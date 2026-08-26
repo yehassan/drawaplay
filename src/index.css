@@ -109,3 +109,11 @@
   transform-origin: center;
   transform-box: fill-box;
 }
+
+.canvas-vignette {
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.5) 100%);
+}
+
+[data-theme="light"] .canvas-vignette {
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.15) 100%);
+}

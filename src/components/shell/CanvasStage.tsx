@@ -7,7 +7,7 @@ export function CanvasStage() {
 
   return (
     <main className="relative min-w-0 flex-1 overflow-hidden bg-chrome-950">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,rgba(0,0,0,0.5)_100%)]" />
+      <div className="canvas-vignette pointer-events-none absolute inset-0" />
       <FieldCanvas />
       <ScenarioPicker />
       {tokenCount === 0 && (
