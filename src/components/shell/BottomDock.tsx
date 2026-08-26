@@ -143,7 +143,7 @@ export function BottomDock() {
                   onChipPointerDown(e, p, 'move')
                 }}
               >
-                <span className="pointer-events-none truncate px-1.5 text-[9px] font-bold uppercase leading-none tracking-wide text-on-chip/85">
+                <span className="pointer-events-none truncate px-1.5 text-[9px] font-bold uppercase leading-none tracking-tight text-on-chip/85">
                   {p.userLocked ? '⏳ ' : ''}
                   {SHORT_LABELS[p.type]}
                 </span>

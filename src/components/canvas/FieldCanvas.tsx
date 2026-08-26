@@ -801,7 +801,7 @@ export function FieldCanvas() {
                 }`}
               >
                 <TypeSample type={t} />
-                <span className="text-[8px] font-semibold uppercase leading-none tracking-wide text-chrome-400">
+                <span className="text-[8px] font-semibold uppercase leading-none tracking-tight text-chrome-400">
                   {PATH_STYLES[t].label}
                 </span>
                 <span className="text-[8px] font-bold leading-none text-chrome-600">{i + 1}</span>

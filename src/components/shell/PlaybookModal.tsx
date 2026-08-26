@@ -83,7 +83,7 @@ function MetaEditor({
 
   return (
     <div className="space-y-2 border-t border-chrome-800 bg-chrome-900/60 p-2.5">
-      <label className="block text-[10px] uppercase tracking-widest text-chrome-500">
+      <label className="block text-[10px] uppercase tracking-[0.06em] text-chrome-500">
         Folder
         <select
           value={folderId ?? ''}
@@ -99,7 +99,7 @@ function MetaEditor({
         </select>
       </label>
 
-      <div className="text-[10px] uppercase tracking-widest text-chrome-500">Tags</div>
+      <div className="text-[10px] uppercase tracking-[0.06em] text-chrome-500">Tags</div>
       <TagChips tags={tags} onRemove={(t) => setTags((prev) => prev.filter((x) => x !== t))} />
       <div className="flex gap-1">
         <input
@@ -448,7 +448,7 @@ export function PlaybookModal() {
     <div className="fixed inset-0 z-40 grid place-items-center bg-black/60 p-4 backdrop-blur-sm">
       <div className="flex h-[80vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-chrome-700 bg-chrome-900 shadow-2xl">
         <header className="flex items-center gap-3 border-b border-chrome-800 px-5 py-3.5">
-          <h2 className="font-display text-xl font-semibold tracking-wide text-chrome-100">Playbook</h2>
+          <h2 className="font-display text-xl font-semibold tracking-tight text-chrome-100">Playbook</h2>
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -481,7 +481,7 @@ export function PlaybookModal() {
             {sideItem('all', 'All plays', countIn('all'))}
             {sideItem('unfiled', 'Unfiled', countIn('unfiled'))}
             {folders.length > 0 && (
-              <p className="px-1 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-widest text-chrome-600">
+              <p className="px-1 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.06em] text-chrome-600">
                 Folders
               </p>
             )}
@@ -554,7 +554,7 @@ export function PlaybookModal() {
 
             {trash.length > 0 && (
               <section className="mt-6 border-t border-chrome-800 pt-4">
-                <p className="pb-2 text-xs font-semibold uppercase tracking-widest text-chrome-500">
+                <p className="pb-2 text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
                   Trash ({trash.length})
                 </p>
                 <ul className="space-y-1">

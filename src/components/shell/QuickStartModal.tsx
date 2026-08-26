@@ -22,7 +22,7 @@ export function QuickStartModal() {
       <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-chrome-700 bg-chrome-900 shadow-2xl">
         <header className="flex items-center justify-between border-b border-chrome-800 px-6 py-4">
           <div>
-            <h2 className="font-display text-xl font-semibold tracking-wide text-chrome-100">
+            <h2 className="font-display text-xl font-semibold tracking-tight text-chrome-100">
               New Play
             </h2>
             <p className="text-xs text-chrome-500">Set the formation — then draw routes and animate.</p>
@@ -39,7 +39,7 @@ export function QuickStartModal() {
         <div className="max-h-[70vh] space-y-5 overflow-y-auto p-6">
           {/* personnel */}
           <section>
-            <p className="pb-2 text-xs font-semibold uppercase tracking-widest text-chrome-500">
+            <p className="pb-2 text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
               Personnel
             </p>
             <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6">
@@ -77,7 +77,7 @@ export function QuickStartModal() {
           {/* alignment */}
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <p className="pb-2 text-xs font-semibold uppercase tracking-widest text-chrome-500">
+              <p className="pb-2 text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
                 Snap
               </p>
               <div className="flex rounded-lg border border-chrome-700 p-0.5">
@@ -102,7 +102,7 @@ export function QuickStartModal() {
             </div>
 
             <div>
-              <p className="pb-2 text-xs font-semibold uppercase tracking-widest text-chrome-500">
+              <p className="pb-2 text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
                 Ball placement
               </p>
               <div className="flex rounded-lg border border-chrome-700 p-0.5">
@@ -124,7 +124,7 @@ export function QuickStartModal() {
 
           {/* yard line */}
           <section>
-            <p className="pb-2 text-xs font-semibold uppercase tracking-widest text-chrome-500">
+            <p className="pb-2 text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
               Line of scrimmage
             </p>
             <div className="flex items-center gap-2">

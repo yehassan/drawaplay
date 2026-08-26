@@ -57,7 +57,7 @@ export function TopBar() {
     <header className="flex h-12 shrink-0 items-center gap-1.5 border-b border-chrome-800 bg-chrome-900 px-3">
       <div className="flex items-center gap-2 pr-1">
         <LogoMark />
-        <span className="font-display text-lg font-semibold tracking-wide text-chrome-100">
+        <span className="font-display text-lg font-semibold tracking-tight text-chrome-100">
           Draw<span className="text-accent-400">A</span>PLAY
         </span>
       </div>
@@ -127,7 +127,7 @@ export function TopBar() {
         </IconButton>
         {settingsOpen && (
           <div className="absolute right-0 top-full z-30 mt-1 w-60 overflow-hidden rounded-xl border border-chrome-700 bg-chrome-900 p-3 shadow-xl">
-            <p className="pb-2 text-[10px] font-semibold uppercase tracking-widest text-chrome-500">
+            <p className="pb-2 text-[10px] font-semibold uppercase tracking-[0.06em] text-chrome-500">
               Field fill
             </p>
             <div className="flex gap-1.5">
@@ -157,7 +157,7 @@ export function TopBar() {
                 </button>
               ))}
             </div>
-            <p className="pb-2 pt-3 text-[10px] font-semibold uppercase tracking-widest text-chrome-500">
+            <p className="pb-2 pt-3 text-[10px] font-semibold uppercase tracking-[0.06em] text-chrome-500">
               Ruleset
             </p>
             <div className="flex gap-1.5">

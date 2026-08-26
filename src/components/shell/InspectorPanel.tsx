@@ -23,7 +23,7 @@ const SHORTCUTS: ReadonlyArray<readonly [string, string]> = [
 
 function SectionLabel({ children }: { children: string }) {
   return (
-    <p className="pb-2 text-xs font-semibold uppercase tracking-widest text-chrome-500">
+    <p className="pb-2 text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
       {children}
     </p>
   )
@@ -167,7 +167,7 @@ function TokenInspector({ tokenId }: { tokenId: string }) {
 
       {chain.length > 0 && (
         <div className="mt-3">
-          <p className="pb-1.5 text-xs font-semibold uppercase tracking-widest text-chrome-500">
+          <p className="pb-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
             Movement sequence
           </p>
           <ul className="space-y-1">
@@ -232,7 +232,7 @@ export function InspectorPanel() {
 
   return (
     <aside className="flex w-72 shrink-0 flex-col border-l border-chrome-800 bg-chrome-900">
-      <p className="px-4 pb-2 pt-4 text-xs font-semibold uppercase tracking-widest text-chrome-500">
+      <p className="px-4 pb-2 pt-4 text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
         Inspector
       </p>
       <div className="min-h-0 flex-1 overflow-y-auto p-4 pt-0">{body}</div>

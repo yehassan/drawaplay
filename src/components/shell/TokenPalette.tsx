@@ -29,7 +29,7 @@ export function TokenPalette() {
     <div className="w-52 shrink-0 overflow-y-auto border-r border-chrome-800 bg-chrome-900 p-3">
       {PALETTE_GROUPS.map(({ side, title, positions }) => (
         <section key={side} className={side === 'defense' ? 'mt-4' : undefined}>
-          <p className="px-1 pb-1.5 text-xs font-semibold uppercase tracking-widest text-chrome-500">
+          <p className="px-1 pb-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
             {title}
           </p>
           <div className="grid grid-cols-4 gap-1">

@@ -4,6 +4,12 @@
   --font-sans: "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-display: "Oswald", "Archivo", ui-sans-serif, system-ui, sans-serif;
 
+  /* Tighter tracking on Oswald display — editorial feel */
+  --tracking-display: -0.02em;
+
+  /* Bump text-xs from 12px → 13px for better readability */
+  --text-xs: 0.8125rem;
+
   /* UI chrome — dark broadcast slate */
   --color-chrome-950: #090c11;
   --color-chrome-900: #0f131a;
