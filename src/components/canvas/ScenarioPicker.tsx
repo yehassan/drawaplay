@@ -6,7 +6,7 @@ export function ScenarioPicker() {
   const resetPlayIdentity = useEditorStore((s) => s.resetPlayIdentity)
 
   return (
-    <label className="absolute left-3 top-3 z-10 flex items-center gap-1.5 rounded-lg border border-chrome-700 bg-chrome-900/90 py-1 pl-2.5 pr-1 text-xs text-chrome-400 shadow-lg backdrop-blur">
+    <label className="absolute left-3 top-3 z-10 flex items-center gap-1.5 rounded-[16px] border border-chrome-700 bg-chrome-900/90 py-1 pl-2.5 pr-1 text-xs text-chrome-400 shadow-[0_0_0_1px_rgba(4,23,43,0.05),0_2px_8px_rgba(0,0,0,0.15)] backdrop-blur">
       <span className="font-medium">Scenario</span>
       <select
         value=""

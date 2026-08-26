@@ -90,9 +90,9 @@ function PathInspector({ pathId }: { pathId: string }) {
               type="button"
               onClick={() => updatePathType(path.id, type)}
               title={`Mark as ${st.label}`}
-              className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-xs font-medium transition-colors ${
+              className={`flex items-center gap-2 rounded-[16px] border px-2.5 py-2 text-xs font-medium transition-colors ${
                 active
-                  ? 'border-accent-400/60 bg-accent-400/10 text-accent-400'
+                  ? 'border-accent-400/60 bg-accent-surface text-accent-400'
                   : 'border-chrome-700 bg-chrome-850 text-chrome-300 hover:border-chrome-600 hover:bg-chrome-800'
               }`}
             >
@@ -106,7 +106,7 @@ function PathInspector({ pathId }: { pathId: string }) {
       <button
         type="button"
         onClick={() => deletePaths([path.id])}
-        className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg border border-chrome-700 py-2 text-xs font-medium text-defense-400 transition-colors hover:border-defense-500/50 hover:bg-defense-500/10"
+        className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-full border border-chrome-700 py-2 text-xs font-medium text-defense-400 transition-colors hover:border-defense-500/50 hover:bg-defense-500/10"
       >
         Delete path
       </button>
@@ -144,16 +144,16 @@ function TokenInspector({ tokenId }: { tokenId: string }) {
           placeholder={POSITIONS[token.pos].label}
           spellCheck={false}
           maxLength={3}
-          className="mt-1 w-full rounded-lg border border-chrome-700 bg-chrome-850 px-2.5 py-1.5 text-sm font-medium text-chrome-200 outline-none focus:border-accent-400/60"
+          className="mt-1 w-full rounded-[16px] border border-chrome-700 bg-chrome-850 px-2.5 py-1.5 text-sm font-medium text-chrome-200 outline-none focus:border-accent-400/60"
         />
       </label>
 
       <button
         type="button"
         onClick={() => setBallStart(isHolder ? null : token.id)}
-        className={`mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border py-2 text-xs font-medium transition-colors ${
+        className={`mt-3 flex w-full items-center justify-center gap-1.5 rounded-full border py-2 text-xs font-medium transition-colors ${
           isHolder
-            ? 'border-ball-500/60 bg-ball-500/10 text-accent-400'
+            ? 'border-ball-500/60 bg-accent-surface text-accent-400'
             : 'border-chrome-700 bg-chrome-850 text-chrome-300 hover:border-chrome-600 hover:bg-chrome-800'
         }`}
       >

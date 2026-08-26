@@ -137,7 +137,7 @@ function MetaEditor({
             onSave({ folderId, tags })
             onClose()
           }}
-          className="rounded bg-accent-400 px-2.5 py-1 text-xs font-semibold text-chrome-950 hover:bg-accent-300"
+          className="rounded-full bg-accent-400 px-2.5 py-1 text-xs font-semibold text-chrome-950 hover:bg-accent-300"
         >
           Save
         </button>
@@ -173,7 +173,7 @@ function PlayCard({
   const folderName = folders.find((f) => f.id === rec.folderId)?.name
 
   return (
-    <div className="group relative overflow-hidden rounded-xl border border-chrome-700 bg-chrome-850 transition-colors hover:border-chrome-600">
+    <div className="group relative overflow-hidden rounded-[16px] border border-chrome-700 bg-chrome-850 transition-colors hover:border-chrome-600">
       {!rec.deletedAt && (
         <IconButton
           label="Move to trash"
@@ -446,20 +446,20 @@ export function PlaybookModal() {
 
   return (
     <div className="fixed inset-0 z-40 grid place-items-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="flex h-[80vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-chrome-700 bg-chrome-900 shadow-2xl">
+      <div className="flex h-[80vh] w-full max-w-5xl flex-col overflow-hidden rounded-[24px] border border-chrome-700 bg-chrome-900 shadow-[0_0_0_1px_rgba(4,23,43,0.05),0_20px_25px_-5px_rgba(0,0,0,0.1),0_8px_10px_-6px_rgba(0,0,0,0.1)]">
         <header className="flex items-center gap-3 border-b border-chrome-800 px-5 py-3.5">
           <h2 className="font-display text-xl font-semibold tracking-tight text-chrome-100">Playbook</h2>
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search plays & tags…"
-            className="ml-2 w-56 rounded-lg border border-chrome-700 bg-chrome-850 px-3 py-1.5 text-sm text-chrome-200 outline-none focus:border-accent-400/60"
+            className="ml-2 w-56 rounded-[16px] border border-chrome-700 bg-chrome-850 px-3 py-1.5 text-sm text-chrome-200 outline-none focus:border-accent-400/60"
           />
           <div className="flex-1" />
           <button
             type="button"
             onClick={newPlay}
-            className="flex items-center gap-1.5 rounded-lg bg-accent-400 px-3 py-1.5 text-sm font-semibold text-chrome-950 transition-colors hover:bg-accent-300"
+            className="flex items-center gap-1.5 rounded-full bg-accent-400 px-3 py-1.5 text-sm font-semibold text-chrome-950 transition-colors hover:bg-accent-300"
           >
             <Icon name="plus" className="size-4" />
             New play
@@ -530,7 +530,7 @@ export function PlaybookModal() {
                     <button
                       type="button"
                       onClick={newPlay}
-                      className="mt-3 rounded-lg bg-accent-400 px-4 py-2 text-sm font-semibold text-chrome-950 hover:bg-accent-300"
+                      className="mt-3 rounded-full bg-accent-400 px-4 py-2 text-sm font-semibold text-chrome-950 hover:bg-accent-300"
                     >
                       Create your first play
                     </button>

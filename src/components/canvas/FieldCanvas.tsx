@@ -782,7 +782,7 @@ export function FieldCanvas() {
       {/* one-shot type bar */}
       {typeBarActive && typeBarTip && (
         <div
-          className="absolute z-20 flex -translate-x-1/2 gap-0.5 rounded-lg border border-chrome-700 bg-chrome-900/95 p-1 shadow-xl backdrop-blur"
+          className="absolute z-20 flex -translate-x-1/2 gap-0.5 rounded-[16px] border border-chrome-700 bg-chrome-900/95 p-1 shadow-[0_0_0_1px_rgba(4,23,43,0.05),0_8px_40px_0px_rgba(0,0,0,0.1)] backdrop-blur"
           style={{ left: typeBarTip.x * camera.zoom + camera.tx, top: typeBarTip.y * camera.zoom + camera.ty - 14 }}
         >
           {PATH_TYPE_ORDER.map((t, i) => {
@@ -796,8 +796,8 @@ export function FieldCanvas() {
                   updatePathType(typeBarFor!, t)
                   showTypeBar(null)
                 }}
-                className={`flex w-[52px] flex-col items-center gap-0.5 rounded-md px-1 py-1 transition-colors ${
-                  active ? 'bg-accent-400/20 ring-1 ring-accent-400' : 'hover:bg-chrome-800'
+                className={`flex w-[52px] flex-col items-center gap-0.5 rounded-[12px] px-1 py-1 transition-colors ${
+                  active ? 'bg-accent-surface ring-1 ring-accent-400' : 'hover:bg-chrome-800'
                 }`}
               >
                 <TypeSample type={t} />
@@ -815,12 +815,12 @@ export function FieldCanvas() {
       )}
 
       {/* view controls */}
-      <div className="absolute right-3 bottom-3 flex flex-col gap-1 rounded-xl border border-chrome-700 bg-chrome-900/90 p-1 shadow-lg backdrop-blur">
+      <div className="absolute right-3 bottom-3 flex flex-col gap-1 rounded-[16px] border border-chrome-700 bg-chrome-900/90 p-1 shadow-[0_0_0_1px_rgba(4,23,43,0.05),0_2px_8px_rgba(0,0,0,0.15)] backdrop-blur">
         <button
           type="button"
           title="Zoom in"
           onClick={() => zoomBy(1.25)}
-          className="grid size-8 place-items-center rounded-lg text-chrome-400 transition-colors hover:bg-chrome-800 hover:text-chrome-200"
+          className="grid size-8 place-items-center rounded-[12px] text-chrome-400 transition-colors hover:bg-chrome-800 hover:text-chrome-200"
         >
           <Icon name="plus" className="size-4" />
         </button>
@@ -828,7 +828,7 @@ export function FieldCanvas() {
           type="button"
           title="Zoom out"
           onClick={() => zoomBy(0.8)}
-          className="grid size-8 place-items-center rounded-lg text-chrome-400 transition-colors hover:bg-chrome-800 hover:text-chrome-200"
+          className="grid size-8 place-items-center rounded-[12px] text-chrome-400 transition-colors hover:bg-chrome-800 hover:text-chrome-200"
         >
           <Icon name="minus" className="size-4" />
         </button>
@@ -836,7 +836,7 @@ export function FieldCanvas() {
           type="button"
           title="Fit to play (F)"
           onClick={fitToPlay}
-          className="grid size-8 place-items-center rounded-lg text-chrome-400 transition-colors hover:bg-chrome-800 hover:text-chrome-200"
+          className="grid size-8 place-items-center rounded-[12px] text-chrome-400 transition-colors hover:bg-chrome-800 hover:text-chrome-200"
         >
           <Icon name="fit" className="size-4" />
         </button>

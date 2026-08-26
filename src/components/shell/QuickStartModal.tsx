@@ -19,7 +19,7 @@ export function QuickStartModal() {
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-chrome-700 bg-chrome-900 shadow-2xl">
+      <div className="w-full max-w-2xl overflow-hidden rounded-[24px] border border-chrome-700 bg-chrome-900 shadow-[0_0_0_1px_rgba(4,23,43,0.05),0_20px_25px_-5px_rgba(0,0,0,0.1),0_8px_10px_-6px_rgba(0,0,0,0.1)]">
         <header className="flex items-center justify-between border-b border-chrome-800 px-6 py-4">
           <div>
             <h2 className="font-display text-xl font-semibold tracking-tight text-chrome-100">
@@ -52,9 +52,9 @@ export function QuickStartModal() {
                     setUnderCenter(p.uc)
                   }}
                   title={p.formation}
-                  className={`rounded-lg border px-2 py-2 text-center transition-colors ${
+                  className={`rounded-[16px] border px-2 py-2 text-center transition-colors ${
                     personnel === p.key
-                      ? 'border-accent-400/70 bg-accent-400/10'
+                      ? 'border-accent-400/70 bg-accent-surface'
                       : 'border-chrome-700 bg-chrome-850 hover:border-chrome-600 hover:bg-chrome-800'
                   }`}
                 >
@@ -80,13 +80,13 @@ export function QuickStartModal() {
               <p className="pb-2 text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
                 Snap
               </p>
-              <div className="flex rounded-lg border border-chrome-700 p-0.5">
+              <div className="flex rounded-[16px] border border-chrome-700 p-0.5">
                 {[false, true].map((uc) => (
                   <button
                     key={String(uc)}
                     type="button"
                     onClick={() => setUnderCenter(uc)}
-                    className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                    className={`flex-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                       underCenter === uc
                         ? 'bg-accent-400 text-chrome-950'
                         : 'text-chrome-300 hover:bg-chrome-800'
@@ -105,13 +105,13 @@ export function QuickStartModal() {
               <p className="pb-2 text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
                 Ball placement
               </p>
-              <div className="flex rounded-lg border border-chrome-700 p-0.5">
+              <div className="flex rounded-[16px] border border-chrome-700 p-0.5">
                 {(['center', 'left', 'right'] as Hash[]).map((h) => (
                   <button
                     key={h}
                     type="button"
                     onClick={() => setHash(h)}
-                    className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium capitalize transition-colors ${
+                    className={`flex-1 rounded-full px-2 py-1.5 text-xs font-medium capitalize transition-colors ${
                       hash === h ? 'bg-accent-400 text-chrome-950' : 'text-chrome-300 hover:bg-chrome-800'
                     }`}
                   >
@@ -128,13 +128,13 @@ export function QuickStartModal() {
               Line of scrimmage
             </p>
             <div className="flex items-center gap-2">
-              <div className="flex rounded-lg border border-chrome-700 p-0.5">
+              <div className="flex rounded-[16px] border border-chrome-700 p-0.5">
                 {(['ours', 'theirs'] as const).map((s) => (
                   <button
                     key={s}
                     type="button"
                     onClick={() => setSide(s)}
-                    className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                    className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                       side === s ? 'bg-accent-400 text-chrome-950' : 'text-chrome-300 hover:bg-chrome-800'
                     }`}
                   >
@@ -150,7 +150,7 @@ export function QuickStartModal() {
                 onChange={(e) =>
                   setYardLine(Math.max(1, Math.min(50, Number(e.target.value) || 1)))
                 }
-                className="w-20 rounded-lg border border-chrome-700 bg-chrome-850 px-3 py-1.5 text-sm font-medium text-chrome-200 outline-none focus:border-accent-400/60"
+                className="w-20 rounded-[16px] border border-chrome-700 bg-chrome-850 px-3 py-1.5 text-sm font-medium text-chrome-200 outline-none focus:border-accent-400/60"
               />
               <span className="text-xs text-chrome-500">yard line (both sides: 50 = midfield)</span>
             </div>
@@ -180,7 +180,7 @@ export function QuickStartModal() {
               })
               closeQuickStart()
             }}
-            className="flex items-center gap-1.5 rounded-lg bg-accent-400 px-4 py-2 text-sm font-semibold text-chrome-950 transition-colors hover:bg-accent-300"
+            className="flex items-center gap-1.5 rounded-full bg-accent-400 px-4 py-2 text-sm font-semibold text-chrome-950 transition-colors hover:bg-accent-300"
           >
             Create play
           </button>

@@ -68,7 +68,7 @@ export function TopBar() {
         type="button"
         onClick={openLibrary}
         title="Playbook library"
-        className="flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-sm text-chrome-400 transition-colors hover:bg-chrome-800 hover:text-chrome-200"
+        className="flex shrink-0 items-center gap-1.5 rounded-full px-2 py-1 text-sm text-chrome-400 transition-colors hover:bg-chrome-800 hover:text-chrome-200"
       >
         <Icon name="book" className="size-4" />
         Playbook
@@ -80,7 +80,7 @@ export function TopBar() {
         onChange={(e) => renamePlay(e.target.value)}
         spellCheck={false}
         aria-label="Play name"
-        className="w-44 rounded-md bg-transparent px-2 py-1 text-sm font-medium text-chrome-200 outline-none transition-colors hover:bg-chrome-800 focus:bg-chrome-800"
+        className="w-44 rounded-full bg-transparent px-2 py-1 text-sm font-medium text-chrome-200 outline-none transition-colors hover:bg-chrome-800 focus:bg-chrome-800"
       />
 
       <span className="hidden items-center gap-1.5 pl-1 text-xs text-chrome-500 lg:flex" title="Changes save automatically to this browser">
@@ -126,7 +126,7 @@ export function TopBar() {
           <Icon name="gear" className="size-[18px]" />
         </IconButton>
         {settingsOpen && (
-          <div className="absolute right-0 top-full z-30 mt-1 w-60 overflow-hidden rounded-xl border border-chrome-700 bg-chrome-900 p-3 shadow-xl">
+          <div className="absolute right-0 top-full z-30 mt-1 w-60 overflow-hidden rounded-[20px] border border-chrome-700 bg-chrome-900 p-3 shadow-[0_0_0_1px_rgba(4,23,43,0.05),0_8px_40px_0px_rgba(0,0,0,0.1)]">
             <p className="pb-2 text-[10px] font-semibold uppercase tracking-[0.06em] text-chrome-500">
               Field fill
             </p>
@@ -137,9 +137,9 @@ export function TopBar() {
                   type="button"
                   title={`${t.label} turf`}
                   onClick={() => setFieldTheme(t.key as FieldTheme)}
-                  className={`flex flex-1 flex-col items-center gap-1 rounded-lg border px-1 py-1.5 transition-colors ${
+                  className={`flex flex-1 flex-col items-center gap-1 rounded-[16px] border px-1 py-1.5 transition-colors ${
                     fieldTheme === t.key
-                      ? 'border-accent-400/70 bg-accent-400/10'
+                      ? 'border-accent-400/70 bg-accent-surface'
                       : 'border-chrome-700 hover:border-chrome-600'
                   }`}
                 >
@@ -167,9 +167,9 @@ export function TopBar() {
                   type="button"
                   title={r.hint}
                   onClick={() => setRuleset(r.key)}
-                  className={`flex-1 rounded-lg border px-2 py-1.5 text-[11px] font-semibold transition-colors ${
+                  className={`flex-1 rounded-[16px] border px-2 py-1.5 text-[11px] font-semibold transition-colors ${
                     ruleset === r.key
-                      ? 'border-accent-400/70 bg-accent-400/10 text-accent-400'
+                      ? 'border-accent-400/70 bg-accent-surface text-accent-400'
                       : 'border-chrome-700 text-chrome-400 hover:border-chrome-600'
                   }`}
                 >
@@ -188,13 +188,13 @@ export function TopBar() {
             setSettingsOpen(false)
           }}
           title="Export this play"
-          className="flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-chrome-400 transition-colors hover:bg-chrome-800 hover:text-chrome-200"
+          className="flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1.5 text-sm text-chrome-400 transition-colors hover:bg-chrome-800 hover:text-chrome-200"
         >
           <Icon name="download" className="size-4" />
           {exportBusy ?? 'Export'}
         </button>
         {exportOpen && (
-          <div className="absolute right-0 top-full z-30 mt-1 w-52 overflow-hidden rounded-xl border border-chrome-700 bg-chrome-900 shadow-xl">
+          <div className="absolute right-0 top-full z-30 mt-1 w-52 overflow-hidden rounded-[20px] border border-chrome-700 bg-chrome-900 shadow-[0_0_0_1px_rgba(4,23,43,0.05),0_8px_40px_0px_rgba(0,0,0,0.1)]">
             {[
               {
                 label: 'PNG — full diagram',
@@ -243,7 +243,7 @@ export function TopBar() {
         type="button"
         onClick={openQuickStart}
         title="Start a new play"
-        className="ml-1 flex shrink-0 items-center gap-1.5 rounded-lg bg-accent-400 px-3 py-1.5 text-sm font-semibold text-chrome-950 transition-colors hover:bg-accent-300"
+        className="ml-1 flex shrink-0 items-center gap-1.5 rounded-full bg-accent-400 px-3 py-1.5 text-sm font-semibold text-chrome-950 transition-colors hover:bg-accent-300"
       >
         <Icon name="plus" className="size-4" />
         New Play

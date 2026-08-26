@@ -101,7 +101,7 @@ export function BottomDock() {
       {/* timing tracks — one row per path, NLE style */}
       <div
         ref={laneRef}
-        className="relative mx-4 mt-2 h-[64px] select-none overflow-y-auto rounded-md border border-chrome-700 bg-chrome-850"
+        className="relative mx-4 mt-2 h-[64px] select-none overflow-y-auto rounded-[12px] border border-chrome-700 bg-chrome-850"
         onPointerMove={onLanePointerMove}
         onPointerUp={onLanePointerUp}
         onPointerCancel={onLanePointerUp}
@@ -171,7 +171,7 @@ export function BottomDock() {
           type="button"
           onClick={togglePlay}
           title="Play / pause (Space)"
-          className="grid size-10 shrink-0 place-items-center rounded-full bg-accent-400 text-chrome-950 shadow-lg shadow-accent-400/20 transition-colors hover:bg-accent-300 disabled:pointer-events-none disabled:opacity-35"
+          className="grid size-10 shrink-0 place-items-center rounded-full bg-accent-400 text-chrome-950 shadow-[0_0_0_1px_rgba(4,23,43,0.05),0_2px_8px_rgba(0,0,0,0.15)] transition-colors hover:bg-accent-300 disabled:pointer-events-none disabled:opacity-35"
           disabled={paths.length === 0}
         >
           <Icon name={playing ? 'pause' : 'play'} className="size-5 translate-x-px" />
