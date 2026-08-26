@@ -1,0 +1,105 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Oswald", "Archivo", ui-sans-serif, system-ui, sans-serif;
+
+  /* UI chrome — dark broadcast slate */
+  --color-chrome-950: #090c11;
+  --color-chrome-900: #0f131a;
+  --color-chrome-850: #141924;
+  --color-chrome-800: #1a212c;
+  --color-chrome-700: #26303f;
+  --color-chrome-600: #37435a;
+  --color-chrome-500: #55637a;
+  --color-chrome-400: #8494ab;
+  --color-chrome-300: #aeb9c9;
+  --color-chrome-200: #ced7e3;
+  --color-chrome-100: #eef2f7;
+
+  /* Accent — warm terracotta (dark mode); sienna override in light mode */
+  --color-accent-300: #e8a582;
+  --color-accent-400: #c8714a;
+  --color-accent-500: #b85c2e;
+  --color-accent-600: #9a4a22;
+  --color-accent-surface: #fbe1d1;
+
+  /* Play semantics */
+  --color-offense-400: #60a5fa;
+  --color-offense-500: #3b82f6;
+  --color-defense-400: #f87171;
+  --color-defense-500: #ef4444;
+  --color-ball-500: #c98a2b;
+
+  /* Constant dark text for colored chip surfaces (path tracklets) */
+  --color-on-chip: #0a0a0e;
+
+  /* Field */
+  --color-field-700: #1a6340;
+  --color-field-800: #175235;
+  --color-field-900: #12402a;
+  --color-chalk: #eaf3ea;
+}
+
+/* Light mode — invert chrome ramp + sienna accent (Steep paper/ink palette) */
+[data-theme="light"] {
+  --color-chrome-950: #ffffff;
+  --color-chrome-900: #f2f2f3;
+  --color-chrome-850: #e8e8ec;
+  --color-chrome-800: #dcdce2;
+  --color-chrome-700: #e2e2e8;
+  --color-chrome-600: #6a6a74;
+  --color-chrome-500: #55555f;
+  --color-chrome-400: #45454f;
+  --color-chrome-300: #2e2e36;
+  --color-chrome-200: #17191c;
+  --color-chrome-100: #17191c;
+
+  --color-accent-300: #8b4513;
+  --color-accent-400: #5d2a1a;
+  --color-accent-500: #4a2216;
+  --color-accent-600: #3a1a10;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-chrome-950 font-sans text-chrome-200 antialiased;
+    overscroll-behavior: none;
+  }
+
+  ::selection {
+    background-color: color-mix(in oklab, var(--color-accent-400) 30%, transparent);
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-chrome-700) transparent;
+  }
+}
+
+/* token placement settle-bounce */
+@keyframes dap-pop {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.dap-pop {
+  animation: dap-pop 0.28s cubic-bezier(0.2, 0.8, 0.3, 1.2);
+  transform-origin: center;
+  transform-box: fill-box;
+}
