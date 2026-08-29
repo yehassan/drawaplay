@@ -56,6 +56,7 @@ export function FieldCanvas() {
   const [marquee, setMarquee] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
   const [guides, setGuides] = useState<{ xs: number[]; ys: number[] }>({ xs: [], ys: [] })
   const [liveStroke, setLiveStroke] = useState<{ raw: Pt[]; d: string } | null>(null)
+  const [justCreatedId, setJustCreatedId] = useState<string | null>(null)
   const [hint, setHint] = useState<string | null>(null)
   const hintTimer = useRef<number | undefined>(undefined)
 
@@ -289,8 +290,7 @@ export function FieldCanvas() {
       const l = toLocal(e)
       const f = screenToField(st.camera, l.x, l.y)
       const id = st.addTextNote({ x: snap(f.x), y: snap(f.y), text: 'Text' })
-      // keep text tool armed; selection is set inside addTextNote
-      void id
+      setJustCreatedId(id)
       return
     }
     if (st.tool === 'select' && e.button === 0) {
@@ -388,9 +388,20 @@ export function FieldCanvas() {
         st.beginHistory()
         s.began = true
       }
-      const nx = snap(s.origin.x + dx)
-      const ny = snap(s.origin.y + dy)
+      let nx = snap(s.origin.x + dx)
+      let ny = snap(s.origin.y + dy)
+      // alignment guides against tokens + other text notes
+      const others = [...st.tokens, ...st.textNotes.filter((n) => n.id !== s.id)]
+      let gx: number[] = []
+      let gy: number[] = []
+      for (const o of others) {
+        if (Math.abs(o.x - nx) < GUIDE_EPS) { nx = o.x; gx = [o.x]; break }
+      }
+      for (const o of others) {
+        if (Math.abs(o.y - ny) < GUIDE_EPS) { ny = o.y; gy = [o.y]; break }
+      }
       st.moveTextNotesLive({ [s.id]: { x: nx, y: ny } })
+      setGuides({ xs: gx, ys: gy })
       return
     }
 
@@ -466,7 +477,7 @@ export function FieldCanvas() {
       else finalizeStroke(s.raw)
     }
     if (s.type === 'pathEnd') st.applyScheduleNow()
-    if (s.type === 'drag') setGuides({ xs: [], ys: [] })
+    if (s.type === 'drag' || s.type === 'textDrag') setGuides({ xs: [], ys: [] })
     sessionRef.current = null
   }
 
@@ -733,7 +744,9 @@ export function FieldCanvas() {
               key={n.id}
               note={n}
               selected={selectedIds.includes(n.id)}
+              autoEdit={justCreatedId === n.id}
               onPointerDown={onTextPointerDown}
+              onEditDone={() => setJustCreatedId((cur) => (cur === n.id ? null : cur))}
             />
           ))}
 

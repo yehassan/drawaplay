@@ -80,6 +80,23 @@ describe('text notes store', () => {
     expect(st.textNotes[0].text).toBe('X')
     expect(st.textNotes[0].id).not.toBe('old')
   })
+
+  it('duplicateSelected clones text notes', () => {
+    const id = useEditorStore.getState().addTextNote({ x: 10, y: 80, text: 'A' })
+    useEditorStore.getState().select([id])
+    useEditorStore.getState().duplicateSelected()
+    const st = useEditorStore.getState()
+    expect(st.textNotes).toHaveLength(2)
+    expect(st.textNotes[1].text).toBe('A')
+    expect(st.textNotes[1].id).not.toBe(id)
+  })
+
+  it('empty text is allowed and persists', () => {
+    const id = useEditorStore.getState().addTextNote({ x: 10, y: 80, text: '' })
+    expect(useEditorStore.getState().textNotes[0].text).toBe('')
+    useEditorStore.getState().updateTextNote(id, '')
+    expect(useEditorStore.getState().textNotes[0].text).toBe('')
+  })
 })
 
 describe('thumb with text', () => {

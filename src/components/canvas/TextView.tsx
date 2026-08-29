@@ -6,11 +6,15 @@ import { paletteFor } from '../../lib/theme'
 export function TextView({
   note,
   selected,
+  autoEdit,
   onPointerDown,
+  onEditDone,
 }: {
   note: TextNote
   selected: boolean
+  autoEdit?: boolean
   onPointerDown: (e: React.PointerEvent<SVGGElement>, id: string) => void
+  onEditDone?: () => void
 }) {
   const updateTextNote = useEditorStore((s) => s.updateTextNote)
   const fieldTheme = useEditorStore((s) => s.fieldTheme)
@@ -19,9 +23,16 @@ export function TextView({
   const [draft, setDraft] = useState(note.text)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  useEffect(() => {
+    if (autoEdit) setEditing(true)
+  }, [autoEdit])
+
   useEffect(() => setDraft(note.text), [note.text])
   useEffect(() => {
-    if (editing) inputRef.current?.focus()
+    if (editing) {
+      inputRef.current?.focus()
+      inputRef.current?.select()
+    }
   }, [editing])
 
   const commit = () => {
@@ -29,11 +40,13 @@ export function TextView({
     if (t && t !== note.text) updateTextNote(note.id, t)
     else if (!t) updateTextNote(note.id, '')
     setEditing(false)
+    onEditDone?.()
   }
 
   const cancel = () => {
     setDraft(note.text)
     setEditing(false)
+    onEditDone?.()
   }
 
   // approx text width in field yards for hit area / selection outline
@@ -56,7 +69,7 @@ export function TextView({
             onBlur={commit}
             placeholder="Text"
             maxLength={24}
-            className="h-full w-full rounded bg-chrome-900 px-1 text-center text-sm text-chrome-100 outline-none"
+            className="h-full w-full rounded-[8px] border border-accent-400/60 bg-chrome-850 px-1 text-center text-sm text-chrome-200 outline-none"
             style={{ fontFamily: 'var(--font-display)' }}
           />
         </foreignObject>
@@ -64,6 +77,7 @@ export function TextView({
     )
   }
 
+  const isPlaceholder = !note.text
   return (
     <g
       onPointerDown={(e) => onPointerDown(e, note.id)}
@@ -75,10 +89,11 @@ export function TextView({
         y={note.y - estH / 2}
         width={estW}
         height={estH}
-        fill="transparent"
+        fill={selected ? 'var(--color-accent-surface)' : 'transparent'}
+        fillOpacity={selected ? 0.35 : 0}
         stroke={selected ? 'var(--color-accent-400)' : 'transparent'}
-        strokeWidth={selected ? 0.08 : 0}
-        rx={0.3}
+        strokeWidth={selected ? 0.1 : 0}
+        rx={0.4}
       />
       <text
         x={note.x}
@@ -89,6 +104,7 @@ export function TextView({
         fontFamily="var(--font-display)"
         fontWeight={700}
         fill={pal.line}
+        opacity={isPlaceholder ? 0.55 : 1}
         stroke="var(--color-chrome-950)"
         strokeWidth={0.07}
         paintOrder="stroke"
