@@ -81,18 +81,22 @@ export function reschedule(paths: PlayPath[]): Map<string, Timing> {
 
   // iterate so chains (motion → snap → drop → pass) settle
   for (let iter = 0; iter < 3; iter++) {
-    // 1. pre-snap motion chains by draw order and ALWAYS plays before the snap,
-    //    regardless of when it was drawn
+    // 1. motion: adjustable snap point — 1.0 = stop before snap, <1 = jet through snap
     let mEnd = 0
+    let snapAt = 0
     for (const m of motions()) {
       const cur = result.get(m.id)!
       const delayMs = Math.max(0, mEnd)
       assign(m.id, { ...cur, delayMs })
-      mEnd = delayMs + cur.durationMs
+      const dur = result.get(m.id)!.durationMs
+      const at = (m as PlayPath & { motionSnapAt?: number }).motionSnapAt ?? 1
+      const snapPoint = delayMs + dur * Math.max(0.1, Math.min(1, at))
+      snapAt = Math.max(snapAt, snapPoint)
+      mEnd = delayMs + dur
     }
-    const motionEnd = mEnd
-    for (const s of snaps()) assign(s.id, { ...result.get(s.id)!, delayMs: motionEnd })
-    const snapEnd = Math.max(motionEnd, ...snaps().map((s) => end(s.id)))
+    const motionSnapAt = snapAt
+    for (const s of snaps()) assign(s.id, { ...result.get(s.id)!, delayMs: motionSnapAt })
+    const snapEnd = Math.max(motionSnapAt, ...snaps().map((s) => end(s.id)))
 
     // 3. everyone else starts when the snap completes
     for (const p of paths) {

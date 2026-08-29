@@ -111,6 +111,20 @@ describe('motion phase', () => {
     expect(endOf(motion)).toBeLessThanOrEqual(snap.timing.delayMs + 1)
     expect(slant.timing.delayMs).toBeGreaterThanOrEqual(endOf(snap) - 1)
   })
+
+  it('jet motion (snap at 50%) overlaps snap — fake handoff', () => {
+    const paths = applySchedule([
+      P('snap', 'C', 'QB', 'snap', [[26.5, 90], [26.5, 92.6]]),
+      P('jet', 'WR', null, 'motion', [[30, 88], [22, 88]], { motionSnapAt: 0.5 }),
+      P('route', 'WR2', null, 'route', [[12, 88], [16, 80]]),
+    ])
+    const [snap, jet, route] = paths
+    expect(jet.timing.delayMs).toBe(0)
+    expect(snap.timing.delayMs).toBeGreaterThan(jet.timing.delayMs)
+    expect(snap.timing.delayMs).toBeLessThan(endOf(jet) - 1)
+    expect(route.timing.delayMs).toBeGreaterThanOrEqual(endOf(snap) - 1)
+    expect(route.timing.delayMs).toBeLessThan(endOf(jet))
+  })
 })
 
 describe('handoff chains', () => {

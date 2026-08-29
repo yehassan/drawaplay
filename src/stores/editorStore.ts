@@ -39,6 +39,8 @@ export interface PlayPath {
   timing: Timing
   /** set when the user hand-tuned timing — reschedule preserves it */
   userLocked?: boolean
+  /** for motion only: fraction of duration where snap occurs (0.1..1.0, 1 = stop before snap) */
+  motionSnapAt?: number
 }
 
 export type Speed = 0.5 | 1 | 2
@@ -132,6 +134,7 @@ interface EditorState {
     patch: { delayMs?: number; durationMs?: number },
   ) => void
   setPathLocked: (id: string, userLocked: boolean) => void
+  setMotionSnapAt: (id: string, snapAt: number) => void
   reorderPath: (id: string, dir: -1 | 1) => void
   setPathEndpointLive: (
     id: string,
@@ -349,6 +352,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     get().beginHistory()
     set((s) => ({
       paths: s.paths.map((p) => (p.id === id ? { ...p, userLocked } : p)),
+    }))
+  },
+
+  setMotionSnapAt: (id, snapAt) => {
+    const clamped = Math.max(0.1, Math.min(1, snapAt))
+    get().beginHistory()
+    set((s) => ({
+      paths: applySchedule(s.paths.map((p) => (p.id === id ? { ...p, motionSnapAt: clamped } : p))),
     }))
   },
 

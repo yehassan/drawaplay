@@ -66,6 +66,7 @@ function PathInspector({ pathId }: { pathId: string }) {
   const tokens = useEditorStore((s) => s.tokens)
   const updatePathType = useEditorStore((s) => s.updatePathType)
   const deletePaths = useEditorStore((s) => s.deletePaths)
+  const setMotionSnapAt = useEditorStore((s) => s.setMotionSnapAt)
   if (!path) return null
   const from = tokens.find((t) => t.id === path.tokenId)
 
@@ -103,6 +104,31 @@ function PathInspector({ pathId }: { pathId: string }) {
           )
         })}
       </div>
+
+      {path.type === 'motion' && (
+        <div className="mt-4 rounded-[16px] border border-chrome-700 bg-chrome-850 p-3">
+          <p className="text-xs font-semibold text-chrome-300">Motion timing</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-chrome-500">
+            Where the snap happens along this motion — left = jet/fake (still moving at snap), right = stop before snap.
+          </p>
+          <div className="mt-3 flex items-center gap-2">
+            <span className="text-[10px] text-chrome-500">Jet</span>
+            <input
+              type="range"
+              min={0.15}
+              max={1}
+              step={0.05}
+              value={path.motionSnapAt ?? 1}
+              onChange={(e) => setMotionSnapAt(path.id, Number(e.target.value))}
+              className="flex-1 accent-accent-400"
+            />
+            <span className="text-[10px] text-chrome-500">Stop</span>
+          </div>
+          <p className="mt-1 text-center text-[10px] font-medium text-chrome-400">
+            {(path.motionSnapAt ?? 1) >= 0.95 ? 'Stop before snap' : `Snap at ${Math.round((path.motionSnapAt ?? 1) * 100)}% — jet`}
+          </p>
+        </div>
+      )}
 
       <button
         type="button"
