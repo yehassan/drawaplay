@@ -1,4 +1,4 @@
-import type { PlayPath, Token } from '../stores/editorStore'
+import type { PlayPath, TextNote, Token } from '../stores/editorStore'
 
 /** A persisted play document. */
 export interface PlayRecord {
@@ -6,6 +6,7 @@ export interface PlayRecord {
   name: string
   tokens: Token[]
   paths: PlayPath[]
+  textNotes: TextNote[]
   ballStartId: string | null
   /** line-of-scrimmage metadata from quickstart (LOS marker) */
   los?: { side: 'ours' | 'theirs'; n: number }
@@ -241,9 +242,10 @@ export function newRecord(
   tokens: Token[],
   paths: PlayPath[],
   ballStartId: string | null,
+  textNotes: TextNote[] = [],
 ): PlayRecord {
   const now = Date.now()
-  return { id: uid(), name, tokens, paths, ballStartId, tags: [], createdAt: now, updatedAt: now }
+  return { id: uid(), name, tokens, paths, textNotes, ballStartId, tags: [], createdAt: now, updatedAt: now }
 }
 
 export function touchName(record: PlayRecord, name: string): PlayRecord {

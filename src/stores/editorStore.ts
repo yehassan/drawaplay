@@ -20,6 +20,13 @@ export interface Token {
   y: number
 }
 
+export interface TextNote {
+  id: string
+  x: number
+  y: number
+  text: string
+}
+
 export interface PlayPath {
   id: string
   /** anchor token — path translates when this token moves */
@@ -53,6 +60,7 @@ export interface Camera {
 interface Snapshot {
   tokens: Token[]
   paths: PlayPath[]
+  textNotes: TextNote[]
 }
 
 type SaveState = 'idle' | 'dirty' | 'saving' | 'saved'
@@ -83,6 +91,7 @@ interface EditorState {
   inspectorOpen: boolean
   tokens: Token[]
   paths: PlayPath[]
+  textNotes: TextNote[]
   /** token holding the ball at the snap; null = auto (first handoff, else QB) */
   ballStartId: string | null
   selectedIds: string[]
@@ -132,6 +141,10 @@ interface EditorState {
     anchorTokenId?: string | null,
   ) => void
   deletePaths: (ids: string[]) => void
+  addTextNote: (t: Omit<TextNote, 'id'>) => string
+  updateTextNote: (id: string, text: string) => void
+  moveTextNotesLive: (updates: Record<string, { x: number; y: number }>) => void
+  deleteTextNotes: (ids: string[]) => void
   deleteSelected: () => void
   select: (ids: string[]) => void
   setBallStart: (id: string | null) => void
@@ -139,6 +152,7 @@ interface EditorState {
     name: string
     tokens: Token[]
     paths: Omit<PlayPath, 'id' | 'timing'>[]
+    textNotes?: TextNote[]
     los?: LosSpec | null
     fieldTheme?: FieldTheme
     ruleset?: Ruleset
@@ -165,6 +179,7 @@ const uid = () =>
 const snap = (s: Snapshot): Snapshot => ({
   tokens: s.tokens.map((t) => ({ ...t })),
   paths: s.paths.map((p) => ({ ...p })),
+  textNotes: s.textNotes.map((n) => ({ ...n })),
 })
 
 export const useEditorStore = create<EditorState>((set, get) => ({
@@ -175,6 +190,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   inspectorOpen: true,
   tokens: [],
   paths: [],
+  textNotes: [],
   ballStartId: null,
   selectedIds: [],
   camera: { zoom: 16, tx: 0, ty: 0 },
@@ -243,6 +259,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       tool: 'select',
       tokens: [],
       paths: [],
+      textNotes: [],
       ballStartId: null,
       selectedIds: [],
       past: [],
@@ -406,6 +423,35 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }))
   },
 
+  addTextNote: (t) => {
+    const note: TextNote = { ...t, id: uid() }
+    get().beginHistory()
+    set((s) => ({ textNotes: [...s.textNotes, note], selectedIds: [note.id] }))
+    return note.id
+  },
+
+  updateTextNote: (id, text) =>
+    set((s) => ({
+      textNotes: s.textNotes.map((n) => (n.id === id ? { ...n, text } : n)),
+    })),
+
+  moveTextNotesLive: (updates) =>
+    set((s) => ({
+      textNotes: s.textNotes.map((n) => {
+        const u = updates[n.id]
+        return u ? { ...n, x: u.x, y: u.y } : n
+      }),
+    })),
+
+  deleteTextNotes: (ids) => {
+    if (ids.length === 0) return
+    get().beginHistory()
+    set((s) => ({
+      textNotes: s.textNotes.filter((n) => !ids.includes(n.id)),
+      selectedIds: s.selectedIds.filter((id) => !ids.includes(id)),
+    }))
+  },
+
   nudgeSelected: (dx, dy) => {
     const s = get()
     if (s.selectedIds.length === 0) return
@@ -416,6 +462,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       tokens: st.tokens.map((t) =>
         st.selectedIds.includes(t.id) ? { ...t, x: t.x + dx, y: t.y + dy } : t,
       ),
+      textNotes: st.textNotes.map((n) =>
+        st.selectedIds.includes(n.id) ? { ...n, x: n.x + dx, y: n.y + dy } : n,
+      ),
     }))
   },
 
@@ -424,22 +473,29 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     if (s.selectedIds.length === 0) return
     s.beginHistory()
     set((st) => {
-      const clones = st.tokens
+      const tokenClones = st.tokens
         .filter((t) => st.selectedIds.includes(t.id))
         .map((t) => ({ ...t, id: uid(), x: t.x + 1.5, y: t.y + 1.5 }))
+      const noteClones = st.textNotes
+        .filter((n) => st.selectedIds.includes(n.id))
+        .map((n) => ({ ...n, id: uid(), x: n.x + 1.5, y: n.y + 1.5 }))
+      if (tokenClones.length === 0 && noteClones.length === 0) return {}
       return {
-        tokens: [...st.tokens, ...clones],
-        selectedIds: clones.map((c) => c.id),
+        tokens: [...st.tokens, ...tokenClones],
+        textNotes: [...st.textNotes, ...noteClones],
+        selectedIds: [...tokenClones.map((c) => c.id), ...noteClones.map((c) => c.id)],
       }
     })
   },
 
   deleteSelected: () => {
-    const { selectedIds, tokens, paths } = get()
+    const { selectedIds, tokens, paths, textNotes } = get()
     const tokenIds = selectedIds.filter((id) => tokens.some((t) => t.id === id))
     const pathIds = selectedIds.filter((id) => paths.some((p) => p.id === id))
+    const noteIds = selectedIds.filter((id) => textNotes.some((n) => n.id === id))
     if (tokenIds.length > 0) get().deleteTokens(tokenIds)
     if (pathIds.length > 0) get().deletePaths(pathIds)
+    if (noteIds.length > 0) get().deleteTextNotes(noteIds)
   },
 
   select: (ids) => set({ selectedIds: ids }),
@@ -473,6 +529,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           endTokenId: p.endTokenId ? idMap.get(p.endTokenId) ?? null : null,
         })),
       )
+      const textNotes = (play.textNotes ?? []).map((n) => ({ ...n, id: uid() }))
       return {
         playName: play.name,
         losSpec: play.los ?? null,
@@ -480,6 +537,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         ruleset: play.ruleset ?? s.ruleset,
         tokens,
         paths,
+        textNotes,
         ballStartId: null,
         selectedIds: [],
         past: [],
@@ -493,7 +551,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   beginHistory: () =>
     set((s) => ({
-      past: [...s.past.slice(-49), snap({ tokens: s.tokens, paths: s.paths })],
+      past: [...s.past.slice(-49), snap({ tokens: s.tokens, paths: s.paths, textNotes: s.textNotes })],
       future: [],
       typeBarFor: null,
       // any edit returns the play to rest so the editor always shows true positions
@@ -501,35 +559,39 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     })),
 
   undo: () => {
-    const { past, future, tokens, paths, selectedIds } = get()
+    const { past, future, tokens, paths, textNotes, selectedIds } = get()
     if (past.length === 0) return
     const prev = past[past.length - 1]
     set({
       tokens: prev.tokens,
       paths: prev.paths,
+      textNotes: prev.textNotes,
       past: past.slice(0, -1),
-      future: [snap({ tokens, paths }), ...future],
+      future: [snap({ tokens, paths, textNotes }), ...future],
       selectedIds: selectedIds.filter(
         (id) =>
           prev.tokens.some((t) => t.id === id) ||
-          prev.paths.some((p) => p.id === id),
+          prev.paths.some((p) => p.id === id) ||
+          prev.textNotes.some((n) => n.id === id),
       ),
     })
   },
 
   redo: () => {
-    const { past, future, tokens, paths, selectedIds } = get()
+    const { past, future, tokens, paths, textNotes, selectedIds } = get()
     if (future.length === 0) return
     const next = future[0]
     set({
       tokens: next.tokens,
       paths: next.paths,
-      past: [...past, snap({ tokens, paths })],
+      textNotes: next.textNotes,
+      past: [...past, snap({ tokens, paths, textNotes })],
       future: future.slice(1),
       selectedIds: selectedIds.filter(
         (id) =>
           next.tokens.some((t) => t.id === id) ||
-          next.paths.some((p) => p.id === id),
+          next.paths.some((p) => p.id === id) ||
+          next.textNotes.some((n) => n.id === id),
       ),
     })
   },

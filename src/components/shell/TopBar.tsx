@@ -206,7 +206,7 @@ export function TopBar() {
                 hint: 'static, hi-res',
                 run: async () => {
                   const st = useEditorStore.getState()
-                  await exportPNG({ name: st.playName, tokens: st.tokens, paths: st.paths, ballStartId: st.ballStartId, losSpec: st.losSpec, fieldTheme, ruleset: st.ruleset })
+                  await exportPNG({ name: st.playName, tokens: st.tokens, paths: st.paths, textNotes: st.textNotes, ballStartId: st.ballStartId, losSpec: st.losSpec, fieldTheme, ruleset: st.ruleset })
                 },
               },
               {
@@ -215,7 +215,7 @@ export function TopBar() {
                 run: async () => {
                   const st = useEditorStore.getState()
                   await exportWebM(
-                    { name: st.playName, tokens: st.tokens, paths: st.paths, ballStartId: st.ballStartId, losSpec: st.losSpec, fieldTheme, ruleset: st.ruleset },
+                    { name: st.playName, tokens: st.tokens, paths: st.paths, textNotes: st.textNotes, ballStartId: st.ballStartId, losSpec: st.losSpec, fieldTheme, ruleset: st.ruleset },
                     () => setExportBusy('Recording…'),
                   )
                 },

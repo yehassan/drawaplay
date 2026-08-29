@@ -19,6 +19,7 @@ export function usePersistence(): void {
           name: rec.name,
           tokens: rec.tokens,
           paths: rec.paths,
+          textNotes: (rec.textNotes as never) ?? [],
           los: rec.los ?? null,
           fieldTheme: (rec.fieldTheme as never) ?? undefined,
           ruleset: (rec.ruleset as never) ?? undefined,
@@ -48,6 +49,7 @@ export function usePersistence(): void {
             name: st.playName,
             tokens: st.tokens.map((t) => ({ ...t })),
             paths: st.paths.map((p) => ({ ...p })),
+            textNotes: st.textNotes.map((n) => ({ ...n })),
             ballStartId: st.ballStartId,
             los: st.losSpec ?? undefined,
             fieldTheme: st.fieldTheme,
@@ -65,6 +67,7 @@ export function usePersistence(): void {
         name: st.playName,
         tokens: st.tokens.map((t) => ({ ...t })),
         paths: st.paths.map((p) => ({ ...p })),
+        textNotes: st.textNotes.map((n) => ({ ...n })),
         ballStartId: st.ballStartId,
         los: st.losSpec ?? undefined,
         fieldTheme: st.fieldTheme,
@@ -87,6 +90,7 @@ export function usePersistence(): void {
       if (
         s.tokens === prev.tokens &&
         s.paths === prev.paths &&
+        s.textNotes === prev.textNotes &&
         s.playName === prev.playName &&
         s.ballStartId === prev.ballStartId &&
         s.fieldTheme === prev.fieldTheme &&

@@ -3,12 +3,13 @@ import { drawFrame } from './exportCanvas'
 import { timelineDuration } from './timing'
 import type { LosSpecLike } from './los'
 import type { Ruleset } from './field'
-import type { PlayPath, Token } from '../stores/editorStore'
+import type { PlayPath, TextNote, Token } from '../stores/editorStore'
 
 export interface ExportDoc {
   name: string
   tokens: Token[]
   paths: PlayPath[]
+  textNotes?: TextNote[]
   ballStartId: string | null
   losSpec?: LosSpecLike | null
   fieldTheme?: 'green' | 'white' | 'black'
@@ -50,13 +51,13 @@ export function pickVideoMime(
 /** Static hi-res PNG of the diagram, framed tightly on the play. */
 export async function exportPNG(doc: ExportDoc): Promise<void> {
   const scale = 24
-  const view = fitView(doc.tokens, doc.paths, { tMs: 0, playing: false, ballStartId: doc.ballStartId })
+  const view = fitView(doc.tokens, doc.paths, { tMs: 0, playing: false, ballStartId: doc.ballStartId }, 5, 20, doc.textNotes ?? [])
   const canvas = document.createElement('canvas')
   canvas.width = Math.round(view.w * scale)
   canvas.height = Math.round(view.h * scale)
   const ctx = canvas.getContext('2d')!
   const scene = computeScene(doc.tokens, doc.paths, { tMs: 0, playing: false, ballStartId: doc.ballStartId })
-  drawFrame(ctx, { ...scene, tokens: doc.tokens }, { scale, losSpec: doc.losSpec ?? null, view, theme: doc.fieldTheme, ruleset: doc.ruleset })
+  drawFrame(ctx, { ...scene, tokens: doc.tokens, textNotes: doc.textNotes }, { scale, losSpec: doc.losSpec ?? null, view, theme: doc.fieldTheme, ruleset: doc.ruleset })
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
   if (!blob) throw new Error('PNG export failed')
   download(blob, `${safeFilename(doc.name)}.png`)
@@ -76,7 +77,7 @@ export async function exportWebM(
     throw new Error('Video recording is not supported in this browser')
   }
 
-  const baseView = fitView(doc.tokens, doc.paths, { tMs: 0, playing: true, ballStartId: doc.ballStartId })
+  const baseView = fitView(doc.tokens, doc.paths, { tMs: 0, playing: true, ballStartId: doc.ballStartId }, 5, 20, doc.textNotes ?? [])
   let scale = VIDEO_SCALE
   const longest = Math.max(baseView.w, baseView.h)
   if (longest * scale > VIDEO_MAX_DIM) {
@@ -100,7 +101,7 @@ export async function exportWebM(
   if (doc.paths.length === 0) throw new Error('Nothing to record — draw some routes first')
 
   const scene0 = computeScene(doc.tokens, doc.paths, { tMs: 0, playing: true, ballStartId: doc.ballStartId })
-  drawFrame(ctx, { ...scene0, tokens: doc.tokens }, { scale, losSpec: doc.losSpec ?? null, view, theme: doc.fieldTheme, ruleset: doc.ruleset })
+  drawFrame(ctx, { ...scene0, tokens: doc.tokens, textNotes: doc.textNotes }, { scale, losSpec: doc.losSpec ?? null, view, theme: doc.fieldTheme, ruleset: doc.ruleset })
 
   let stream: MediaStream
   let track: MediaStreamTrack
@@ -135,7 +136,7 @@ export async function exportWebM(
 
   const drawAt = (t: number): void => {
     const scene = computeScene(doc.tokens, doc.paths, { tMs: t, playing: true, ballStartId: doc.ballStartId })
-    drawFrame(ctx, { ...scene, tokens: doc.tokens }, { scale, losSpec: doc.losSpec ?? null, view, theme: doc.fieldTheme, ruleset: doc.ruleset })
+    drawFrame(ctx, { ...scene, tokens: doc.tokens, textNotes: doc.textNotes }, { scale, losSpec: doc.losSpec ?? null, view, theme: doc.fieldTheme, ruleset: doc.ruleset })
   }
 
   if (canRequestFrame) {

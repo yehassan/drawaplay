@@ -27,10 +27,12 @@ import { TypeSample } from '../ui/TypeSample'
 import { BallView } from './BallView'
 import { Field } from './Field'
 import { PathView } from './PathView'
+import { TextView } from './TextView'
 import { TokenView } from './TokenView'
 
 type Session =
   | { type: 'drag'; start: Pt; origins: Map<string, Pt>; began: boolean }
+  | { type: 'textDrag'; id: string; start: Pt; origin: Pt; began: boolean }
   | { type: 'marquee'; x0: number; y0: number }
   | { type: 'pan'; sx: number; sy: number; cam: Camera }
   | { type: 'draw'; raw: Pt[]; lastSx: number; lastSy: number; moved: boolean }
@@ -64,6 +66,7 @@ export function FieldCanvas() {
   }
 
   const tokens = useEditorStore((s) => s.tokens)
+  const textNotes = useEditorStore((s) => s.textNotes)
   const selectedIds = useEditorStore((s) => s.selectedIds)
   const tool = useEditorStore((s) => s.tool)
   const camera = useEditorStore((s) => s.camera)
@@ -160,7 +163,7 @@ export function FieldCanvas() {
 
   const fitToPlay = () => {
     const st = useEditorStore.getState()
-    const pts = st.tokens.map((t) => ({ x: t.x, y: t.y }))
+    const pts = [...st.tokens.map((t) => ({ x: t.x, y: t.y })), ...st.textNotes.map((n) => ({ x: n.x, y: n.y }))]
     if (pts.length === 0) {
       st.setCamera(defaultCamera(size.w, size.h))
       return
@@ -219,6 +222,18 @@ export function FieldCanvas() {
     return () => el.removeEventListener('wheel', onWheel)
   }, [size])
 
+  const onTextPointerDown = (e: ReactPointerEvent<SVGGElement>, id: string) => {
+    e.stopPropagation()
+    const st = useEditorStore.getState()
+    if (!st.selectedIds.includes(id)) st.select([id])
+    const note = st.textNotes.find((n) => n.id === id)
+    if (!note) return
+    const l = toLocal(e)
+    const f = screenToField(st.camera, l.x, l.y)
+    sessionRef.current = { type: 'textDrag', id, start: f, origin: { x: note.x, y: note.y }, began: false }
+    svgRef.current?.setPointerCapture(e.pointerId)
+  }
+
   const onTokenPointerDown = (e: ReactPointerEvent<SVGGElement>, id: string) => {
     const st = useEditorStore.getState()
 
@@ -268,6 +283,14 @@ export function FieldCanvas() {
       sessionRef.current = { type: 'draw', raw: [f], lastSx: l.x, lastSy: l.y, moved: false }
       setLiveStroke({ raw: [f], d: '' })
       svgRef.current?.setPointerCapture(e.pointerId)
+      return
+    }
+    if (st.tool === 'text' && e.button === 0) {
+      const l = toLocal(e)
+      const f = screenToField(st.camera, l.x, l.y)
+      const id = st.addTextNote({ x: snap(f.x), y: snap(f.y), text: 'Text' })
+      // keep text tool armed; selection is set inside addTextNote
+      void id
       return
     }
     if (st.tool === 'select' && e.button === 0) {
@@ -356,6 +379,21 @@ export function FieldCanvas() {
       return
     }
 
+    if (s.type === 'textDrag') {
+      const l = toLocal(e)
+      const cur = screenToField(st.camera, l.x, l.y)
+      const dx = cur.x - s.start.x
+      const dy = cur.y - s.start.y
+      if (!s.began && (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01)) {
+        st.beginHistory()
+        s.began = true
+      }
+      const nx = snap(s.origin.x + dx)
+      const ny = snap(s.origin.y + dy)
+      st.moveTextNotesLive({ [s.id]: { x: nx, y: ny } })
+      return
+    }
+
     // drag tokens with grid snap + alignment guides
     const l = toLocal(e)
     const cur = screenToField(st.camera, l.x, l.y)
@@ -415,9 +453,9 @@ export function FieldCanvas() {
       } else {
         const a = screenToField(st.camera, Math.min(s.x0, l.x), Math.min(s.y0, l.y))
         const b = screenToField(st.camera, Math.max(s.x0, l.x), Math.max(s.y0, l.y))
-        st.select(
-          st.tokens.filter((t) => t.x >= a.x && t.x <= b.x && t.y >= a.y && t.y <= b.y).map((t) => t.id),
-        )
+        const tIds = st.tokens.filter((t) => t.x >= a.x && t.x <= b.x && t.y >= a.y && t.y <= b.y).map((t) => t.id)
+        const nIds = st.textNotes.filter((n) => n.x >= a.x && n.x <= b.x && n.y >= a.y && n.y <= b.y).map((n) => n.id)
+        st.select([...tIds, ...nIds])
       }
       setMarquee(null)
     }
@@ -457,6 +495,19 @@ export function FieldCanvas() {
     }
     if (bestTok) {
       st.select([bestTok])
+      return
+    }
+    let bestNote: string | null = null
+    let bestNd = 1.2
+    for (const n of st.textNotes) {
+      const d = dist(f, { x: n.x, y: n.y })
+      if (d < bestNd) {
+        bestNd = d
+        bestNote = n.id
+      }
+    }
+    if (bestNote) {
+      st.select([bestNote])
       return
     }
     let bestPath: string | null = null
@@ -675,6 +726,14 @@ export function FieldCanvas() {
               selected={selectedIds.includes(t.id)}
               posOverride={animActive ? scene.tokenPositions.get(t.id) : undefined}
               onPointerDown={onTokenPointerDown}
+            />
+          ))}
+          {textNotes.map((n) => (
+            <TextView
+              key={n.id}
+              note={n}
+              selected={selectedIds.includes(n.id)}
+              onPointerDown={onTextPointerDown}
             />
           ))}
 

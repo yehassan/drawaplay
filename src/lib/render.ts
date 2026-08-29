@@ -4,7 +4,7 @@ import { ballStateAt, type BallState } from './ball'
 import { PLAYER_DRIVEN } from './pathStyles'
 import type { Pt } from './field'
 
-import type { PlayPath, Token } from '../stores/editorStore'
+import type { PlayPath, TextNote, Token } from '../stores/editorStore'
 
 const FLIGHT_TYPES: ReadonlySet<PlayPath['type']> = new Set(['pass', 'handoff', 'toss', 'snap'])
 
@@ -208,6 +208,7 @@ export function fitView(
   opts: SceneOpts,
   pad = 5,
   minSpan = 20,
+  textNotes: TextNote[] = [],
 ): ViewRect {
   let minX = Infinity
   let minY = Infinity
@@ -221,6 +222,7 @@ export function fitView(
   }
 
   for (const t of tokens) consider(t.x, t.y)
+  for (const n of textNotes) consider(n.x, n.y)
 
   if (paths.length > 0) {
     const D = timelineDuration(paths)

@@ -1,10 +1,11 @@
 import { PATH_STYLES } from './pathStyles'
-import type { PlayPath, Token } from '../stores/editorStore'
+import type { PlayPath, TextNote, Token } from '../stores/editorStore'
 import { paletteFor, type FieldTheme } from './theme'
 
 export interface ThumbPlay {
   tokens: Pick<Token, 'x' | 'y' | 'side'>[]
   paths: Pick<PlayPath, 'points' | 'type'>[]
+  textNotes?: Pick<TextNote, 'x' | 'y' | 'text'>[]
 }
 
 /**
@@ -15,6 +16,7 @@ export function thumbSvg(
   tokens: ThumbPlay['tokens'],
   paths: ThumbPlay['paths'],
   theme: FieldTheme = 'green',
+  textNotes: ThumbPlay['textNotes'] = [],
 ): string {
   const pal = paletteFor(theme)
   const ink = pal.line
@@ -32,6 +34,7 @@ export function thumbSvg(
   }
   for (const t of tokens) consider(t.x, t.y)
   for (const p of paths) for (const pt of p.points) consider(pt.x, pt.y)
+  for (const n of textNotes) consider(n.x, n.y)
 
   if (!Number.isFinite(minX)) {
     minX = 10
@@ -64,6 +67,10 @@ export function thumbSvg(
     parts.push(
       `<circle cx="${t.x.toFixed(1)}" cy="${t.y.toFixed(1)}" r="0.85" fill="#101720" stroke="${ring}" stroke-width="0.22"/>`,
     )
+  }
+  for (const n of textNotes) {
+    const txt = (n.text || 'Text').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    parts.push(`<text x="${n.x.toFixed(1)}" y="${n.y.toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="1.8" font-family="Oswald" font-weight="700" fill="${ink}">${txt}</text>`)
   }
   parts.push('</svg>')
   return parts.join('')

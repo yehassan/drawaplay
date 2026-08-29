@@ -5,7 +5,7 @@ import { paletteFor, styleColor, type FieldTheme } from './theme'
 import type { Scene } from './render'
 import type { LosSpecLike } from './los'
 import type { ViewRect } from './render'
-import type { Token } from '../stores/editorStore'
+import type { TextNote, Token } from '../stores/editorStore'
 
 const CHALK = '#eaf3ea'
 
@@ -15,7 +15,7 @@ export const FIELD_L_YD = 120
 /** Paint the full animated frame for a scene onto a 2D context (scale = px/yd). */
 export function drawFrame(
   ctx: CanvasRenderingContext2D,
-  input: Scene & { tokens: Token[] },
+  input: Scene & { tokens: Token[]; textNotes?: TextNote[] },
   opts: { scale: number; losSpec?: LosSpecLike | null; view?: ViewRect; theme?: FieldTheme; ruleset?: Ruleset },
 ): void {
   const theme: FieldTheme = opts.theme ?? 'green'
@@ -198,6 +198,26 @@ export function drawFrame(
     }
     ctx.globalAlpha = 1
     ctx.setLineDash([])
+  }
+
+  // text notes
+  if (input.textNotes) {
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.font = `700 1.4px Oswald, sans-serif`
+    for (const n of input.textNotes) {
+      if (!n.text) continue
+      ctx.save()
+      ctx.fillStyle = '#0b0e13'
+      ctx.strokeStyle = '#0b0e13'
+      ctx.lineWidth = 0.22
+      ctx.globalAlpha = 0.5
+      ctx.strokeText(n.text, n.x, n.y)
+      ctx.globalAlpha = 1
+      ctx.fillStyle = styleColor(CHALK, theme)
+      ctx.fillText(n.text, n.x, n.y)
+      ctx.restore()
+    }
   }
 
   // tokens

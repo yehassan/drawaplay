@@ -190,7 +190,7 @@ function PlayCard({
       <button type="button" onClick={() => onOpen(rec)} className="block w-full" title="Open play">
         <div
           className="h-36 w-full bg-chrome-900 p-1 [&>svg]:h-full [&>svg]:w-full"
-          dangerouslySetInnerHTML={{ __html: thumbSvg(rec.tokens, rec.paths, (rec.fieldTheme as never) ?? thumbTheme) }}
+          dangerouslySetInnerHTML={{ __html: thumbSvg(rec.tokens, rec.paths, (rec.fieldTheme as never) ?? thumbTheme, (rec.textNotes as never) ?? []) }}
         />
       </button>
 

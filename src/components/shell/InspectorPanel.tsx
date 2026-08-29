@@ -115,6 +115,36 @@ function PathInspector({ pathId }: { pathId: string }) {
   )
 }
 
+function TextInspector({ noteId }: { noteId: string }) {
+  const note = useEditorStore((s) => s.textNotes.find((n) => n.id === noteId))
+  const updateTextNote = useEditorStore((s) => s.updateTextNote)
+  const deleteTextNotes = useEditorStore((s) => s.deleteTextNotes)
+  if (!note) return null
+  return (
+    <>
+      <SectionLabel>Text</SectionLabel>
+      <label className="block text-xs text-chrome-500">
+        Content
+        <input
+          value={note.text}
+          onChange={(e) => updateTextNote(note.id, e.target.value)}
+          placeholder="Text"
+          spellCheck={false}
+          maxLength={24}
+          className="mt-1 w-full rounded-[16px] border border-chrome-700 bg-chrome-850 px-2.5 py-1.5 text-sm font-medium text-chrome-200 outline-none focus:border-accent-400/60"
+        />
+      </label>
+      <button
+        type="button"
+        onClick={() => deleteTextNotes([note.id])}
+        className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-full border border-chrome-700 py-2 text-xs font-medium text-defense-400 transition-colors hover:border-defense-500/50 hover:bg-defense-500/10"
+      >
+        Delete text
+      </button>
+    </>
+  )
+}
+
 function TokenInspector({ tokenId }: { tokenId: string }) {
   const token = useEditorStore((s) => s.tokens.find((t) => t.id === tokenId))
   const tokens = useEditorStore((s) => s.tokens)
@@ -221,6 +251,7 @@ export function InspectorPanel() {
   const selectedIds = useEditorStore((s) => s.selectedIds)
   const tokens = useEditorStore((s) => s.tokens)
   const paths = useEditorStore((s) => s.paths)
+  const textNotes = useEditorStore((s) => s.textNotes)
   const toggleInspector = useEditorStore((s) => s.toggleInspector)
 
   let body: ReactNode
@@ -228,6 +259,8 @@ export function InspectorPanel() {
     body = <TokenInspector tokenId={selectedIds[0]} />
   } else if (selectedIds.length === 1 && paths.some((p) => p.id === selectedIds[0])) {
     body = <PathInspector pathId={selectedIds[0]} />
+  } else if (selectedIds.length === 1 && textNotes.some((n) => n.id === selectedIds[0])) {
+    body = <TextInspector noteId={selectedIds[0]} />
   } else {
     body = <EmptyState count={selectedIds.length} />
   }
