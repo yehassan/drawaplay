@@ -565,14 +565,30 @@ export function FieldCanvas() {
       return best
     }
 
-    const startToken = snapEnd(pts[0])
+    let startToken: Token | null = snapEnd(pts[0])
+    if (!startToken) {
+      // allow starting at the tip of an existing chain (e.g., route after motion)
+      let best: Token | null = null
+      let bestD = radius
+      for (const t of st.tokens) {
+        const chain = st.paths.filter((q) => q.tokenId === t.id && PLAYER_DRIVEN.has(q.type))
+        if (chain.length === 0) continue
+        const tip = chain[chain.length - 1].points[chain[chain.length - 1].points.length - 1]!
+        const d = dist(pts[0], tip)
+        if (d < bestD) {
+          bestD = d
+          best = t
+        }
+      }
+      if (best) startToken = best
+    }
     const endToken = snapEnd(pts[pts.length - 1])
     if (!startToken) {
       showHint('Start routes on a player')
       return
     }
-    // magnetic chaining: start snaps to the player's chain tip, end snaps back
-    // to the chain root — out-and-back motions complete exactly
+    // magnetic chaining: next segment starts where the player's chain ends
+    // (e.g., route after motion starts at motion tip, not original spot)
     const existingChain = st.paths.filter(
       (q) => q.tokenId === startToken.id && PLAYER_DRIVEN.has(q.type),
     )
@@ -584,9 +600,9 @@ export function FieldCanvas() {
       chainRoot = existingChain[0].points[0]
     }
 
-    pts[0] = { x: startToken.x, y: startToken.y }
+    if (chainTip) pts[0] = chainTip
+    else pts[0] = { x: startToken.x, y: startToken.y }
     const type = inferPathType(pts, { startToken, endToken })
-    if (chainTip && dist(pts[0], chainTip) < 2) pts[0] = chainTip
     if (!endToken && chainRoot && dist(pts[pts.length - 1], chainRoot) < 2) {
       pts[pts.length - 1] = chainRoot
     }
