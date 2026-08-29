@@ -4,6 +4,7 @@ import { POSITIONS } from '../../lib/positions'
 import { PATH_STYLES, PATH_TYPE_ORDER, PLAYER_DRIVEN } from '../../lib/pathStyles'
 import { TypeSample } from '../ui/TypeSample'
 import { Icon } from '../ui/icons'
+import { IconButton } from '../ui/IconButton'
 
 const SHORTCUTS: ReadonlyArray<readonly [string, string]> = [
   ['V', 'Select'],
@@ -93,7 +94,7 @@ function PathInspector({ pathId }: { pathId: string }) {
               className={`flex items-center gap-2 rounded-[16px] border px-2.5 py-2 text-xs font-medium transition-colors ${
                 active
                   ? 'border-accent-400/60 bg-accent-surface text-accent-400'
-                  : 'border-chrome-700 bg-chrome-850 text-chrome-300 hover:border-chrome-600 hover:bg-chrome-800'
+                  : 'border-[var(--color-inspector-border)] bg-[var(--color-inspector-unselected)] text-[var(--color-inspector-text)] hover:border-[var(--color-inspector-hover-border)] hover:bg-[var(--color-inspector-hover)]'
               }`}
             >
               <TypeSample type={type} />
@@ -220,6 +221,7 @@ export function InspectorPanel() {
   const selectedIds = useEditorStore((s) => s.selectedIds)
   const tokens = useEditorStore((s) => s.tokens)
   const paths = useEditorStore((s) => s.paths)
+  const toggleInspector = useEditorStore((s) => s.toggleInspector)
 
   let body: ReactNode
   if (selectedIds.length === 1 && tokens.some((t) => t.id === selectedIds[0])) {
@@ -232,9 +234,14 @@ export function InspectorPanel() {
 
   return (
     <aside className="flex w-72 shrink-0 flex-col border-l border-chrome-800 bg-chrome-900">
-      <p className="px-4 pb-2 pt-4 text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
-        Inspector
-      </p>
+      <div className="flex items-center justify-between px-4 pb-2 pt-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
+          Inspector
+        </p>
+        <IconButton label="Collapse inspector" active onClick={toggleInspector} className="!size-7">
+          <Icon name="book" className="size-3.5" />
+        </IconButton>
+      </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-4 pt-0">{body}</div>
     </aside>
   )

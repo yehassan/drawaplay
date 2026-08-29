@@ -111,7 +111,20 @@ export function fitCamera(rect: Rect, vw: number, vh: number): Camera {
 
 /** Empty-canvas default: full field width, ~44yd of length around the LOS area. */
 export function defaultCamera(vw: number, vh: number): Camera {
-  return fitCamera({ x: -2, y: 60, w: FIELD_W + 4, h: 44 }, vw, vh)
+  const rect = { x: -2, y: 60, w: FIELD_W + 4, h: 44 }
+  const raw = Math.min(vw / rect.w, vh / rect.h)
+  // two zoom steps out so the full sideline-to-sideline width stays
+  // comfortably in view even on a 13" laptop with palette + inspector open
+  const zoom = clamp(raw * 0.65, MIN_ZOOM, MAX_ZOOM)
+  return clampCamera(
+    {
+      zoom,
+      tx: vw / 2 - (rect.x + rect.w / 2) * zoom,
+      ty: vh / 2 - (rect.y + rect.h / 2) * zoom,
+    },
+    vw,
+    vh,
+  )
 }
 
 export function bboxOf(pts: Pt[], pad: number): Rect | null {

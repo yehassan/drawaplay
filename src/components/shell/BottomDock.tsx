@@ -178,7 +178,7 @@ export function BottomDock() {
         </button>
 
         <span className="shrink-0 font-mono text-xs tabular-nums text-chrome-400">
-          {fmt(Math.min(tMs, D))} <span className="text-chrome-600">/ {fmt(D)}</span>
+          {fmt(Math.min(tMs, D))} <span className="text-chrome-400">/ {fmt(D)}</span>
         </span>
 
         <div

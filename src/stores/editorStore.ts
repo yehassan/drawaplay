@@ -80,6 +80,7 @@ interface EditorState {
   saveState: 'idle' | 'dirty' | 'saving' | 'saved'
   libraryOpen: boolean
   paletteOpen: boolean
+  inspectorOpen: boolean
   tokens: Token[]
   paths: PlayPath[]
   /** token holding the ball at the snap; null = auto (first handoff, else QB) */
@@ -105,6 +106,7 @@ interface EditorState {
   showTypeBar: (id: string | null) => void
   renamePlay: (name: string) => void
   togglePalette: () => void
+  toggleInspector: () => void
   newPlay: () => void
 
   addToken: (t: Omit<Token, 'id'>) => void
@@ -170,6 +172,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   tool: 'select',
   quickStartOpen: true,
   paletteOpen: true,
+  inspectorOpen: true,
   tokens: [],
   paths: [],
   ballStartId: null,
@@ -233,6 +236,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   showTypeBar: (typeBarFor) => set({ typeBarFor }),
   renamePlay: (playName) => set({ playName }),
   togglePalette: () => set((s) => ({ paletteOpen: !s.paletteOpen })),
+  toggleInspector: () => set((s) => ({ inspectorOpen: !s.inspectorOpen })),
   newPlay: () =>
     set((s) => ({
       playName: 'Untitled Play',

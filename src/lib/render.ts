@@ -81,7 +81,11 @@ export function computeScene(
     }
     let active: PlayPath | null = null
     for (const q of list) {
-      if (q.points.length >= 2 && q.timing.delayMs <= opts.tMs) active = q
+      if (q.points.length >= 2 && q.timing.delayMs <= opts.tMs) {
+        // prefer the most recently started path — fixes late-drawn motion
+        // being picked over the route it precedes (bug #2)
+        if (!active || q.timing.delayMs > active.timing.delayMs) active = q
+      }
     }
     if (!active) {
       tokenPositions.set(t.id, { x: t.x, y: t.y })

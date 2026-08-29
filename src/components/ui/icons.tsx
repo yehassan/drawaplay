@@ -19,6 +19,8 @@ export type IconName =
   | 'gear'
   | 'fit'
   | 'chevron-down'
+  | 'chevron-left'
+  | 'chevron-right'
   | 'theme'
   | 'sun'
   | 'moon'
@@ -76,6 +78,8 @@ const paths: Record<IconName, ReactNode> = {
   ),
   fit: <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />,
   'chevron-down': <path d="m6 9.5 6 6 6-6" />,
+  'chevron-left': <path d="m14.5 6-6 6 6 6" />,
+  'chevron-right': <path d="m9.5 6 6 6-6 6" />,
   theme: (
     <>
       <circle cx="12" cy="12" r="8.5" />

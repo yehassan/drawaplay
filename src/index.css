@@ -17,8 +17,8 @@
   --color-chrome-800: #1a212c;
   --color-chrome-700: #26303f;
   --color-chrome-600: #37435a;
-  --color-chrome-500: #55637a;
-  --color-chrome-400: #8494ab;
+  --color-chrome-500: #e2e2e8;
+  --color-chrome-400: #e2e2e8;
   --color-chrome-300: #aeb9c9;
   --color-chrome-200: #ced7e3;
   --color-chrome-100: #eef2f7;
@@ -45,6 +45,13 @@
   --color-field-800: #175235;
   --color-field-900: #12402a;
   --color-chalk: #eaf3ea;
+
+  /* Inspector button unselected fill — lighter than chrome-850 for line visibility */
+  --color-inspector-unselected: #e8e8ec;
+  --color-inspector-border: #e2e2e8;
+  --color-inspector-hover: #dcdce2;
+  --color-inspector-hover-border: #6a6a74;
+  --color-inspector-text: #2e2e36;
 }
 
 /* Light mode — invert chrome ramp + sienna accent (Steep paper/ink palette) */
@@ -65,6 +72,12 @@
   --color-accent-400: #5d2a1a;
   --color-accent-500: #4a2216;
   --color-accent-600: #3a1a10;
+
+  --color-inspector-unselected: #e8e8ec;
+  --color-inspector-border: #e2e2e8;
+  --color-inspector-hover: #dcdce2;
+  --color-inspector-hover-border: #6a6a74;
+  --color-inspector-text: #2e2e36;
 }
 
 @layer base {

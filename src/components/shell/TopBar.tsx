@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { exportPNG, exportWebM } from '../../lib/exporters'
+import { putPlay, getPlay } from '../../lib/playbook'
 import { ALL_FIELD_THEMES, paletteFor, type FieldTheme } from '../../lib/theme'
 import { ALL_RULESETS } from '../../lib/field'
 import { Icon } from '../ui/icons'
@@ -47,7 +48,11 @@ export function TopBar() {
   const setRuleset = useEditorStore((s) => s.setRuleset)
   const uiTheme = useEditorStore((s) => s.uiTheme)
   const setUITheme = useEditorStore((s) => s.setUITheme)
+  const playId = useEditorStore((s) => s.playId)
+  const loadPlay = useEditorStore((s) => s.loadPlay)
+  const resetPlayIdentity = useEditorStore((s) => s.resetPlayIdentity)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [trashOpen, setTrashOpen] = useState(false)
   const canUndo = useEditorStore((s) => s.past.length > 0)
   const canRedo = useEditorStore((s) => s.future.length > 0)
   const undo = useEditorStore((s) => s.undo)
@@ -248,6 +253,48 @@ export function TopBar() {
         <Icon name="plus" className="size-4" />
         New Play
       </button>
+
+      {playId && (
+        <IconButton label="Trash play" onClick={() => setTrashOpen(true)}>
+          <Icon name="trash" className="size-[18px]" />
+        </IconButton>
+      )}
+
+      {trashOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setTrashOpen(false)}>
+          <div
+            className="rounded-[20px] border border-chrome-700 bg-chrome-900 p-6 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm font-semibold text-chrome-100">Move "{playName}" to trash?</p>
+            <p className="mt-1 text-xs text-chrome-500">You can restore it from the Playbook.</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setTrashOpen(false)}
+                className="rounded-full px-3 py-1.5 text-xs font-medium text-chrome-400 transition-colors hover:bg-chrome-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (playId) {
+                    const rec = await getPlay(playId)
+                    if (rec) await putPlay({ ...rec, deletedAt: Date.now() })
+                  }
+                  setTrashOpen(false)
+                  resetPlayIdentity()
+                  loadPlay({ name: 'Untitled', los: { side: 'ours', n: 25 }, tokens: [], paths: [] })
+                }}
+                className="rounded-full bg-defense-500 px-3 py-1.5 text-xs font-semibold text-chrome-950 transition-colors hover:bg-defense-400"
+              >
+                Trash
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   )
 }

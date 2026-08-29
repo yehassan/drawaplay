@@ -13,6 +13,7 @@ export function QuickStartModal() {
   const [hash, setHash] = useState<Hash>('center')
   const [side, setSide] = useState<'ours' | 'theirs'>('ours')
   const [yardLine, setYardLine] = useState(25)
+  const [yardLineDraft, setYardLineDraft] = useState(String(25))
 
   if (!open) return null
   const def = PERSONNEL.find((p) => p.key === personnel)!
@@ -54,18 +55,22 @@ export function QuickStartModal() {
                   title={p.formation}
                   className={`rounded-[16px] border px-2 py-2 text-center transition-colors ${
                     personnel === p.key
-                      ? 'border-accent-400/70 bg-accent-surface'
+                      ? 'border-accent-400 bg-accent-400'
                       : 'border-chrome-700 bg-chrome-850 hover:border-chrome-600 hover:bg-chrome-800'
                   }`}
                 >
                   <span
                     className={`block font-display text-lg font-semibold leading-none ${
-                      personnel === p.key ? 'text-accent-400' : 'text-chrome-200'
+                      personnel === p.key ? 'text-chrome-950' : 'text-chrome-200'
                     }`}
                   >
                     {p.key}
                   </span>
-                  <span className="mt-1 block text-[9px] leading-tight text-chrome-500">
+                  <span
+                    className={`mt-1 block text-[9px] leading-tight ${
+                      personnel === p.key ? 'text-chrome-950/80' : 'text-chrome-500'
+                    }`}
+                  >
                     {p.rb}RB·{p.te}TE·{p.wr}WR
                   </span>
                 </button>
@@ -96,7 +101,7 @@ export function QuickStartModal() {
                   </button>
                 ))}
               </div>
-              <p className="pt-1.5 text-[11px] text-chrome-600">
+              <p className="pt-1.5 text-[11px] text-chrome-300">
                 QB lines up {underCenter ? '1' : '3'} yards behind the center.
               </p>
             </div>
@@ -143,13 +148,28 @@ export function QuickStartModal() {
                 ))}
               </div>
               <input
-                type="number"
-                min={1}
-                max={50}
-                value={yardLine}
-                onChange={(e) =>
-                  setYardLine(Math.max(1, Math.min(50, Number(e.target.value) || 1)))
-                }
+                type="text"
+                inputMode="numeric"
+                value={yardLineDraft}
+                onChange={(e) => {
+                  const v = e.target.value
+                  if (/^\d*$/.test(v)) {
+                    setYardLineDraft(v)
+                    if (v !== '' && v !== '0') {
+                      const n = Number(v)
+                      if (!Number.isNaN(n)) setYardLine(n)
+                    }
+                  }
+                }}
+                onBlur={() => {
+                  const raw = Number(yardLineDraft)
+                  const clamped = Math.max(1, Math.min(50, Math.round(Number.isNaN(raw) ? yardLine : raw) || 1))
+                  setYardLine(clamped)
+                  setYardLineDraft(String(clamped))
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                }}
                 className="w-20 rounded-[16px] border border-chrome-700 bg-chrome-850 px-3 py-1.5 text-sm font-medium text-chrome-200 outline-none focus:border-accent-400/60"
               />
               <span className="text-xs text-chrome-500">yard line (both sides: 50 = midfield)</span>
@@ -158,15 +178,16 @@ export function QuickStartModal() {
         </div>
 
         <footer className="flex items-center justify-end gap-2 border-t border-chrome-800 px-6 py-4">
-          <span className="mr-auto text-[11px] text-chrome-600">Defense formations arrive later.</span>
           <button
             type="button"
             onClick={() => {
-              const built = buildFormation({ personnel, underCenter, hash, side, yardLine })
+              const raw = Number(yardLineDraft)
+              const n = Math.max(1, Math.min(50, Math.round(Number.isNaN(raw) ? yardLine : raw) || 1))
+              const built = buildFormation({ personnel, underCenter, hash, side, yardLine: n })
               resetPlayIdentity()
               loadPlay({
                 name: built.name,
-                los: { side, n: yardLine },
+                los: { side, n },
                 tokens: built.tokens,
                 paths: [
                   {

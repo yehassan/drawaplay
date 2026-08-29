@@ -139,6 +139,25 @@ export function FieldCanvas() {
     }
   }, [size])
 
+  // keep the field visually centered when the palette (or window) resizes
+  const prevSizeRef = useRef(size)
+  useEffect(() => {
+    if (!initRef.current) return
+    if (size.w === 0 || size.h === 0) return
+    const prev = prevSizeRef.current
+    if (prev.w === 0 || prev.h === 0) {
+      prevSizeRef.current = size
+      return
+    }
+    const dx = (size.w - prev.w) / 2
+    const dy = (size.h - prev.h) / 2
+    if (dx !== 0 || dy !== 0) {
+      const st = useEditorStore.getState()
+      st.setCamera(clampCamera({ ...st.camera, tx: st.camera.tx + dx, ty: st.camera.ty + dy }, size.w, size.h))
+    }
+    prevSizeRef.current = size
+  }, [size])
+
   const fitToPlay = () => {
     const st = useEditorStore.getState()
     const pts = st.tokens.map((t) => ({ x: t.x, y: t.y }))
@@ -151,15 +170,17 @@ export function FieldCanvas() {
     rect.w = Math.max(rect.w, 26)
     rect.y -= Math.max(0, (26 - rect.h) / 2)
     rect.h = Math.max(rect.h, 26)
+    // guarantee the full sideline-to-sideline width stays in view on desktop
+    // (otherwise a narrow formation crops to the hashmarks on a 13" screen)
+    if (rect.w < 53.3 + 4) {
+      const pad = (53.3 + 4 - rect.w) / 2
+      rect.x -= pad
+      rect.w = 53.3 + 4
+    }
     st.setCamera(fitCamera(rect, size.w, size.h))
   }
 
-  // one-shot type bar auto-hides
-  useEffect(() => {
-    if (!typeBarFor) return
-    const h = setTimeout(() => useEditorStore.getState().showTypeBar(null), 3500)
-    return () => clearTimeout(h)
-  }, [typeBarFor])
+  // type bar stays until user selects, clicks outside, or presses Esc
 
   // keyboard: F fits the view to the play
   useEffect(() => {
@@ -230,6 +251,10 @@ export function FieldCanvas() {
 
   const onBackgroundPointerDown = (e: ReactPointerEvent<SVGSVGElement>) => {
     const st = useEditorStore.getState()
+
+    if (st.typeBarFor) {
+      st.showTypeBar(null)
+    }
 
     if (e.button === 1 || st.tool === 'pan') {
       const l = toLocal(e)
@@ -782,7 +807,7 @@ export function FieldCanvas() {
       {/* one-shot type bar */}
       {typeBarActive && typeBarTip && (
         <div
-          className="absolute z-20 flex -translate-x-1/2 gap-0.5 rounded-[16px] border border-chrome-700 bg-chrome-900/95 p-1 shadow-[0_0_0_1px_rgba(4,23,43,0.05),0_8px_40px_0px_rgba(0,0,0,0.1)] backdrop-blur"
+          className="absolute z-20 flex -translate-x-1/2 gap-0.5 rounded-[16px] border border-[var(--color-inspector-border)] bg-[var(--color-inspector-unselected)] p-1 shadow-[0_0_0_1px_rgba(4,23,43,0.05),0_8px_40px_0px_rgba(0,0,0,0.1)] backdrop-blur"
           style={{ left: typeBarTip.x * camera.zoom + camera.tx, top: typeBarTip.y * camera.zoom + camera.ty - 14 }}
         >
           {PATH_TYPE_ORDER.map((t, i) => {
@@ -797,14 +822,14 @@ export function FieldCanvas() {
                   showTypeBar(null)
                 }}
                 className={`flex w-[52px] flex-col items-center gap-0.5 rounded-[12px] px-1 py-1 transition-colors ${
-                  active ? 'bg-accent-surface ring-1 ring-accent-400' : 'hover:bg-chrome-800'
+                  active ? 'bg-accent-400 text-chrome-950' : 'text-[var(--color-inspector-text)] hover:bg-[var(--color-inspector-hover)]'
                 }`}
               >
                 <TypeSample type={t} />
-                <span className="text-[8px] font-semibold uppercase leading-none tracking-tight text-chrome-400">
+                <span className="text-[8px] font-semibold uppercase leading-none tracking-tight">
                   {PATH_STYLES[t].label}
                 </span>
-                <span className="text-[8px] font-bold leading-none text-chrome-600">{i + 1}</span>
+                <span className="text-[8px] font-bold leading-none">{i + 1}</span>
               </button>
             )
           })}
