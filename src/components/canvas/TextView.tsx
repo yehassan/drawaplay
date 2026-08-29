@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState } from 'react'
 import type { TextNote } from '../../stores/editorStore'
 import { useEditorStore } from '../../stores/editorStore'
 import { paletteFor } from '../../lib/theme'
@@ -6,82 +5,27 @@ import { paletteFor } from '../../lib/theme'
 export function TextView({
   note,
   selected,
-  autoEdit,
   onPointerDown,
-  onEditDone,
+  onDoubleClick,
 }: {
   note: TextNote
   selected: boolean
-  autoEdit?: boolean
   onPointerDown: (e: React.PointerEvent<SVGGElement>, id: string) => void
-  onEditDone?: () => void
+  onDoubleClick: (id: string) => void
 }) {
-  const updateTextNote = useEditorStore((s) => s.updateTextNote)
   const fieldTheme = useEditorStore((s) => s.fieldTheme)
   const pal = paletteFor(fieldTheme)
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(note.text)
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    if (autoEdit) setEditing(true)
-  }, [autoEdit])
-
-  useEffect(() => setDraft(note.text), [note.text])
-  useEffect(() => {
-    if (editing) {
-      inputRef.current?.focus()
-      inputRef.current?.select()
-    }
-  }, [editing])
-
-  const commit = () => {
-    const t = draft.trim()
-    if (t && t !== note.text) updateTextNote(note.id, t)
-    else if (!t) updateTextNote(note.id, '')
-    setEditing(false)
-    onEditDone?.()
-  }
-
-  const cancel = () => {
-    setDraft(note.text)
-    setEditing(false)
-    onEditDone?.()
-  }
 
   // approx text width in field yards for hit area / selection outline
   const fontSize = 1.4
   const estW = Math.max(2.5, note.text.length * fontSize * 0.55 + 0.8)
   const estH = fontSize * 1.6
 
-  if (editing) {
-    return (
-      <g transform={`translate(${note.x} ${note.y})`}>
-        <foreignObject x={-estW / 2} y={-estH / 2} width={estW} height={estH}>
-          <input
-            ref={inputRef}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') commit()
-              if (e.key === 'Escape') cancel()
-            }}
-            onBlur={commit}
-            placeholder="Text"
-            maxLength={24}
-            className="h-full w-full rounded-[8px] border border-accent-400/60 bg-chrome-850 px-1 text-center text-sm text-chrome-200 outline-none"
-            style={{ fontFamily: 'var(--font-display)' }}
-          />
-        </foreignObject>
-      </g>
-    )
-  }
-
   const isPlaceholder = !note.text
   return (
     <g
       onPointerDown={(e) => onPointerDown(e, note.id)}
-      onDoubleClick={() => setEditing(true)}
+      onDoubleClick={() => onDoubleClick(note.id)}
       style={{ cursor: selected ? 'grab' : 'pointer' }}
     >
       <rect

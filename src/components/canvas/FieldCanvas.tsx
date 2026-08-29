@@ -56,7 +56,8 @@ export function FieldCanvas() {
   const [marquee, setMarquee] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
   const [guides, setGuides] = useState<{ xs: number[]; ys: number[] }>({ xs: [], ys: [] })
   const [liveStroke, setLiveStroke] = useState<{ raw: Pt[]; d: string } | null>(null)
-  const [justCreatedId, setJustCreatedId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editDraft, setEditDraft] = useState('Text')
   const [hint, setHint] = useState<string | null>(null)
   const hintTimer = useRef<number | undefined>(undefined)
 
@@ -225,6 +226,10 @@ export function FieldCanvas() {
 
   const onTextPointerDown = (e: ReactPointerEvent<SVGGElement>, id: string) => {
     e.stopPropagation()
+    if (editingId) {
+      setEditingId(null)
+      return
+    }
     const st = useEditorStore.getState()
     if (!st.selectedIds.includes(id)) st.select([id])
     const note = st.textNotes.find((n) => n.id === id)
@@ -287,10 +292,15 @@ export function FieldCanvas() {
       return
     }
     if (st.tool === 'text' && e.button === 0) {
+      if (editingId) {
+        setEditingId(null)
+        return
+      }
       const l = toLocal(e)
       const f = screenToField(st.camera, l.x, l.y)
       const id = st.addTextNote({ x: snap(f.x), y: snap(f.y), text: 'Text' })
-      setJustCreatedId(id)
+      setEditingId(id)
+      setEditDraft('Text')
       return
     }
     if (st.tool === 'select' && e.button === 0) {
@@ -739,16 +749,23 @@ export function FieldCanvas() {
               onPointerDown={onTokenPointerDown}
             />
           ))}
-          {textNotes.map((n) => (
-            <TextView
-              key={n.id}
-              note={n}
-              selected={selectedIds.includes(n.id)}
-              autoEdit={justCreatedId === n.id}
-              onPointerDown={onTextPointerDown}
-              onEditDone={() => setJustCreatedId((cur) => (cur === n.id ? null : cur))}
-            />
-          ))}
+          {textNotes.map((n) =>
+            editingId === n.id ? null : (
+              <TextView
+                key={n.id}
+                note={n}
+                selected={selectedIds.includes(n.id)}
+                onPointerDown={onTextPointerDown}
+                onDoubleClick={(id) => {
+                  const note = textNotes.find((x) => x.id === id)
+                  if (note) {
+                    setEditingId(id)
+                    setEditDraft(note.text)
+                  }
+                }}
+              />
+            ),
+          )}
 
     
         {/* line-of-scrimmage marker (from quickstart metadata) */}
@@ -875,6 +892,41 @@ export function FieldCanvas() {
           </span>
         </div>
       )}
+
+      {editingId &&
+        (() => {
+          const note = textNotes.find((n) => n.id === editingId)
+          if (!note) return null
+          const sx = note.x * camera.zoom + camera.tx
+          const sy = note.y * camera.zoom + camera.ty
+          const commit = () => {
+            const t = editDraft.trim()
+            if (t !== note.text) useEditorStore.getState().updateTextNote(note.id, t)
+            setEditingId(null)
+          }
+          const cancel = () => setEditingId(null)
+          return (
+            <div
+              className="absolute z-20 -translate-x-1/2 -translate-y-1/2"
+              style={{ left: sx, top: sy }}
+            >
+              <input
+                autoFocus
+                value={editDraft}
+                onChange={(e) => setEditDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') commit()
+                  if (e.key === 'Escape') cancel()
+                }}
+                onBlur={commit}
+                placeholder="Text"
+                maxLength={24}
+                className="w-36 rounded-[8px] border border-accent-400/60 bg-chrome-850 px-2 py-1 text-center text-sm text-chrome-200 outline-none"
+                style={{ fontFamily: 'var(--font-display)' }}
+              />
+            </div>
+          )
+        })()}
 
       {/* one-shot type bar */}
       {typeBarActive && typeBarTip && (
