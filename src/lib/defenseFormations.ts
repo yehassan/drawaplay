@@ -44,8 +44,9 @@ export interface BuiltDefense {
  *
  * LB/DB numbers are frame-1 medians from bdbtrackingdata/week1.csv
  * (2018 tracking, 1034 plays): LB depth 3.5 / |lat| 3.5, CB depth 4.2 /
- * |lat| 12.6, S depth 10.4 / |lat| 6.1. DL is synthetic (line play is
- * untracked in that file) — standard 4-man front at 0.8yd.
+ * |lat| 12.6, S depth 10.4 / |lat| 6.1; nickel (innermost CB) depth 2.8 /
+ * |lat| 9.1. DL is synthetic (line play is untracked in that file) —
+ * standard 4-man front at 0.8yd.
  */
 export function buildDefenseFormation(spec: DefenseSpec): BuiltDefense {
   const { front, shell, hash, side, yardLine } = spec
@@ -78,8 +79,9 @@ export function buildDefenseFormation(spec: DefenseSpec): BuiltDefense {
       // outside corners (BDB median depth 4.2 / |lat| 12.6)
       tok('CB1', 'CB', -12.6, 4.2)
       tok('CB2', 'CB', 12.6, 4.2)
-      // nickel back over the slot
-      tok('NB', 'CB', 6, 3)
+      // nickel over the slot (BDB innermost-CB median depth 2.8 / |lat| 9.1 —
+      // ~1yd in front of the LB level, not on it)
+      tok('NB', 'CB', 9, 2.5)
       if (shell === '1-high') {
         // box safety + single-high (BDB 1-deep: ~7yd box / ~12.8yd high)
         tok('SS', 'S', -6, 7)
