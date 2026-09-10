@@ -15,6 +15,7 @@ export interface DefenseFrontDef {
 export const DEFENSE_FRONTS: DefenseFrontDef[] = [
   { key: 'nickel', dl: 4, lb: 2, cb: 3, s: 2, formation: 'Nickel 4-2-5' },
   { key: '34', dl: 3, lb: 4, cb: 2, s: 2, formation: 'Base 3-4' },
+  { key: 'dime', dl: 4, lb: 1, cb: 3, s: 3, formation: 'Dime 4-1-6' },
 ]
 
 export const DEFENSE_SHELLS: ReadonlyArray<{ key: Shell; label: string; hint: string }> = [
@@ -66,23 +67,42 @@ export function buildDefenseFormation(spec: DefenseSpec): BuiltDefense {
     })
   }
 
-  /** safety shell shared by every front */
+  /** safety shell shared by every front; dime adds a third safety */
   const shells = (
     t: (id: string, pos: Token['pos'], dx: number, depth: number) => void,
     sh: Shell,
+    dime = false,
   ): void => {
     if (sh === '1-high') {
       // box safety + single-high (BDB 1-deep: ~7yd box / ~12.8yd high)
       t('SS', 'S', -6, 7)
       t('FS', 'S', 4, 12.5)
+      // dime (BDB 4-1-6, n=39): third safety deep middle (~14yd)
+      if (dime) t('DIME', 'S', 0, 14)
     } else {
       // two-high shell (BDB median depth 10.4 / |lat| 6.1)
       t('SS', 'S', -6, 10.5)
       t('FS', 'S', 6, 10.5)
+      // dime: third safety over the top (~13.5yd)
+      if (dime) t('DIME', 'S', 0, 13.5)
     }
   }
 
   switch (front) {
+    case 'dime': {
+      // dime 4-1-6 (BDB 3CB+1LB+3S plays, n=39): lone MIKE at
+      // depth 4.5, safeties stack shallow/mid/deep (e.g. 4/10.5/13.5)
+      tok('DL1', 'DL', -6.5, 0.8)
+      tok('DL2', 'DL', -2.2, 0.8)
+      tok('DL3', 'DL', 2.2, 0.8)
+      tok('DL4', 'DL', 6.5, 0.8)
+      tok('MIKE', 'LB', 0, 4.5)
+      tok('CB1', 'CB', -12.6, 4.2)
+      tok('CB2', 'CB', 12.6, 4.2)
+      tok('NB', 'CB', 9, 2.5)
+      shells(tok, shell, true)
+      break
+    }
     case '34': {
       // 3-4 base (BDB 4LB+2CB+2S plays, n=32): edge OLBs up on the
       // line (median depth 1.3 / |lat| 6.3), inside backers at

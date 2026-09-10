@@ -82,8 +82,7 @@ describe('nickel front', () => {
   })
 })
 
-describe('3-4 front', () => {
-  it('declares 3-4-4 counts', () => {
+describe('3-4 front', () => {  it('declares 3-4-4 counts', () => {
     const def = DEFENSE_FRONTS.find((f) => f.key === '34')!
     expect([def.dl, def.lb, def.cb, def.s]).toEqual([3, 4, 2, 2])
   })
@@ -127,6 +126,53 @@ describe('3-4 front', () => {
           const b = f.tokens[j]
           const d = Math.hypot(a.x - b.x, a.y - b.y)
           expect(d, `${hash} ${a.id}↔${b.id}`).toBeGreaterThanOrEqual(1.5)
+        }
+      }
+    }
+  })
+})
+
+describe('dime front', () => {
+  it('declares 4-1-6 counts', () => {
+    const def = DEFENSE_FRONTS.find((f) => f.key === 'dime')!
+    expect([def.dl, def.lb, def.cb, def.s]).toEqual([4, 1, 3, 3])
+  })
+
+  it('stacks three safeties shallow/mid/deep (BDB n=39)', () => {
+    for (const shell of ['1-high', '2-high'] as Shell[]) {
+      const f = buildDefenseFormation({ front: 'dime', shell, hash: 'center', side: 'ours', yardLine: 25 })
+      expect(f.tokens).toHaveLength(11)
+      const ly = losY('ours', 25)
+      const at = (id: string) => f.tokens.find((t) => t.id === id)!
+      const depth = (id: string) => ly - at(id).y
+      if (shell === '1-high') {
+        // box + high + over-the-top, matching [~4, ~10.5, ~13.5] pattern
+        expect(depth('SS')).toBeLessThanOrEqual(7)
+        expect(depth('DIME')).toBeGreaterThanOrEqual(12.5)
+        expect(depth('SS')).toBeLessThan(depth('FS'))
+        expect(depth('FS')).toBeLessThan(depth('DIME'))
+      } else {
+        // two-high pair + third safety over the top
+        expect(depth('SS')).toBeCloseTo(10.5, 1)
+        expect(depth('FS')).toBeCloseTo(10.5, 1)
+        expect(depth('DIME')).toBeGreaterThan(depth('SS'))
+      }
+      // lone MIKE near the LB level
+      expect(depth('MIKE'), `${shell} mike`).toBeCloseTo(4.5, 1)
+    }
+  })
+
+  it('no two dime defenders overlap across hashes and shells', () => {
+    for (const shell of ['1-high', '2-high'] as Shell[]) {
+      for (const hash of ['left', 'center', 'right'] as const) {
+        const f = buildDefenseFormation({ front: 'dime', shell, hash, side: 'ours', yardLine: 25 })
+        for (let i = 0; i < f.tokens.length; i++) {
+          for (let j = i + 1; j < f.tokens.length; j++) {
+            const a = f.tokens[i]
+            const b = f.tokens[j]
+            const d = Math.hypot(a.x - b.x, a.y - b.y)
+            expect(d, `${shell} ${hash} ${a.id}↔${b.id}`).toBeGreaterThanOrEqual(1.5)
+          }
         }
       }
     }
