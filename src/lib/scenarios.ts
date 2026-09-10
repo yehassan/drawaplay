@@ -207,6 +207,24 @@ export const SCENARIOS: Scenario[] = [
       ],
     ),
   },
+  {
+    name: 'BDB: Julio hitch vs Mills (real tracking)',
+    description: '2018 week-1 NFL tracking (ATL@PHI): hitch, bail coverage, real ball arc. Timing re-derived by the app.',
+    build: build(
+      'BDB Hitch',
+      [
+        T('QB', 'offense', 'QB', 26.7, 91.7),
+        T('WR1', 'offense', 'WR', 44.1, 91.4),
+        T('CB1', 'defense', 'CB', 43.4, 83.9),
+      ],
+      [
+        P('QB', 'drop', [[26.7, 91.7], [26.7, 92.1], [26.5, 93.9], [26.4, 95.9], [26.7, 96.5], [27.1, 96.2], [27.7, 96.2]]),
+        P('WR1', 'route', [[44.1, 91.4], [44.1, 91.0], [44.0, 88.4], [44.1, 86.4], [44.5, 82.4], [44.8, 81.0], [45.9, 80.2], [47.9, 81.1], [49.2, 81.5]]),
+        P('CB1', 'route', [[43.4, 83.9], [43.5, 83.8], [43.8, 82.6], [44.3, 80.1], [44.6, 78.5], [44.9, 77.0], [45.4, 74.8], [47.1, 74.4], [48.4, 74.9]]),
+        P('QB', 'pass', [[27.0, 96.9], [29.4, 95.7], [33.9, 92.2], [37.8, 89.4], [41.5, 86.7], [44.9, 84.3]], 'WR1'),
+      ],
+    ),
+  },
 ]
 
 /** convenience for the picker */
