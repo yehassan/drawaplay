@@ -133,32 +133,23 @@ describe('3-4 front', () => {  it('declares 3-4-4 counts', () => {
 })
 
 describe('dime front', () => {
-  it('declares 4-1-6 counts', () => {
+  it('declares textbook 4-1-6 counts (4 corners + 2 safeties)', () => {
     const def = DEFENSE_FRONTS.find((f) => f.key === 'dime')!
-    expect([def.dl, def.lb, def.cb, def.s]).toEqual([4, 1, 3, 3])
+    expect([def.dl, def.lb, def.cb, def.s]).toEqual([4, 1, 4, 2])
   })
 
-  it('stacks three safeties shallow/mid/deep (BDB n=39)', () => {
+  it('dimeback mirrors the nickel over the opposite slot', () => {
     for (const shell of ['1-high', '2-high'] as Shell[]) {
       const f = buildDefenseFormation({ front: 'dime', shell, hash: 'center', side: 'ours', yardLine: 25 })
       expect(f.tokens).toHaveLength(11)
       const ly = losY('ours', 25)
       const at = (id: string) => f.tokens.find((t) => t.id === id)!
-      const depth = (id: string) => ly - at(id).y
-      if (shell === '1-high') {
-        // box + high + over-the-top, matching [~4, ~10.5, ~13.5] pattern
-        expect(depth('SS')).toBeLessThanOrEqual(7)
-        expect(depth('DIME')).toBeGreaterThanOrEqual(12.5)
-        expect(depth('SS')).toBeLessThan(depth('FS'))
-        expect(depth('FS')).toBeLessThan(depth('DIME'))
-      } else {
-        // two-high pair + third safety over the top
-        expect(depth('SS')).toBeCloseTo(10.5, 1)
-        expect(depth('FS')).toBeCloseTo(10.5, 1)
-        expect(depth('DIME')).toBeGreaterThan(depth('SS'))
-      }
-      // lone MIKE near the LB level
-      expect(depth('MIKE'), `${shell} mike`).toBeCloseTo(4.5, 1)
+      expect(ly - at('DIME').y, `${shell} dime depth`).toBeCloseTo(2.5, 1)
+      expect(at('DIME').x, `${shell} dime lat`).toBeCloseTo(26.65 - 9, 1)
+      expect(ly - at('MIKE').y, `${shell} mike`).toBeCloseTo(4.5, 1)
+      // standard two-safety shell, same as nickel
+      expect(ly - at('SS').y).toBeGreaterThan(0)
+      expect(ly - at('FS').y).toBeGreaterThan(0)
     }
   })
 
