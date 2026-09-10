@@ -15,7 +15,7 @@ describe('nickel front', () => {
   })
 
   for (const shell of ['1-high', '2-high'] as Shell[]) {
-    it(`builds 11 defenders (${shell}) on the defensive side of the LOS`, () => {
+    it(`builds 11 nickel defenders (${shell}) on the defensive side of the LOS`, () => {
       const f = buildDefenseFormation({ front: 'nickel', shell, hash: 'center', side: 'ours', yardLine: 25 })
       expect(f.tokens).toHaveLength(11)
       expect(f.tokens.every((t) => t.side === 'defense')).toBe(true)
@@ -56,7 +56,7 @@ describe('nickel front', () => {
     expect(at(one.tokens, 'FS')).toBeGreaterThan(at(one.tokens, 'SS'))
   })
 
-  it('no two defenders overlap (min center gap ≥ 1.5yd)', () => {
+  it('no two nickel defenders overlap (min center gap ≥ 1.5yd)', () => {
     for (const shell of ['1-high', '2-high'] as Shell[]) {
       for (const hash of ['left', 'center', 'right'] as const) {
         const f = buildDefenseFormation({ front: 'nickel', shell, hash, side: 'ours', yardLine: 25 })
@@ -78,6 +78,57 @@ describe('nickel front', () => {
     expect(f.tokens).toHaveLength(11)
     for (const t of f.tokens) {
       expect(t.y, `${t.id}`).toBeLessThanOrEqual(ly)
+    }
+  })
+})
+
+describe('3-4 front', () => {
+  it('declares 3-4-4 counts', () => {
+    const def = DEFENSE_FRONTS.find((f) => f.key === '34')!
+    expect([def.dl, def.lb, def.cb, def.s]).toEqual([3, 4, 2, 2])
+  })
+
+  it('edges play up on the line, inside backers off (BDB n=32)', () => {
+    const f = buildDefenseFormation({ front: '34', shell: '2-high', hash: 'center', side: 'ours', yardLine: 25 })
+    expect(f.tokens).toHaveLength(11)
+    const ly = losY('ours', 25)
+    const at = (id: string) => f.tokens.find((t) => t.id === id)!
+    // edge OLBs ~1.3yd deep / ±6.3 wide, inside ~4.0 / ±2.5
+    for (const id of ['OLB1', 'OLB2']) {
+      expect(ly - at(id).y, id).toBeCloseTo(1.3, 1)
+      expect(Math.abs(at(id).x - 26.65), id).toBeCloseTo(6.3, 1)
+    }
+    for (const id of ['ILB1', 'ILB2']) {
+      expect(ly - at(id).y, id).toBeCloseTo(4, 1)
+      expect(Math.abs(at(id).x - 26.65), id).toBeCloseTo(2.5, 1)
+    }
+    const cnt = (pos: string) => f.tokens.filter((t) => t.pos === pos).length
+    expect(cnt('DL')).toBe(3)
+    expect(cnt('LB')).toBe(4)
+    expect(cnt('CB')).toBe(2)
+    expect(cnt('S')).toBe(2)
+  })
+
+  it('shares both shells with nickel', () => {
+    const one = buildDefenseFormation({ front: '34', shell: '1-high', hash: 'center', side: 'ours', yardLine: 25 })
+    const two = buildDefenseFormation({ front: '34', shell: '2-high', hash: 'center', side: 'ours', yardLine: 25 })
+    const ly = losY('ours', 25)
+    const depth = (toks: typeof one.tokens, id: string) => ly - toks.find((t) => t.id === id)!.y
+    expect(depth(one.tokens, 'SS')).toBeLessThan(depth(two.tokens, 'SS'))
+    expect(depth(one.tokens, 'FS')).toBeGreaterThan(depth(one.tokens, 'SS'))
+  })
+
+  it('no two 3-4 defenders overlap across hashes', () => {
+    for (const hash of ['left', 'center', 'right'] as const) {
+      const f = buildDefenseFormation({ front: '34', shell: '2-high', hash, side: 'ours', yardLine: 25 })
+      for (let i = 0; i < f.tokens.length; i++) {
+        for (let j = i + 1; j < f.tokens.length; j++) {
+          const a = f.tokens[i]
+          const b = f.tokens[j]
+          const d = Math.hypot(a.x - b.x, a.y - b.y)
+          expect(d, `${hash} ${a.id}↔${b.id}`).toBeGreaterThanOrEqual(1.5)
+        }
+      }
     }
   })
 })

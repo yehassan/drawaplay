@@ -14,6 +14,7 @@ export interface DefenseFrontDef {
 
 export const DEFENSE_FRONTS: DefenseFrontDef[] = [
   { key: 'nickel', dl: 4, lb: 2, cb: 3, s: 2, formation: 'Nickel 4-2-5' },
+  { key: '34', dl: 3, lb: 4, cb: 2, s: 2, formation: 'Base 3-4' },
 ]
 
 export const DEFENSE_SHELLS: ReadonlyArray<{ key: Shell; label: string; hint: string }> = [
@@ -65,7 +66,39 @@ export function buildDefenseFormation(spec: DefenseSpec): BuiltDefense {
     })
   }
 
+  /** safety shell shared by every front */
+  const shells = (
+    t: (id: string, pos: Token['pos'], dx: number, depth: number) => void,
+    sh: Shell,
+  ): void => {
+    if (sh === '1-high') {
+      // box safety + single-high (BDB 1-deep: ~7yd box / ~12.8yd high)
+      t('SS', 'S', -6, 7)
+      t('FS', 'S', 4, 12.5)
+    } else {
+      // two-high shell (BDB median depth 10.4 / |lat| 6.1)
+      t('SS', 'S', -6, 10.5)
+      t('FS', 'S', 6, 10.5)
+    }
+  }
+
   switch (front) {
+    case '34': {
+      // 3-4 base (BDB 4LB+2CB+2S plays, n=32): edge OLBs up on the
+      // line (median depth 1.3 / |lat| 6.3), inside backers at
+      // depth 4.0 / |lat| 2.5; 3-man line is synthetic
+      tok('DL1', 'DL', -3.5, 0.8)
+      tok('DL2', 'DL', 0, 0.8)
+      tok('DL3', 'DL', 3.5, 0.8)
+      tok('OLB1', 'LB', -6.3, 1.3)
+      tok('OLB2', 'LB', 6.3, 1.3)
+      tok('ILB1', 'LB', -2.5, 4)
+      tok('ILB2', 'LB', 2.5, 4)
+      tok('CB1', 'CB', -12.6, 4.2)
+      tok('CB2', 'CB', 12.6, 4.2)
+      shells(tok, shell)
+      break
+    }
     case 'nickel':
     default:
       // 4-man line (synthetic — untracked in BDB week1)
@@ -82,15 +115,7 @@ export function buildDefenseFormation(spec: DefenseSpec): BuiltDefense {
       // nickel over the slot (BDB innermost-CB median depth 2.8 / |lat| 9.1 —
       // ~1yd in front of the LB level, not on it)
       tok('NB', 'CB', 9, 2.5)
-      if (shell === '1-high') {
-        // box safety + single-high (BDB 1-deep: ~7yd box / ~12.8yd high)
-        tok('SS', 'S', -6, 7)
-        tok('FS', 'S', 4, 12.5)
-      } else {
-        // two-high shell (BDB median depth 10.4 / |lat| 6.1)
-        tok('SS', 'S', -6, 10.5)
-        tok('FS', 'S', 6, 10.5)
-      }
+      shells(tok, shell)
       break
   }
 
