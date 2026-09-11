@@ -15,16 +15,22 @@ interface SeedToken extends Token {
   y: number
 }
 
+interface SeedText {
+  x: number
+  y: number
+  text: string
+}
+
 export interface Scenario {
   name: string
   description: string
-  build(): { tokens: Token[]; paths: Omit<PlayPath, 'id' | 'timing'>[]; name: string }
+  build(): { tokens: Token[]; paths: Omit<PlayPath, 'id' | 'timing'>[]; textNotes: { id: string; x: number; y: number; text: string }[]; name: string }
 }
 
 const T = (id: string, side: 'offense' | 'defense', pos: SeedToken['pos'], x: number, y: number): SeedToken => ({ id, side, pos, num: '', x, y })
 const P = (tokenId: string, type: PathType, seg: Seg, endTokenId?: string): SeedPath => ({ tokenId, type, seg, endTokenId })
 
-function build(name: string, tokens: SeedToken[], seeds: SeedPath[]): Scenario['build'] {
+function build(name: string, tokens: SeedToken[], seeds: SeedPath[], texts: SeedText[] = []): Scenario['build'] {
   return () => ({
     name,
     tokens: tokens.map((t) => ({ ...t })),
@@ -35,6 +41,7 @@ function build(name: string, tokens: SeedToken[], seeds: SeedPath[]): Scenario['
       points: s.seg.map(([x, y]) => ({ x, y })),
       d: '',
     })),
+    textNotes: texts.map((t, i) => ({ id: `txt${i}`, ...t })),
   })
 }
 
@@ -223,6 +230,7 @@ export const SCENARIOS: Scenario[] = [
         P('CB1', 'route', [[43.4, 83.9], [43.5, 83.8], [43.8, 82.6], [44.3, 80.1], [44.6, 78.5], [44.9, 77.0], [45.4, 74.8], [47.1, 74.4], [48.4, 74.9]]),
         P('QB', 'pass', [[27.0, 96.9], [29.4, 95.7], [33.9, 92.2], [37.8, 89.4], [41.5, 86.7], [44.9, 84.3]], 'WR1'),
       ],
+      [{ x: 45.5, y: 78.5, text: 'HITCH' }],
     ),
   },
 ]
