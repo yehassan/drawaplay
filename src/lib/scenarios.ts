@@ -1,6 +1,7 @@
 import type { PathType } from './pathStyles'
 import type { PlayPath, Token } from '../stores/editorStore'
 import { simplifyRDP } from './geometry'
+import type { Timing } from './timing'
 
 type Seg = [number, number][]
 
@@ -9,6 +10,8 @@ interface SeedPath {
   endTokenId?: string | null
   type: PathType
   seg: Seg
+  /** real frame-derived timing (10Hz): preserved verbatim via userLocked */
+  timing?: Timing
 }
 
 interface SeedToken extends Token {
@@ -25,11 +28,11 @@ interface SeedText {
 export interface Scenario {
   name: string
   description: string
-  build(): { tokens: Token[]; paths: Omit<PlayPath, 'id' | 'timing'>[]; textNotes: { id: string; x: number; y: number; text: string }[]; name: string }
+  build(): { tokens: Token[]; paths: (Omit<PlayPath, 'id' | 'timing'> & { timing?: Timing })[]; textNotes: { id: string; x: number; y: number; text: string }[]; name: string }
 }
 
 const T = (id: string, side: 'offense' | 'defense', pos: SeedToken['pos'], x: number, y: number): SeedToken => ({ id, side, pos, num: '', x, y })
-const P = (tokenId: string, type: PathType, seg: Seg, endTokenId?: string): SeedPath => ({ tokenId, type, seg, endTokenId })
+const P = (tokenId: string, type: PathType, seg: Seg, endTokenId?: string, timing?: Timing): SeedPath => ({ tokenId, type, seg, endTokenId, timing })
 
 /**
  * Tracking-data seeds carry 10Hz sampling jitter (e.g. the ball hook at the
@@ -40,9 +43,9 @@ const BDB = (seg: Seg): Seg => {
   const pts = seg.map(([x, y]) => ({ x, y }))
   return simplifyRDP(pts, 1.0).map((p) => [Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10] as [number, number])
 }
-/** tracking-data path: same RDP pass as BDB() */
-const PBDB = (tokenId: string, type: PathType, seg: Seg, endTokenId?: string): SeedPath =>
-  P(tokenId, type, BDB(seg), endTokenId)
+/** tracking-data path: same RDP pass as BDB(), plus real frame timing */
+const PBDB = (tokenId: string, type: PathType, seg: Seg, endTokenId?: string, timing?: Timing): SeedPath =>
+  P(tokenId, type, BDB(seg), endTokenId, timing)
 
 function build(name: string, tokens: SeedToken[], seeds: SeedPath[], texts: SeedText[] = []): Scenario['build'] {
   return () => ({
@@ -54,6 +57,7 @@ function build(name: string, tokens: SeedToken[], seeds: SeedPath[], texts: Seed
       type: s.type,
       points: s.seg.map(([x, y]) => ({ x, y })),
       d: '',
+      ...(s.timing ? { timing: s.timing, userLocked: true } : {}),
     })),
     textNotes: texts.map((t, i) => ({ id: `txt${i}`, ...t })),
   })
@@ -230,7 +234,7 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     name: 'BDB: Julio hitch vs Mills (real tracking)',
-    description: '2018 week-1 NFL tracking (ATL@PHI): hitch, bail coverage, real ball arc. Timing re-derived by the app.',
+    description: '2018 week-1 NFL tracking (ATL@PHI): frame-exact timing, hitch, bail coverage, straight-line throw. Timing from the 10Hz feed.',
     build: build(
       'BDB Hitch',
       [
@@ -239,17 +243,17 @@ export const SCENARIOS: Scenario[] = [
         T('CB1', 'defense', 'CB', 43.4, 83.9),
       ],
       [
-        PBDB('QB', 'drop', [[26.7, 91.7], [26.7, 92.1], [26.5, 93.9], [26.4, 95.9], [26.7, 96.5], [27.1, 96.2], [27.7, 96.2]]),
-        PBDB('WR1', 'route', [[44.1, 91.4], [44.1, 91.0], [44.0, 88.4], [44.1, 86.4], [44.5, 82.4], [44.8, 81.0], [45.9, 80.2], [47.9, 81.1], [49.2, 81.5]]),
-        PBDB('CB1', 'route', [[43.4, 83.9], [43.5, 83.8], [43.8, 82.6], [44.3, 80.1], [44.6, 78.5], [44.9, 77.0], [45.4, 74.8], [47.1, 74.4], [48.4, 74.9]]),
-        PBDB('QB', 'pass', [[27.0, 96.9], [29.4, 95.7], [33.9, 92.2], [37.8, 89.4], [41.5, 86.7], [44.9, 84.3]], 'WR1'),
+        PBDB('QB', 'drop', [[26.7, 91.7], [26.7, 91.8], [26.6, 92.5], [26.5, 93.9], [26.4, 95.3], [26.5, 96.3], [26.6, 96.4]], undefined, { delayMs: 0, durationMs: 2200 }),
+        PBDB('WR1', 'route', [[44.1, 91.4], [44.1, 91.2], [44.1, 90.4], [44.0, 88.4], [44.2, 85.7], [44.4, 83.0], [44.8, 81.0], [45.5, 80.2], [46.5, 80.5], [47.9, 81.1]], undefined, { delayMs: 0, durationMs: 3600 }),
+        PBDB('CB1', 'route', [[43.4, 83.9], [43.4, 83.9], [43.5, 83.5], [43.8, 82.6], [44.1, 81.0], [44.5, 79.0], [44.9, 77.0], [45.2, 75.3], [45.8, 74.4], [47.1, 74.4], [48.4, 74.9]], undefined, { delayMs: 0, durationMs: 3900 }),
+        PBDB('QB', 'pass', [[27.0, 96.9], [46.5, 83.3]], 'WR1'),
       ],
       [{ x: 45.5, y: 78.5, text: 'HITCH' }],
     ),
   },
   {
     name: 'BDB: full play — DAL@CAR shovel-pass TD drive (real tracking)',
-    description: '2018 week-1 NFL tracking: all 13 tracked players (lines untracked), slant vs tight man, contested catch, tackle. Timing re-derived by the app.',
+    description: '2018 week-1 NFL tracking: all 13 tracked players (lines untracked), frame-exact timing, slant vs tight man, contested catch. Timing from the 10Hz feed.',
     build: build(
       'BDB Full Play',
       [
@@ -268,20 +272,21 @@ export const SCENARIOS: Scenario[] = [
         T('SS', 'defense', 'S', 28.8, 63.0),
       ],
       [
-        PBDB('QB', 'drop', [[24.2, 68.7], [24.2, 68.9], [23.8, 69.2], [23.3, 69.5], [22.3, 69.9]]),
-        PBDB('RB', 'route', [[22.1, 69.4], [22.5, 69.2], [24.9, 67.7], [26.6, 66.3], [26.4, 65.9]]),
-        PBDB('WR1', 'route', [[8.7, 65.3], [8.6, 64.1], [8.7, 62.5], [10.8, 59.4], [12.7, 58.5], [16.8, 58.2]]),
-        PBDB('WR2', 'route', [[36.4, 66.2], [37.3, 66.4], [40.6, 66.5], [43.8, 65.8], [45.4, 65.4]]),
-        PBDB('WR3', 'route', [[46.5, 66.2], [46.6, 65.8], [47.4, 63.9], [49.4, 61.2], [49.8, 57.6]]),
-        PBDB('TE', 'route', [[28.5, 65.4], [29.5, 65.4], [31.0, 66.1], [32.9, 66.2], [33.5, 66.0]]),
-        PBDB('LB1', 'route', [[26.4, 61.0], [26.9, 61.4], [27.7, 62.6], [28.6, 62.6], [30.0, 62.6]]),
-        PBDB('LB2', 'route', [[21.2, 62.2], [21.5, 63.1], [22.3, 65.3], [22.8, 67.8], [23.0, 69.4]]),
-        PBDB('CB1', 'route', [[46.3, 63.5], [46.4, 63.4], [47.0, 62.4], [49.0, 60.3], [49.9, 56.9]]),
-        PBDB('CB2', 'route', [[36.1, 63.3], [36.4, 63.2], [38.8, 63.3], [42.5, 63.9], [45.3, 64.2]]),
-        PBDB('CB3', 'route', [[8.6, 59.2], [8.5, 58.3], [8.6, 57.6], [10.5, 56.6], [12.4, 57.1], [16.8, 58.5]]),
-        PBDB('FS', 'route', [[25.9, 44.8], [26.0, 44.6], [25.6, 44.0], [23.9, 44.8], [21.5, 47.9]]),
-        PBDB('SS', 'route', [[28.8, 63.0], [28.9, 63.3], [29.0, 65.0], [29.4, 65.8], [31.3, 65.9]]),
-        PBDB('QB', 'pass', [[24.4, 69.2], [24.6, 69.2], [20.2, 64.8], [17.2, 61.8], [14.5, 59.0], [15.0, 58.1]], 'WR1'),
+        PBDB('QB', 'drop', [[24.2, 68.7], [24.2, 68.8], [24.2, 68.9], [24.0, 69.1], [23.8, 69.2]], undefined, { delayMs: 0, durationMs: 1600 }),
+        PBDB('RB', 'route', [[22.1, 69.4], [22.5, 69.2], [24.9, 67.7], [26.6, 66.3], [26.4, 65.9]], undefined, { delayMs: 0, durationMs: 3200 }),
+        PBDB('WR1', 'route', [[8.7, 65.3], [8.6, 65.1], [8.6, 64.1], [8.7, 62.5], [9.3, 60.8], [10.8, 59.4], [12.7, 58.5], [14.3, 58.2]], undefined, { delayMs: 0, durationMs: 2700 }),
+        PBDB('WR1', 'run', [[14.3, 58.2], [15.3, 58.1], [16.3, 58.1], [17.1, 58.2], [17.4, 58.3]], undefined, { delayMs: 2700, durationMs: 700 }),
+        PBDB('WR2', 'route', [[36.4, 66.2], [37.3, 66.4], [40.6, 66.5], [43.8, 65.8], [45.4, 65.4]], undefined, { delayMs: 0, durationMs: 3200 }),
+        PBDB('WR3', 'route', [[46.5, 66.2], [46.6, 65.8], [47.4, 63.9], [49.4, 61.2], [49.8, 57.6]], undefined, { delayMs: 0, durationMs: 3200 }),
+        PBDB('TE', 'route', [[28.5, 65.4], [29.5, 65.4], [31.0, 66.1], [32.9, 66.2], [33.5, 66.0]], undefined, { delayMs: 0, durationMs: 3200 }),
+        PBDB('LB1', 'route', [[26.4, 61.0], [26.9, 61.4], [27.7, 62.6], [28.6, 62.6], [30.0, 62.6]], undefined, { delayMs: 0, durationMs: 3200 }),
+        PBDB('LB2', 'route', [[21.2, 62.2], [21.5, 63.1], [22.3, 65.3], [22.8, 67.8], [23.0, 69.4]], undefined, { delayMs: 0, durationMs: 3200 }),
+        PBDB('CB1', 'route', [[46.3, 63.5], [46.4, 63.4], [47.0, 62.4], [49.0, 60.3], [49.9, 56.9]], undefined, { delayMs: 0, durationMs: 3200 }),
+        PBDB('CB2', 'route', [[36.1, 63.3], [36.4, 63.2], [38.8, 63.3], [42.5, 63.9], [45.3, 64.2]], undefined, { delayMs: 0, durationMs: 3200 }),
+        PBDB('CB3', 'route', [[8.6, 59.2], [8.5, 58.3], [8.6, 57.6], [10.5, 56.6], [12.4, 57.1], [16.8, 58.5]], undefined, { delayMs: 0, durationMs: 3200 }),
+        PBDB('FS', 'route', [[25.9, 44.8], [26.0, 44.6], [25.6, 44.0], [23.9, 44.8], [21.5, 47.9]], undefined, { delayMs: 0, durationMs: 3200 }),
+        PBDB('SS', 'route', [[28.8, 63.0], [28.9, 63.3], [29.0, 65.0], [29.4, 65.8], [31.3, 65.9]], undefined, { delayMs: 0, durationMs: 3200 }),
+        PBDB('QB', 'pass', [[24.4, 69.2], [14.3, 58.2]], 'WR1'),
       ],
       [
         { x: 13.5, y: 60.5, text: 'SLANT' },

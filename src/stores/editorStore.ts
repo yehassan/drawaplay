@@ -154,7 +154,7 @@ interface EditorState {
   loadPlay: (play: {
     name: string
     tokens: Token[]
-    paths: Omit<PlayPath, 'id' | 'timing'>[]
+    paths: (Omit<PlayPath, 'id' | 'timing'> & { timing?: Timing })[]
     textNotes?: TextNote[]
     los?: LosSpec | null
     fieldTheme?: FieldTheme
@@ -530,7 +530,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         play.paths.map((p) => ({
           ...p,
           id: uid(),
-          timing: { delayMs: 0, durationMs: 600 },
+          // locked seeds (tracking data) carry real timing — keep it verbatim
+          timing: p.userLocked && p.timing ? { ...p.timing } : { delayMs: 0, durationMs: 600 },
           // d is derived from points — rebuild it so seeded/loaded plays
           // (scenarios, quickstart) draw instead of rendering empty
           d: catmullRomPath(p.points),
