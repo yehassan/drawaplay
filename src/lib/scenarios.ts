@@ -233,6 +233,25 @@ export const SCENARIOS: Scenario[] = [
       [{ x: 45.5, y: 78.5, text: 'HITCH' }],
     ),
   },
+  {
+    name: 'BDB: Thompson slant vs Jackson (real tracking)',
+    description: '2018 week-1 NFL tracking (DAL@CAR): slant vs tight man, contested catch, tackle. Timing re-derived by the app.',
+    build: build(
+      'BDB Slant',
+      [
+        T('QB', 'offense', 'QB', 24.2, 68.7),
+        T('WR1', 'offense', 'WR', 8.7, 65.3),
+        T('CB1', 'defense', 'CB', 8.6, 59.2),
+      ],
+      [
+        P('QB', 'drop', [[24.2, 68.7], [24.2, 69.0], [23.7, 69.3], [22.9, 69.8], [22.2, 69.9]]),
+        P('WR1', 'route', [[8.7, 65.3], [8.6, 64.7], [8.7, 62.5], [10.0, 60.0], [12.7, 58.5], [15.8, 58.1], [17.1, 58.2]]),
+        P('CB1', 'route', [[8.6, 59.2], [8.6, 58.6], [8.6, 57.6], [9.7, 56.6], [12.4, 57.1], [15.8, 58.3], [17.3, 58.6]]),
+        P('QB', 'pass', [[24.4, 69.2], [20.2, 64.8], [14.5, 59.0], [15.0, 58.1]], 'WR1'),
+      ],
+      [{ x: 13.5, y: 60.5, text: 'SLANT' }],
+    ),
+  },
 ]
 
 /** convenience for the picker */
