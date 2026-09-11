@@ -531,6 +531,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           ...p,
           id: uid(),
           timing: { delayMs: 0, durationMs: 600 },
+          // d is derived from points — rebuild it so seeded/loaded plays
+          // (scenarios, quickstart) draw instead of rendering empty
+          d: catmullRomPath(p.points),
           // old saves may carry stale locks on derived flights — drop them
           userLocked:
             p.userLocked && !['pass', 'handoff', 'toss', 'snap'].includes(p.type)
