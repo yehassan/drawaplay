@@ -15,7 +15,7 @@ export interface RouteConcept {
 
 /** lateral is mirrored by side; depth never is */
 export const ROUTE_CONCEPTS: ReadonlyArray<RouteConcept> = [
-  { key: 'go', label: 'Go', shape: [[0, 0], [8, 0], [14, 3.9]] },
+  { key: 'go', label: 'Go', shape: [[0, 0], [14, 0]] },
   { key: 'post', label: 'Post', shape: [[0, 0], [12, 0], [17, 4]] },
   { key: 'corner', label: 'Corner', shape: [[0, 0], [12, 0], [17, 5]] },
   { key: 'slant', label: 'Slant', shape: [[0, 0], [4, 0], [7, 5]] },

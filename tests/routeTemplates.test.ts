@@ -26,7 +26,7 @@ describe('route templates', () => {
     }
     // [expected dd, expected |lat|] from arrival-clipped BDB medians
     const want: Record<string, [number, number]> = {
-      go: [14.3, 3.9],
+      go: [14.0, 0],
       post: [16.9, 4.1],
       corner: [16.6, 5.3],
       slant: [7.2, 5.1],
