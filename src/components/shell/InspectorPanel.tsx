@@ -1,9 +1,8 @@
 import type { ReactNode } from 'react'
-import { useState } from 'react'
 import { useEditorStore } from '../../stores/editorStore'
 import { POSITIONS } from '../../lib/positions'
 import { PATH_STYLES, PATH_TYPE_ORDER, PLAYER_DRIVEN } from '../../lib/pathStyles'
-import { ROUTE_CONCEPTS, type RouteSide } from '../../lib/routeTemplates'
+import { ROUTE_CONCEPTS } from '../../lib/routeTemplates'
 import { TypeSample } from '../ui/TypeSample'
 import { Icon } from '../ui/icons'
 import { IconButton } from '../ui/IconButton'
@@ -36,39 +35,22 @@ function SectionLabel({ children }: { children: string }) {
 function RouteLibraryGrid({ pathId, tokenId }: { pathId?: string; tokenId?: string }) {
   const applyRouteTemplate = useEditorStore((s) => s.applyRouteTemplate)
   const addTemplateRoute = useEditorStore((s) => s.addTemplateRoute)
-  const [side, setSide] = useState<RouteSide>('right')
 
   return (
     <div className="mt-4">
-      <div className="flex items-center justify-between pb-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
-          Route library
-        </p>
-        <div className="flex rounded-full border border-chrome-700 p-0.5">
-          {(['left', 'right'] as const).map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setSide(s)}
-              className={`rounded-full px-2 py-0.5 text-[10px] font-medium capitalize transition-colors ${
-                side === s ? 'bg-accent-400 text-chrome-950' : 'text-chrome-300 hover:bg-chrome-800'
-              }`}
-            >
-              {s === 'left' ? 'L' : 'R'}
-            </button>
-          ))}
-        </div>
-      </div>
+      <p className="pb-2 text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
+        Route library
+      </p>
       <div className="grid grid-cols-3 gap-1.5">
         {ROUTE_CONCEPTS.map((c) => (
           <button
             key={c.key}
             type="button"
             onClick={() => {
-              if (pathId) applyRouteTemplate(pathId, c.key, side)
-              else if (tokenId) addTemplateRoute(tokenId, c.key, side)
+              if (pathId) applyRouteTemplate(pathId, c.key)
+              else if (tokenId) addTemplateRoute(tokenId, c.key)
             }}
-            title={`${c.label} (${side})`}
+            title={c.label}
             className="rounded-[12px] border border-[var(--color-inspector-border)] bg-[var(--color-inspector-unselected)] px-1 py-1.5 text-[11px] font-medium text-[var(--color-inspector-text)] transition-colors hover:border-[var(--color-inspector-hover-border)] hover:bg-[var(--color-inspector-hover)]"
           >
             {c.label}

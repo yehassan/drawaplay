@@ -3,7 +3,7 @@ import { catmullRomPath } from '../lib/geometry'
 import { applySchedule, timelineDuration, type Timing } from '../lib/timing'
 import { resolveFlightTarget } from '../lib/target'
 import { PLAYER_DRIVEN } from '../lib/pathStyles'
-import { buildRoutePoints, routeConcept, type RouteSide } from '../lib/routeTemplates'
+import { buildRoutePoints, routeConcept } from '../lib/routeTemplates'
 import type { FieldTheme } from '../lib/theme'
 import type { Pt, Ruleset } from '../lib/field'
 import type { PathType } from '../lib/pathStyles'
@@ -130,9 +130,9 @@ interface EditorState {
   addPath: (p: Omit<PlayPath, 'id' | 'timing'>) => string
   updatePathType: (id: string, type: PathType) => void
   /** reshape an existing path to a named route template (BDB medians) */
-  applyRouteTemplate: (id: string, conceptKey: string, side: RouteSide, depthScale?: number) => void
+  applyRouteTemplate: (id: string, conceptKey: string, depthScale?: number) => void
   /** create a templated route anchored at a player, selected like addPath */
-  addTemplateRoute: (tokenId: string, conceptKey: string, side: RouteSide, depthScale?: number) => string | null
+  addTemplateRoute: (tokenId: string, conceptKey: string, depthScale?: number) => string | null
   applyScheduleNow: () => void
   setPathTimingLive: (
     id: string,
@@ -412,7 +412,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   applyScheduleNow: () =>
     set((s) => ({ paths: applySchedule(s.paths) })),
 
-  applyRouteTemplate: (id, conceptKey, side, depthScale = 1) => {
+  applyRouteTemplate: (id, conceptKey, depthScale = 1) => {
     get().beginHistory()
     set((s) => ({
       paths: applySchedule(
@@ -420,18 +420,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           if (p.id !== id || !p.tokenId) return p
           const anchor = s.tokens.find((t) => t.id === p.tokenId)
           if (!anchor) return p
-          const points = buildRoutePoints(routeConcept(conceptKey), anchor, side, depthScale)
+          const points = buildRoutePoints(routeConcept(conceptKey), anchor, depthScale)
           return { ...p, type: 'route' as const, points, d: catmullRomPath(points) }
         }),
       ),
     }))
   },
 
-  addTemplateRoute: (tokenId, conceptKey, side, depthScale = 1) => {
+  addTemplateRoute: (tokenId, conceptKey, depthScale = 1) => {
     const st = get()
     const anchor = st.tokens.find((t) => t.id === tokenId)
     if (!anchor) return null
-    const points = buildRoutePoints(routeConcept(conceptKey), anchor, side, depthScale)
+    const points = buildRoutePoints(routeConcept(conceptKey), anchor, depthScale)
     const created: PlayPath = {
       tokenId,
       endTokenId: null,
