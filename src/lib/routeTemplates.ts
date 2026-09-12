@@ -20,7 +20,7 @@ export const ROUTE_CONCEPTS: ReadonlyArray<RouteConcept> = [
   { key: 'post', label: 'Post', breaks: 'in', shape: [[0, 0], [12, 0], [17, 4]] },
   { key: 'corner', label: 'Corner', breaks: 'out', shape: [[0, 0], [12, 0], [17, 5]] },
   { key: 'slant', label: 'Slant', breaks: 'in', shape: [[0, 0], [4, 0], [7, 5]] },
-  { key: 'hitch', label: 'Hitch', breaks: 'out', shape: [[0, 0], [8, 2.5]] },
+  { key: 'hitch', label: 'Hitch', breaks: 'out', shape: [[0, 0], [6, 0], [8, 1.5], [6, 2.5]] },
   { key: 'out', label: 'Out', breaks: 'out', shape: [[0, 0], [8, 0], [8, 8]] },
   { key: 'in', label: 'In', breaks: 'in', shape: [[0, 0], [10, 0], [12, 5]] },
   { key: 'cross', label: 'Cross', breaks: 'in', shape: [[0, 0], [4, 0], [6, 14]] },

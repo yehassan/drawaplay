@@ -30,7 +30,7 @@ describe('route templates', () => {
       post: [16.9, -4.1],
       corner: [16.6, 5.3],
       slant: [7.2, -5.1],
-      hitch: [8.0, 2.6],
+      hitch: [6.0, 2.5],
       out: [8.3, 7.8],
       in: [12.0, -4.9],
       cross: [6.2, -13.6],
