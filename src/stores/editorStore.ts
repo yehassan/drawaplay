@@ -131,6 +131,8 @@ interface EditorState {
   updatePathType: (id: string, type: PathType) => void
   /** reshape an existing path to a named route template (BDB medians) */
   applyRouteTemplate: (id: string, conceptKey: string, depthScale?: number) => void
+  /** mirror a path laterally around its anchor (e.g. flip a wheel side) */
+  mirrorPath: (id: string) => void
   /** create a templated route anchored at a player, selected like addPath */
   addTemplateRoute: (tokenId: string, conceptKey: string, depthScale?: number) => string | null
   applyScheduleNow: () => void
@@ -448,6 +450,23 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       typeBarFor: null,
     }))
     return created.id
+  },
+
+  mirrorPath: (id) => {
+    get().beginHistory()
+    set((s) => ({
+      paths: applySchedule(
+        s.paths.map((p) => {
+          if (p.id !== id || p.points.length < 2) return p
+          const anchor = p.tokenId ? s.tokens.find((t) => t.id === p.tokenId) : null
+          const ax = anchor ? anchor.x : p.points[0].x
+          const points = p.points.map((pt, i) =>
+            i === 0 ? pt : { x: Math.max(1.5, Math.min(51.8, 2 * ax - pt.x)), y: pt.y },
+          )
+          return { ...p, points, d: catmullRomPath(points) }
+        }),
+      ),
+    }))
   },
 
   setPathEndpointLive: (id, which, x, y, anchorTokenId) =>

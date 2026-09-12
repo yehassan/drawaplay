@@ -97,6 +97,7 @@ function PathInspector({ pathId }: { pathId: string }) {
   const tokens = useEditorStore((s) => s.tokens)
   const updatePathType = useEditorStore((s) => s.updatePathType)
   const deletePaths = useEditorStore((s) => s.deletePaths)
+  const mirrorPath = useEditorStore((s) => s.mirrorPath)
   const setMotionSnapAt = useEditorStore((s) => s.setMotionSnapAt)
   if (!path) return null
   const from = tokens.find((t) => t.id === path.tokenId)
@@ -167,8 +168,17 @@ function PathInspector({ pathId }: { pathId: string }) {
 
       <button
         type="button"
+        onClick={() => mirrorPath(path.id)}
+        title="Mirror this path laterally (e.g. flip a wheel side)"
+        className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-full border border-chrome-700 py-2 text-xs font-medium text-chrome-300 transition-colors hover:border-chrome-600 hover:bg-chrome-800"
+      >
+        Mirror ↔
+      </button>
+
+      <button
+        type="button"
         onClick={() => deletePaths([path.id])}
-        className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-full border border-chrome-700 py-2 text-xs font-medium text-defense-400 transition-colors hover:border-defense-500/50 hover:bg-defense-500/10"
+        className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-full border border-chrome-700 py-2 text-xs font-medium text-defense-400 transition-colors hover:border-defense-500/50 hover:bg-defense-500/10"
       >
         Delete path
       </button>

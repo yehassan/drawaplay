@@ -103,4 +103,21 @@ describe('template store actions', () => {
     useEditorStore.getState().undo()
     expect(useEditorStore.getState().paths.find((x) => x.id === id)!.points).toHaveLength(before)
   })
+
+  it('mirrorPath flips lateral around the anchor, keeps start', () => {
+    useEditorStore.getState().addToken({ side: 'offense', pos: 'RB', num: '', x: 26, y: 94 })
+    const tok = useEditorStore.getState().tokens[0]
+    const id = useEditorStore.getState().addTemplateRoute(tok.id, 'wheel')!
+    const before = useEditorStore.getState().paths.find((x) => x.id === id)!.points
+    useEditorStore.getState().mirrorPath(id)
+    const after = useEditorStore.getState().paths.find((x) => x.id === id)!.points
+    expect(after[0]).toEqual(before[0])
+    for (let i = 1; i < after.length; i++) {
+      expect(after[i].x).toBeCloseTo(2 * tok.x - before[i].x, 6)
+      expect(after[i].y).toBeCloseTo(before[i].y, 6)
+    }
+    // double mirror restores
+    useEditorStore.getState().mirrorPath(id)
+    expect(useEditorStore.getState().paths.find((x) => x.id === id)!.points).toEqual(after.map((p, i) => (i === 0 ? p : { x: 2 * tok.x - p.x, y: p.y })))
+  })
 })
