@@ -27,7 +27,7 @@ export const ROUTE_CONCEPTS: ReadonlyArray<RouteConcept> = [
   { key: 'flat', label: 'Flat', breaks: 'out', shape: [[0, 0], [2, 0], [4, 11]] },
   { key: 'screen', label: 'Screen', breaks: 'out', shape: [[0, 0], [0.5, 3.5]] },
   { key: 'angle', label: 'Angle', breaks: 'out', shape: [[0, 0], [3, 0], [7, 3]] },
-  { key: 'wheel', label: 'Wheel', breaks: 'out', shape: [[0, 0], [3, 6], [10, 13]] },
+  { key: 'wheel', label: 'Wheel', breaks: 'out', shape: [[0, 0], [2.5, 6.5], [10, 13]] },
 ]
 
 export function routeConcept(key: string): RouteConcept {
