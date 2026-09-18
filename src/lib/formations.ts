@@ -65,7 +65,7 @@ export function buildFormation(spec: FormationSpec): BuiltFormation {
   const { personnel, underCenter, hash, side, yardLine } = spec
   const bx = HASH_X[hash]
   const ly = losY(side, yardLine)
-  const qbDy = underCenter ? 1.6 : 3
+  const qbDy = underCenter ? 1.6 : 5
 
   const toks: SeedToken[] = []
   const tok = (_id_num_unused: string, pos: Token['pos'], dx: number, dyBehindLosOrAbs: number, _num?: string, absoluteY = false): void => {
@@ -140,14 +140,14 @@ export function buildFormation(spec: FormationSpec): BuiltFormation {
       WR(17, 0.2)
       break
     case '11':
-      RB(-1.55, 3.35)
+      RB(-1.55, 5.35)
       TE(5.4, 0)
       WR(-17, 0.2)
       WR(-10, 0.6) // slot
       WR(17, 0.2)
       break
     case '10':
-      RB(-1.55, 3.35)
+      RB(-1.55, 5.35)
       WR(-17, 0.2)
       WR(9, 0.7) // trips stack
       WR(13, 0.45)

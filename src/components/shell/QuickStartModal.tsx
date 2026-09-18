@@ -204,7 +204,7 @@ export function QuickStartModal() {
                   ))}
                 </div>
                 <p className="pt-1.5 text-[11px] text-chrome-300">
-                  QB lines up {underCenter ? '1' : '3'} yards behind the center.
+                  QB lines up {underCenter ? '1' : '5'} yards behind the center.
                 </p>
               </div>
             )}
