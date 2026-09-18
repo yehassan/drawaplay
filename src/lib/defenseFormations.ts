@@ -15,7 +15,13 @@ export interface DefenseFrontDef {
 export const DEFENSE_FRONTS: DefenseFrontDef[] = [
   { key: 'nickel', dl: 4, lb: 2, cb: 3, s: 2, formation: 'Nickel 4-2-5' },
   { key: '34', dl: 3, lb: 4, cb: 2, s: 2, formation: 'Base 3-4' },
+  { key: '43', dl: 4, lb: 3, cb: 2, s: 2, formation: 'Base 4-3' },
+  { key: '52', dl: 5, lb: 2, cb: 2, s: 2, formation: 'Bear 5-2' },
+  { key: '335', dl: 3, lb: 3, cb: 3, s: 2, formation: 'Nickel 3-3-5' },
   { key: 'dime', dl: 4, lb: 1, cb: 4, s: 2, formation: 'Dime 4-1-6' },
+  { key: '326', dl: 3, lb: 2, cb: 4, s: 2, formation: 'Dime 3-2-6' },
+  { key: '317', dl: 3, lb: 1, cb: 4, s: 3, formation: 'Dollar 3-1-7' },
+  { key: '146', dl: 1, lb: 4, cb: 4, s: 2, formation: 'Quarter 1-4-6' },
 ]
 
 export const DEFENSE_SHELLS: ReadonlyArray<{ key: Shell; label: string; hint: string }> = [
@@ -114,6 +120,91 @@ export function buildDefenseFormation(spec: DefenseSpec): BuiltDefense {
       tok('ILB2', 'LB', 2.5, 4)
       tok('CB1', 'CB', -12.6, 4.2)
       tok('CB2', 'CB', 12.6, 4.2)
+      shells(tok, shell)
+      break
+    }
+    case '43': {
+      // 4-3 — balanced 4-man line, MIKE + WILL/SAM off
+      tok('DL1', 'DL', -6.5, 0.8)
+      tok('DL2', 'DL', -2.2, 0.8)
+      tok('DL3', 'DL', 2.2, 0.8)
+      tok('DL4', 'DL', 6.5, 0.8)
+      tok('MIKE', 'LB', 0, 3.5)
+      tok('SAM', 'LB', -3.5, 3.5)
+      tok('WILL', 'LB', 3.5, 3.5)
+      tok('CB1', 'CB', -12.6, 4.2)
+      tok('CB2', 'CB', 12.6, 4.2)
+      shells(tok, shell)
+      break
+    }
+    case '52': {
+      // Bear 5-2 — 5 tight linemen clogging interior gaps
+      tok('DL1', 'DL', -7.5, 0.8)
+      tok('DL2', 'DL', -3.8, 0.8)
+      tok('DL3', 'DL', 0, 0.8)
+      tok('DL4', 'DL', 3.8, 0.8)
+      tok('DL5', 'DL', 7.5, 0.8)
+      tok('MIKE', 'LB', -2.5, 4)
+      tok('WILL', 'LB', 2.5, 4)
+      tok('CB1', 'CB', -12.6, 4.2)
+      tok('CB2', 'CB', 12.6, 4.2)
+      shells(tok, shell)
+      break
+    }
+    case '335': {
+      // Nickel 3-3-5 — 3-man line, triangle backers, nickel over slot
+      tok('DL1', 'DL', -3.5, 0.8)
+      tok('DL2', 'DL', 0, 0.8)
+      tok('DL3', 'DL', 3.5, 0.8)
+      tok('MIKE', 'LB', 0, 4)
+      tok('SAM', 'LB', -3.5, 3.5)
+      tok('WILL', 'LB', 3.5, 3.5)
+      tok('CB1', 'CB', -12.6, 4.2)
+      tok('CB2', 'CB', 12.6, 4.2)
+      tok('NB', 'CB', 9, 2.5)
+      shells(tok, shell)
+      break
+    }
+    case '326': {
+      // Dime 3-2-6 — 3-man line, 2 backers, 4 corners + 2 safeties
+      tok('DL1', 'DL', -3.5, 0.8)
+      tok('DL2', 'DL', 0, 0.8)
+      tok('DL3', 'DL', 3.5, 0.8)
+      tok('MIKE', 'LB', -2.5, 4)
+      tok('WILL', 'LB', 2.5, 4)
+      tok('CB1', 'CB', -12.6, 4.2)
+      tok('CB2', 'CB', 12.6, 4.2)
+      tok('NB', 'CB', 9, 2.5)
+      tok('DIME', 'CB', -9, 2.5)
+      shells(tok, shell)
+      break
+    }
+    case '317': {
+      // Dollar 3-1-7 — 7 DBs, single MIKE, extra deep safety
+      tok('DL1', 'DL', -3.5, 0.8)
+      tok('DL2', 'DL', 0, 0.8)
+      tok('DL3', 'DL', 3.5, 0.8)
+      tok('MIKE', 'LB', 0, 4.5)
+      tok('CB1', 'CB', -12.6, 4.2)
+      tok('CB2', 'CB', 12.6, 4.2)
+      tok('NB', 'CB', 9, 2.5)
+      tok('DIME', 'CB', -9, 2.5)
+      shells(tok, shell)
+      // 7th DB as deep middle
+      tok('DOLLAR', 'S', 0, 15)
+      break
+    }
+    case '146': {
+      // Quarter 1-4-6 — 1 nose, 4 backers, 6 DBs (prevent)
+      tok('NT', 'DL', 0, 0.8)
+      tok('OLB1', 'LB', -6.3, 1.3)
+      tok('OLB2', 'LB', 6.3, 1.3)
+      tok('ILB1', 'LB', -2.5, 4)
+      tok('ILB2', 'LB', 2.5, 4)
+      tok('CB1', 'CB', -12.6, 4.2)
+      tok('CB2', 'CB', 12.6, 4.2)
+      tok('NB', 'CB', 9, 2.5)
+      tok('DIME', 'CB', -9, 2.5)
       shells(tok, shell)
       break
     }

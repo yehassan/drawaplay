@@ -169,3 +169,25 @@ describe('dime front', () => {
     }
   })
 })
+
+describe('all fronts', () => {
+  it('every front builds 11 and respects counts + spacing', () => {
+    for (const def of DEFENSE_FRONTS) {
+      for (const shell of ['1-high', '2-high'] as Shell[]) {
+        const f = buildDefenseFormation({ front: def.key, shell, hash: 'center', side: 'ours', yardLine: 25 })
+        expect(f.tokens, `${def.key} ${shell} count`).toHaveLength(11)
+        const cnt = (pos: string) => f.tokens.filter((t) => t.pos === pos).length
+        expect([cnt('DL'), cnt('LB'), cnt('CB'), cnt('S')], `${def.key} counts`).toEqual([def.dl, def.lb, def.cb, def.s])
+        // spacing
+        for (let i = 0; i < f.tokens.length; i++) {
+          for (let j = i + 1; j < f.tokens.length; j++) {
+            const a = f.tokens[i]
+            const b = f.tokens[j]
+            const d = Math.hypot(a.x - b.x, a.y - b.y)
+            expect(d, `${def.key} ${shell} ${a.id}↔${b.id}`).toBeGreaterThanOrEqual(1.4)
+          }
+        }
+      }
+    }
+  })
+})
