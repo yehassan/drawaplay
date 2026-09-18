@@ -90,12 +90,12 @@ export function buildFormation(spec: FormationSpec): BuiltFormation {
   // offensive line on the ball
   tok('LT', 'T', -3.6, 0)
   tok('LG', 'G', -1.8, 0)
-  tok('C', 'C', 0, 0, '61')
+  tok('C', 'C', 0, 0)
   tok('RG', 'G', 1.8, 0)
   tok('RT', 'T', 3.6, 0)
 
   // quarterback
-  tok('QB', 'QB', 0, qbDy, '')
+  tok('QB', 'QB', 0, qbDy)
 
   switch (personnel) {
     case '23':
