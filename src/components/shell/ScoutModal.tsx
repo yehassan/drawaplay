@@ -40,10 +40,16 @@ export function ScoutModal() {
         <header className="flex items-center justify-between border-b border-chrome-800 px-6 py-4">
           <div>
             <h2 className="font-display text-lg font-semibold tracking-tight text-chrome-100">
-              {hasOffense && hasDefense ? 'Change scout team' : hasOffense ? 'Add scout defense' : 'Add scout offense'}
+              {effectiveMode === 'offense'
+                ? hasOffense
+                  ? 'Change offense'
+                  : 'Add offense'
+                : hasDefense
+                  ? 'Change defense'
+                  : 'Add defense'}
             </h2>
             <p className="text-xs text-chrome-500">
-              {effectiveMode === 'offense' ? 'Pick offense personnel' : 'Pick defensive front'} — then add to this play
+              {effectiveMode === 'offense' ? 'Pick offense personnel' : 'Pick defensive front'} — then update this play
             </p>
           </div>
           <button type="button" onClick={close} className="rounded-lg px-3 py-1.5 text-sm text-chrome-400 hover:bg-chrome-800 hover:text-chrome-200">
@@ -199,7 +205,7 @@ export function ScoutModal() {
             }}
             className="rounded-full bg-accent-400 px-4 py-2 text-sm font-semibold text-chrome-950 hover:bg-accent-300"
           >
-            {hasOffense && hasDefense ? 'Change' : 'Add'} {effectiveMode === 'offense' ? 'offense' : 'defense'}
+            {(effectiveMode === 'offense' ? hasOffense : hasDefense) ? 'Change' : 'Add'} {effectiveMode === 'offense' ? 'offense' : 'defense'}
           </button>
         </footer>
       </div>

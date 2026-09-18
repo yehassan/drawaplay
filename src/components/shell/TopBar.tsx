@@ -55,7 +55,6 @@ export function TopBar() {
   const tokens = useEditorStore((s) => s.tokens)
   const hasOffense = tokens.some((t) => t.side === 'offense')
   const hasDefense = tokens.some((t) => t.side === 'defense')
-  const showScout = tokens.length > 0
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [trashOpen, setTrashOpen] = useState(false)
   const canUndo = useEditorStore((s) => s.past.length > 0)
@@ -249,36 +248,45 @@ export function TopBar() {
         )}
       </div>
 
-      {hasOffense && hasDefense ? (
-        <>
-          <button
-            type="button"
-            onClick={() => openScout('offense')}
-            title="Change offense"
-            className="ml-1 hidden items-center gap-1 rounded-full border border-chrome-700 px-3 py-1.5 text-xs font-medium text-chrome-300 hover:border-chrome-600 hover:bg-chrome-800 lg:flex"
-          >
-            Offense
-          </button>
-          <button
-            type="button"
-            onClick={() => openScout('defense')}
-            title="Change defense"
-            className="hidden items-center gap-1 rounded-full border border-chrome-700 px-3 py-1.5 text-xs font-medium text-chrome-300 hover:border-chrome-600 hover:bg-chrome-800 lg:flex"
-          >
-            Defense
-          </button>
-        </>
-      ) : (
-        showScout && (
-          <button
-            type="button"
-            onClick={() => openScout()}
-            title={hasOffense ? 'Add scout defense' : 'Add scout offense'}
-            className="ml-1 hidden items-center gap-1 rounded-full border border-chrome-700 px-3 py-1.5 text-xs font-medium text-chrome-300 hover:border-chrome-600 hover:bg-chrome-800 lg:flex"
-          >
-            + Scout {hasOffense ? 'defense' : 'offense'}
-          </button>
-        )
+      {hasOffense && (
+        <button
+          type="button"
+          onClick={() => openScout('offense')}
+          title="Change offense"
+          className="ml-1 hidden items-center gap-1 rounded-full border border-chrome-700 px-3 py-1.5 text-xs font-medium text-chrome-300 hover:border-chrome-600 hover:bg-chrome-800 lg:flex"
+        >
+          Offense
+        </button>
+      )}
+      {hasDefense && (
+        <button
+          type="button"
+          onClick={() => openScout('defense')}
+          title="Change defense"
+          className="hidden items-center gap-1 rounded-full border border-chrome-700 px-3 py-1.5 text-xs font-medium text-chrome-300 hover:border-chrome-600 hover:bg-chrome-800 lg:flex"
+        >
+          Defense
+        </button>
+      )}
+      {!hasOffense && hasDefense && (
+        <button
+          type="button"
+          onClick={() => openScout('offense')}
+          title="Add scout offense"
+          className="ml-1 hidden items-center gap-1 rounded-full border border-dashed border-chrome-600 px-3 py-1.5 text-xs font-medium text-chrome-400 hover:border-accent-400 hover:text-accent-400 lg:flex"
+        >
+          + Scout offense
+        </button>
+      )}
+      {hasOffense && !hasDefense && (
+        <button
+          type="button"
+          onClick={() => openScout('defense')}
+          title="Add scout defense"
+          className="ml-1 hidden items-center gap-1 rounded-full border border-dashed border-chrome-600 px-3 py-1.5 text-xs font-medium text-chrome-400 hover:border-accent-400 hover:text-accent-400 lg:flex"
+        >
+          + Scout defense
+        </button>
       )}
 
       <button
