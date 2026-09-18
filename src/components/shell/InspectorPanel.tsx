@@ -99,6 +99,7 @@ function PathInspector({ pathId }: { pathId: string }) {
   const deletePaths = useEditorStore((s) => s.deletePaths)
   const mirrorPath = useEditorStore((s) => s.mirrorPath)
   const setMotionSnapAt = useEditorStore((s) => s.setMotionSnapAt)
+  const setPathTarget = useEditorStore((s) => s.setPathTarget)
   if (!path) return null
   const from = tokens.find((t) => t.id === path.tokenId)
 
@@ -159,6 +160,33 @@ function PathInspector({ pathId }: { pathId: string }) {
           <p className="mt-1 text-center text-[10px] font-medium text-chrome-400">
             {(path.motionSnapAt ?? 1) >= 0.95 ? 'Stop before snap' : `Snap at ${Math.round((path.motionSnapAt ?? 1) * 100)}% — jet`}
           </p>
+        </div>
+      )}
+
+      {['pass', 'handoff', 'toss'].includes(path.type) && (
+        <div className="mt-4 rounded-[16px] border border-chrome-700 bg-chrome-850 p-3">
+          <p className="text-xs font-semibold text-chrome-300">Throw to</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-chrome-500">
+            Pick the receiver — the ball will reach them (arrival pins to their route).
+          </p>
+          <div className="mt-2 grid grid-cols-3 gap-1.5">
+            {tokens
+              .filter((t) => t.side === 'offense' && t.id !== path.tokenId)
+              .map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setPathTarget(path.id, t.id)}
+                  className={`rounded-[12px] border px-2 py-1.5 text-xs font-medium transition-colors ${
+                    path.endTokenId === t.id
+                      ? 'border-accent-400 bg-accent-400 text-chrome-950'
+                      : 'border-chrome-700 bg-chrome-900 text-chrome-300 hover:border-chrome-600 hover:bg-chrome-800'
+                  }`}
+                >
+                  {t.num || POSITIONS[t.pos].label}
+                </button>
+              ))}
+          </div>
         </div>
       )}
 
@@ -225,6 +253,7 @@ function TokenInspector({ tokenId }: { tokenId: string }) {
   const renameToken = useEditorStore((s) => s.renameToken)
   const ballStartId = useEditorStore((s) => s.ballStartId)
   const setBallStart = useEditorStore((s) => s.setBallStart)
+  const addPath = useEditorStore((s) => s.addPath)
   if (!token) return null
 
   // this player's movement sequence, in play order
@@ -268,6 +297,48 @@ function TokenInspector({ tokenId }: { tokenId: string }) {
       )}
 
       {token.side === 'offense' && <RouteLibraryGrid tokenId={token.id} />}
+
+      {token.side === 'offense' && (
+        <div className="mt-3 rounded-[16px] border border-chrome-700 bg-chrome-850 p-3">
+          <p className="text-xs font-semibold text-chrome-300">Throw to</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-chrome-500">
+            Tap a teammate — a pass will reach them (arrival at their route).
+          </p>
+          <div className="mt-2 grid grid-cols-3 gap-1.5">
+            {tokens
+              .filter((t) => t.side === 'offense' && t.id !== token.id)
+              .map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => {
+                    const recRoute = paths.find(
+                      (q) =>
+                        q.tokenId === t.id &&
+                        q.type !== 'pass' &&
+                        q.type !== 'handoff' &&
+                        q.type !== 'toss' &&
+                        q.type !== 'snap' &&
+                        q.type !== 'motion' &&
+                        q.points.length >= 2,
+                    )
+                    const toPos = recRoute ? recRoute.points[recRoute.points.length - 1] : { x: t.x, y: t.y }
+                    addPath({
+                      tokenId: token.id,
+                      endTokenId: t.id,
+                      type: 'pass',
+                      points: [{ x: token.x, y: token.y }, toPos],
+                      d: '',
+                    })
+                  }}
+                  className="rounded-[12px] border border-chrome-700 bg-chrome-900 px-2 py-1.5 text-xs font-medium text-chrome-300 transition-colors hover:border-chrome-600 hover:bg-chrome-800"
+                >
+                  {t.num || POSITIONS[t.pos].label}
+                </button>
+              ))}
+          </div>
+        </div>
+      )}
 
       {chain.length > 0 && (
         <div className="mt-3">

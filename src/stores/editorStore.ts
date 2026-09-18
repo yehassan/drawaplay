@@ -142,6 +142,7 @@ interface EditorState {
   ) => void
   setPathLocked: (id: string, userLocked: boolean) => void
   setMotionSnapAt: (id: string, snapAt: number) => void
+  setPathTarget: (id: string, targetId: string | null) => void
   reorderPath: (id: string, dir: -1 | 1) => void
   setPathEndpointLive: (
     id: string,
@@ -368,6 +369,28 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set((s) => ({
       paths: applySchedule(s.paths.map((p) => (p.id === id ? { ...p, motionSnapAt: clamped } : p))),
     }))
+  },
+
+  setPathTarget: (id, targetId) => {
+    get().beginHistory()
+    set((s) => {
+      const path = s.paths.find((p) => p.id === id)
+      if (!path || !path.tokenId) return {}
+      const from = s.tokens.find((t) => t.id === path.tokenId)
+      const to = s.tokens.find((t) => t.id === targetId)
+      if (!from || !to) return {}
+      let toPos = { x: to.x, y: to.y }
+      const recRoute = s.paths.find(
+        (q) => q.tokenId === targetId && q.type !== 'pass' && q.type !== 'handoff' && q.type !== 'toss' && q.type !== 'snap' && q.type !== 'motion' && q.points.length >= 2,
+      )
+      if (recRoute) toPos = recRoute.points[recRoute.points.length - 1]
+      const points = [{ x: from.x, y: from.y }, toPos]
+      return {
+        paths: applySchedule(
+          s.paths.map((p) => (p.id === id ? { ...p, endTokenId: targetId, points, d: catmullRomPath(points) } : p)),
+        ),
+      }
+    })
   },
 
   /** swap a player-driven path with its previous/next sibling (draw order = play order) */
