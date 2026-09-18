@@ -177,7 +177,13 @@ export function reschedule(paths: PlayPath[]): Map<string, Timing> {
         continue
       }
 
-      assign(f.id, { ...result.get(f.id)!, delayMs: ready })
+      {
+        const cur = result.get(f.id)!
+        let dur: number = cur.durationMs
+        if (f.passTrajectory === 'touch') dur = Math.round(dur / 0.85)
+        dur = Math.max(MIN_DURATION_MS, Math.min(FLIGHT_MAX_MS, dur))
+        assign(f.id, { delayMs: ready, durationMs: dur })
+      }
     }
 
     // 5. possession gating: once a delivery (handoff/toss/snap) completes at

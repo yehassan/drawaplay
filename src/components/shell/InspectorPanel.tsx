@@ -208,7 +208,6 @@ function PathInspector({ pathId }: { pathId: string }) {
           )
           const toPos = recRoute ? recRoute.points[recRoute.points.length - 1] : { x: target.x, y: target.y }
           const d = Math.hypot(toPos.x - thrower.x, toPos.y - thrower.y)
-          if (d < 10 || d >= 25) return null
           const traj = path.passTrajectory ?? 'standard'
           return (
             <div className="mt-4 rounded-[16px] border border-chrome-700 bg-chrome-850 p-3">
