@@ -55,7 +55,7 @@ export function TopBar() {
   const tokens = useEditorStore((s) => s.tokens)
   const hasOffense = tokens.some((t) => t.side === 'offense')
   const hasDefense = tokens.some((t) => t.side === 'defense')
-  const showScout = (hasOffense && !hasDefense) || (!hasOffense && hasDefense)
+  const showScout = tokens.length > 0
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [trashOpen, setTrashOpen] = useState(false)
   const canUndo = useEditorStore((s) => s.past.length > 0)
@@ -253,10 +253,10 @@ export function TopBar() {
         <button
           type="button"
           onClick={openScout}
-          title={hasOffense ? 'Add scout defense' : 'Add scout offense'}
+          title={hasOffense && hasDefense ? 'Change scout team' : hasOffense ? 'Add scout defense' : 'Add scout offense'}
           className="ml-1 hidden items-center gap-1 rounded-full border border-chrome-700 px-3 py-1.5 text-xs font-medium text-chrome-300 hover:border-chrome-600 hover:bg-chrome-800 lg:flex"
         >
-          + Scout {hasOffense ? 'defense' : 'offense'}
+          {hasOffense && hasDefense ? 'Scout' : `+ Scout ${hasOffense ? 'defense' : 'offense'}`}
         </button>
       )}
 
