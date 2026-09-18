@@ -110,7 +110,7 @@ function PathInspector({ pathId }: { pathId: string }) {
       <p className="mb-2 text-xs text-chrome-500">
         From{' '}
         <span className="font-semibold text-offense-400">
-          {from ? from.num || POSITIONS[from.pos].label : '—'}
+          {from ? from.num || from.letter || POSITIONS[from.pos].label : '—'}
         </span>{' '}
         · inferred, click to change
       </p>
@@ -183,7 +183,7 @@ function PathInspector({ pathId }: { pathId: string }) {
                       : 'border-chrome-700 bg-chrome-900 text-chrome-300 hover:border-chrome-600 hover:bg-chrome-800'
                   }`}
                 >
-                  {t.num || POSITIONS[t.pos].label}
+                  {t.num || t.letter || POSITIONS[t.pos].label}
                 </button>
               ))}
           </div>
@@ -333,7 +333,7 @@ function TokenInspector({ tokenId }: { tokenId: string }) {
                   }}
                   className="rounded-[12px] border border-chrome-700 bg-chrome-900 px-2 py-1.5 text-xs font-medium text-chrome-300 transition-colors hover:border-chrome-600 hover:bg-chrome-800"
                 >
-                  {t.num || POSITIONS[t.pos].label}
+                  {t.num || t.letter || POSITIONS[t.pos].label}
                 </button>
               ))}
           </div>

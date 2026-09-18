@@ -18,7 +18,7 @@ const SIDE_COLOR: Record<Token['side'], string> = {
 
 export function TokenView({ token, selected, posOverride, onPointerDown }: TokenViewProps) {
   const color = SIDE_COLOR[token.side]
-  const label = token.num || POSITIONS[token.pos].label
+  const label = token.num || token.letter || POSITIONS[token.pos].label
 
   return (
     <g

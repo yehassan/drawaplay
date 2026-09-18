@@ -19,6 +19,8 @@ export interface Token {
   num: string
   x: number
   y: number
+  /** alignment letter (X/Z/H/Y/U etc.) per personnel grouping */
+  letter?: string
 }
 
 export interface TextNote {

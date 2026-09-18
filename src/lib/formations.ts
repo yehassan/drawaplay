@@ -68,12 +68,20 @@ export function buildFormation(spec: FormationSpec): BuiltFormation {
   const qbDy = underCenter ? 1.6 : 5
 
   const toks: SeedToken[] = []
-  const tok = (_id_num_unused: string, pos: Token['pos'], dx: number, dyBehindLosOrAbs: number, _num?: string, absoluteY = false): void => {
+  const tok = (
+    _id_num_unused: string,
+    pos: Token['pos'],
+    dx: number,
+    dyBehindLosOrAbs: number,
+    letter?: string,
+    absoluteY = false,
+  ): void => {
     toks.push({
       id: _id_num_unused,
       side: 'offense',
       pos,
       num: '',
+      letter,
       x: Math.max(1.5, Math.min(51.8, bx + dx)),
       y: absoluteY ? dyBehindLosOrAbs : ly + dyBehindLosOrAbs,
     })
@@ -89,97 +97,89 @@ export function buildFormation(spec: FormationSpec): BuiltFormation {
   // quarterback
   tok('QB', 'QB', 0, qbDy, '')
 
-  let wrN = 0
-  let teN = 0
-  let rbN = 0
-  const WR = (dx: number, dy: number): void => tok(`WR${++wrN}`, 'WR', dx, dy, String(wrN))
-  const TE = (dx: number, dy: number): void => tok(`TE${++teN}`, 'TE', dx, dy, String(84 + teN))
-  const RB = (dx: number, dy: number): void => tok(`RB${++rbN}`, 'RB', dx, dy, ['28', '32'][rbN - 1] ?? '30')
-
   switch (personnel) {
     case '23':
-      RB(0, 3.6) // FB
-      RB(0, 5.6) // TB
-      TE(-5.4, 0)
-      TE(5.4, 0)
-      TE(6.9, 0.85) // wing off RT
+      tok('RB1', 'RB', 0, 3.6, 'F')
+      tok('RB2', 'RB', 0, 5.6, 'T')
+      tok('TE1', 'TE', -5.4, 0, 'Y')
+      tok('TE2', 'TE', 5.4, 0, 'U')
+      tok('TE3', 'TE', 6.9, 0.85, 'H')
       break
     case '22':
-      RB(0, 3.6)
-      RB(0, 5.6)
-      TE(5.4, 0)
-      TE(7.05, 0)
-      WR(-16, 0.3)
+      tok('RB1', 'RB', 0, 3.6, 'F')
+      tok('RB2', 'RB', 0, 5.6, 'T')
+      tok('TE1', 'TE', 5.4, 0, 'Y')
+      tok('TE2', 'TE', 7.05, 0, 'U')
+      tok('WR1', 'WR', -16, 0.3, 'X')
       break
     case '21':
-      RB(0, 3.6)
-      RB(0, 5.6)
-      TE(-5.4, 0)
-      WR(-9, 0.3)
-      WR(9, 0.3)
+      tok('RB1', 'RB', 0, 3.6, 'F')
+      tok('RB2', 'RB', 0, 5.6, 'T')
+      tok('TE1', 'TE', -5.4, 0, 'Y')
+      tok('WR1', 'WR', -9, 0.3, 'X')
+      tok('WR2', 'WR', 9, 0.3, 'Z')
       break
     case '20':
-      RB(-1.2, 3.9) // strong offset FB
-      RB(0, 5.6)
-      WR(-17, 0.2)
-      WR(9, 0.6) // slot
-      WR(17, 0.2)
+      tok('RB1', 'RB', -1.2, 3.9, 'F')
+      tok('RB2', 'RB', 0, 5.6, 'T')
+      tok('WR1', 'WR', -17, 0.2, 'X')
+      tok('WR2', 'WR', 9, 0.6, 'H')
+      tok('WR3', 'WR', 17, 0.2, 'Z')
       break
     case '13':
-      RB(0, 4.6)
-      TE(-5.4, 0)
-      TE(5.4, 0)
-      TE(-6.9, 0.85) // H-back wing
-      WR(16, 0.2)
+      tok('RB1', 'RB', 0, 4.6, 'T')
+      tok('TE1', 'TE', -5.4, 0, 'Y')
+      tok('TE2', 'TE', 5.4, 0, 'U')
+      tok('TE3', 'TE', -6.9, 0.85, 'H')
+      tok('WR1', 'WR', 16, 0.2, 'X')
       break
     case '12':
-      RB(0, 4.6)
-      TE(-5.4, 0)
-      TE(-7.05, 0)
-      WR(10, 0.6) // slot
-      WR(17, 0.2)
+      tok('RB1', 'RB', 0, 4.6, 'T')
+      tok('TE1', 'TE', -5.4, 0, 'Y')
+      tok('TE2', 'TE', -7.05, 0, 'U')
+      tok('WR1', 'WR', 10, 0.6, 'H')
+      tok('WR2', 'WR', 17, 0.2, 'Z')
       break
     case '11':
-      RB(-1.55, 5.35)
-      TE(5.4, 0)
-      WR(-17, 0.2)
-      WR(-10, 0.6) // slot
-      WR(17, 0.2)
+      tok('RB1', 'RB', -1.55, 5.35, 'T')
+      tok('TE1', 'TE', 5.4, 0, 'Y')
+      tok('WR1', 'WR', -17, 0.2, 'X')
+      tok('WR2', 'WR', -10, 0.6, 'H')
+      tok('WR3', 'WR', 17, 0.2, 'Z')
       break
     case '10':
-      RB(-1.55, 5.35)
-      WR(-17, 0.2)
-      WR(9, 0.7) // trips stack
-      WR(13, 0.45)
-      WR(17, 0.2)
+      tok('RB1', 'RB', -1.55, 5.35, 'T')
+      tok('WR1', 'WR', -17, 0.2, 'X')
+      tok('WR2', 'WR', 9, 0.7, 'H')
+      tok('WR3', 'WR', 13, 0.45, 'Y')
+      tok('WR4', 'WR', 17, 0.2, 'Z')
       break
     case '02':
-      TE(6, 0.5) // wing
-      TE(-10, 0.6) // flex slot
-      WR(-17, 0.2)
-      WR(10, 0.6)
-      WR(17, 0.2)
+      tok('TE1', 'TE', 6, 0.5, 'Y')
+      tok('TE2', 'TE', -10, 0.6, 'U')
+      tok('WR1', 'WR', -17, 0.2, 'X')
+      tok('WR2', 'WR', 10, 0.6, 'H')
+      tok('WR3', 'WR', 17, 0.2, 'Z')
       break
     case '01':
-      TE(-10.5, 0.6) // detached big slot
-      WR(-17, 0.2)
-      WR(10, 0.55)
-      WR(13.8, 0.95)
-      WR(17, 0.2)
+      tok('TE1', 'TE', -10.5, 0.6, 'Y')
+      tok('WR1', 'WR', -17, 0.2, 'X')
+      tok('WR2', 'WR', 10, 0.55, 'H')
+      tok('WR3', 'WR', 13.8, 0.95, 'F')
+      tok('WR4', 'WR', 17, 0.2, 'Z')
       break
     case '00':
-      WR(-7, 0.4)
-      WR(-10, 0.7)
-      WR(6.5, 0.35)
-      WR(8.8, 0.75)
-      WR(11.2, 0.4)
+      tok('WR2', 'WR', -10, 0.7, 'X')
+      tok('WR1', 'WR', -7, 0.4, 'H')
+      tok('WR3', 'WR', 6.5, 0.35, 'F')
+      tok('WR4', 'WR', 8.8, 0.75, 'Y')
+      tok('WR5', 'WR', 11.2, 0.4, 'Z')
       break
     default:
-      // fall back to a plain balanced set
-      RB(0, 4.5)
-      WR(-15, 0.2)
-      WR(15, 0.2)
-      TE(5.4, 0)
+      tok('RB1', 'RB', 0, 4.5, 'T')
+      tok('WR1', 'WR', -15, 0.2, 'X')
+      tok('WR2', 'WR', 15, 0.2, 'Z')
+      tok('TE1', 'TE', 5.4, 0, 'Y')
   }
 
   const qb = toks.find((t) => t.id === 'QB')!
