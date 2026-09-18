@@ -38,19 +38,13 @@ export function TokenPalette() {
             {positions.map((pos) => (
               <TokenChip key={pos} pos={pos} side={side} />
             ))}
+            {side === 'offense' &&
+              ALIGNMENT_TOKENS.map((t) => (
+                <TokenChip key={`${t.pos}-${t.letter}`} pos={t.pos} side="offense" letter={t.letter} />
+              ))}
           </div>
         </section>
       ))}
-      <section className="mt-4">
-        <p className="px-1 pb-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
-          Alignment
-        </p>
-        <div className="grid grid-cols-4 gap-1">
-          {ALIGNMENT_TOKENS.map((t) => (
-            <TokenChip key={`${t.pos}-${t.letter}`} pos={t.pos} side="offense" letter={t.letter} />
-          ))}
-        </div>
-      </section>
     </div>
   )
 }
