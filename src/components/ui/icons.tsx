@@ -24,6 +24,7 @@ export type IconName =
   | 'theme'
   | 'sun'
   | 'moon'
+  | 'edit'
 
 const SOLID_ICONS = new Set<IconName>(['play', 'pause'])
 
@@ -93,6 +94,12 @@ const paths: Record<IconName, ReactNode> = {
     </>
   ),
   moon: <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z" />,
+  edit: (
+    <>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+    </>
+  ),
 }
 
 interface IconProps {

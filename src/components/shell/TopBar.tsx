@@ -255,6 +255,7 @@ export function TopBar() {
           title="Change offense"
           className="ml-1 hidden items-center gap-1 rounded-full border border-chrome-700 px-3 py-1.5 text-xs font-medium text-chrome-300 hover:border-chrome-600 hover:bg-chrome-800 lg:flex"
         >
+          <Icon name="edit" className="size-3.5" />
           Offense
         </button>
       )}
@@ -265,6 +266,7 @@ export function TopBar() {
           title="Change defense"
           className="hidden items-center gap-1 rounded-full border border-chrome-700 px-3 py-1.5 text-xs font-medium text-chrome-300 hover:border-chrome-600 hover:bg-chrome-800 lg:flex"
         >
+          <Icon name="edit" className="size-3.5" />
           Defense
         </button>
       )}
