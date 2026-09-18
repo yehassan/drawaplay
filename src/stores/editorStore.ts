@@ -379,7 +379,29 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setPassTrajectory: (id, traj) => {
     get().beginHistory()
     set((s) => ({
-      paths: applySchedule(s.paths.map((p) => (p.id === id ? { ...p, passTrajectory: traj } : p))),
+      paths: applySchedule(
+        s.paths.map((p) => {
+          if (p.id !== id) return p
+          let points: { x: number; y: number }[]
+          if (traj === 'touch' && p.points.length >= 2) {
+            const a = p.points[0]
+            const b = p.points[p.points.length - 1]
+            const cx = b.x - a.x
+            const cy = b.y - a.y
+            const len = Math.hypot(cx, cy) || 1
+            const nx = -cy / len
+            const ny = cx / len
+            const mx = (a.x + b.x) / 2 + nx * 1.8
+            const my = (a.y + b.y) / 2 + ny * 1.8
+            points = [a, { x: mx, y: my }, b]
+          } else if (p.points.length >= 2) {
+            points = [p.points[0], p.points[p.points.length - 1]]
+          } else {
+            points = p.points
+          }
+          return { ...p, passTrajectory: traj, points, d: catmullRomPath(points) }
+        }),
+      ),
     }))
   },
 
