@@ -82,6 +82,7 @@ interface EditorState {
   tool: Tool
   quickStartOpen: boolean
   scoutOpen: boolean
+  scoutMode: 'offense' | 'defense'
   /** line of scrimmage metadata for the current play (from quickstart) */
   losSpec: LosSpec | null
   fieldTheme: FieldTheme
@@ -111,8 +112,9 @@ interface EditorState {
   setTool: (tool: Tool) => void
   openQuickStart: () => void
   closeQuickStart: () => void
-  openScout: () => void
+  openScout: (mode?: 'offense' | 'defense') => void
   closeScout: () => void
+  setScoutMode: (mode: 'offense' | 'defense') => void
   setPlayId: (id: string | null) => void
   /** drop the persisted identity so the next autosave creates a NEW record */
   resetPlayIdentity: () => void
@@ -207,6 +209,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   tool: 'select',
   quickStartOpen: true,
   scoutOpen: false,
+  scoutMode: 'offense',
   paletteOpen: true,
   inspectorOpen: true,
   tokens: [],
@@ -259,8 +262,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   openQuickStart: () => set({ quickStartOpen: true, typeBarFor: null }),
   closeQuickStart: () => set({ quickStartOpen: false }),
-  openScout: () => set({ scoutOpen: true }),
+  openScout: (mode) =>
+    set((s) => ({
+      scoutOpen: true,
+      scoutMode: mode ?? (s.tokens.some((t) => t.side === 'offense') && !s.tokens.some((x) => x.side === 'defense') ? 'defense' : 'offense'),
+    })),
   closeScout: () => set({ scoutOpen: false }),
+  setScoutMode: (mode: 'offense' | 'defense') => set({ scoutMode: mode }),
   setPlayId: (playId) => set({ playId }),
   resetPlayIdentity: () => set({ playId: null, saveState: 'dirty' }),
   setSaveState: (saveState) => set({ saveState }),

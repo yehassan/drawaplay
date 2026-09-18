@@ -249,15 +249,36 @@ export function TopBar() {
         )}
       </div>
 
-      {showScout && (
-        <button
-          type="button"
-          onClick={openScout}
-          title={hasOffense && hasDefense ? 'Change scout team' : hasOffense ? 'Add scout defense' : 'Add scout offense'}
-          className="ml-1 hidden items-center gap-1 rounded-full border border-chrome-700 px-3 py-1.5 text-xs font-medium text-chrome-300 hover:border-chrome-600 hover:bg-chrome-800 lg:flex"
-        >
-          {hasOffense && hasDefense ? 'Scout' : `+ Scout ${hasOffense ? 'defense' : 'offense'}`}
-        </button>
+      {hasOffense && hasDefense ? (
+        <>
+          <button
+            type="button"
+            onClick={() => openScout('offense')}
+            title="Change offense"
+            className="ml-1 hidden items-center gap-1 rounded-full border border-chrome-700 px-3 py-1.5 text-xs font-medium text-chrome-300 hover:border-chrome-600 hover:bg-chrome-800 lg:flex"
+          >
+            Offense
+          </button>
+          <button
+            type="button"
+            onClick={() => openScout('defense')}
+            title="Change defense"
+            className="hidden items-center gap-1 rounded-full border border-chrome-700 px-3 py-1.5 text-xs font-medium text-chrome-300 hover:border-chrome-600 hover:bg-chrome-800 lg:flex"
+          >
+            Defense
+          </button>
+        </>
+      ) : (
+        showScout && (
+          <button
+            type="button"
+            onClick={() => openScout()}
+            title={hasOffense ? 'Add scout defense' : 'Add scout offense'}
+            className="ml-1 hidden items-center gap-1 rounded-full border border-chrome-700 px-3 py-1.5 text-xs font-medium text-chrome-300 hover:border-chrome-600 hover:bg-chrome-800 lg:flex"
+          >
+            + Scout {hasOffense ? 'defense' : 'offense'}
+          </button>
+        )
       )}
 
       <button

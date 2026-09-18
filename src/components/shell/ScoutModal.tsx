@@ -17,7 +17,8 @@ export function ScoutModal() {
   const hasOffense = tokens.some((t) => t.side === 'offense')
   const hasDefense = tokens.some((t) => t.side === 'defense')
 
-  const [mode, setMode] = useState<'offense' | 'defense'>('offense')
+  const scoutMode = useEditorStore((s) => s.scoutMode)
+  const setScoutMode = useEditorStore((s) => s.setScoutMode)
   const [personnel, setPersonnel] = useState('11')
   const [underCenter, setUnderCenter] = useState(false)
   const [front, setFront] = useState('nickel')
@@ -28,10 +29,7 @@ export function ScoutModal() {
 
   if (!open || !close) return null
 
-  // default tab to the missing side, or offense if both present
-  // keep mode in sync when modal opens with different play
-  // (simple: if current mode's side already exists and the other doesn't, switch)
-  const effectiveMode = hasOffense && !hasDefense ? 'defense' : !hasOffense && hasDefense ? 'offense' : mode
+  const effectiveMode = scoutMode
 
   const def = PERSONNEL.find((p) => p.key === personnel)!
   const defFront = DEFENSE_FRONTS.find((f) => f.key === front)!
@@ -61,7 +59,7 @@ export function ScoutModal() {
                 <button
                   key={m}
                   type="button"
-                  onClick={() => setMode(m)}
+                  onClick={() => setScoutMode(m)}
                   className={`flex-1 rounded-full px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
                     effectiveMode === m ? 'bg-accent-400 text-chrome-950' : 'text-chrome-300 hover:bg-chrome-800'
                   }`}
