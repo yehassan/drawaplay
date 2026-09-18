@@ -678,10 +678,11 @@ export function FieldCanvas() {
     const pos = e.dataTransfer.getData('application/x-dap-pos')
     if (!(pos in POSITIONS)) return
     const p = POSITIONS[pos as keyof typeof POSITIONS]
+    const letter = e.dataTransfer.getData('application/x-dap-letter') || undefined
     const st = useEditorStore.getState()
     const l = toLocal(e)
     const f = screenToField(st.camera, l.x, l.y)
-    st.addToken({ side: p.side, pos: pos as Token['pos'], num: '', x: snap(f.x), y: snap(f.y) })
+    st.addToken({ side: p.side, pos: pos as Token['pos'], num: '', letter, x: snap(f.x), y: snap(f.y) })
   }
 
   const zoomBy = (factor: number) => {

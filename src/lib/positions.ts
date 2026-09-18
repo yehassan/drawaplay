@@ -23,3 +23,15 @@ export const PALETTE_GROUPS: ReadonlyArray<{ side: Side; title: string; position
   },
   { side: 'defense', title: 'Defense', positions: ['DL', 'LB', 'CB', 'S'] },
 ]
+
+export const ALIGNMENT_TOKENS: ReadonlyArray<{ pos: PosId; letter: string; title: string }> = [
+  { pos: 'WR', letter: 'X', title: 'X — split end' },
+  { pos: 'WR', letter: 'Z', title: 'Z — flanker' },
+  { pos: 'WR', letter: 'H', title: 'H — slot' },
+  { pos: 'WR', letter: 'F', title: 'F — middle slot' },
+  { pos: 'WR', letter: 'Y', title: 'Y — slot (00 look)' },
+  { pos: 'TE', letter: 'Y', title: 'Y — in-line TE' },
+  { pos: 'TE', letter: 'U', title: 'U — wing/flex TE' },
+  { pos: 'RB', letter: 'T', title: 'T — tailback' },
+  { pos: 'RB', letter: 'F', title: 'F — fullback' },
+]
