@@ -81,6 +81,7 @@ interface EditorState {
   playName: string
   tool: Tool
   quickStartOpen: boolean
+  scoutOpen: boolean
   /** line of scrimmage metadata for the current play (from quickstart) */
   losSpec: LosSpec | null
   fieldTheme: FieldTheme
@@ -110,6 +111,8 @@ interface EditorState {
   setTool: (tool: Tool) => void
   openQuickStart: () => void
   closeQuickStart: () => void
+  openScout: () => void
+  closeScout: () => void
   setPlayId: (id: string | null) => void
   /** drop the persisted identity so the next autosave creates a NEW record */
   resetPlayIdentity: () => void
@@ -203,6 +206,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   playName: 'Untitled Play',
   tool: 'select',
   quickStartOpen: true,
+  scoutOpen: false,
   paletteOpen: true,
   inspectorOpen: true,
   tokens: [],
@@ -255,6 +259,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   openQuickStart: () => set({ quickStartOpen: true, typeBarFor: null }),
   closeQuickStart: () => set({ quickStartOpen: false }),
+  openScout: () => set({ scoutOpen: true }),
+  closeScout: () => set({ scoutOpen: false }),
   setPlayId: (playId) => set({ playId }),
   resetPlayIdentity: () => set({ playId: null, saveState: 'dirty' }),
   setSaveState: (saveState) => set({ saveState }),

@@ -51,6 +51,11 @@ export function TopBar() {
   const playId = useEditorStore((s) => s.playId)
   const loadPlay = useEditorStore((s) => s.loadPlay)
   const resetPlayIdentity = useEditorStore((s) => s.resetPlayIdentity)
+  const openScout = useEditorStore((s) => s.openScout)
+  const tokens = useEditorStore((s) => s.tokens)
+  const hasOffense = tokens.some((t) => t.side === 'offense')
+  const hasDefense = tokens.some((t) => t.side === 'defense')
+  const showScout = (hasOffense && !hasDefense) || (!hasOffense && hasDefense)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [trashOpen, setTrashOpen] = useState(false)
   const canUndo = useEditorStore((s) => s.past.length > 0)
@@ -243,6 +248,17 @@ export function TopBar() {
           </div>
         )}
       </div>
+
+      {showScout && (
+        <button
+          type="button"
+          onClick={openScout}
+          title={hasOffense ? 'Add scout defense' : 'Add scout offense'}
+          className="ml-1 hidden items-center gap-1 rounded-full border border-chrome-700 px-3 py-1.5 text-xs font-medium text-chrome-300 hover:border-chrome-600 hover:bg-chrome-800 lg:flex"
+        >
+          + Scout {hasOffense ? 'defense' : 'offense'}
+        </button>
+      )}
 
       <button
         type="button"

@@ -7,6 +7,7 @@ import { TopBar } from './components/shell/TopBar'
 import { Icon } from './components/ui/icons'
 import { PlaybookModal } from './components/shell/PlaybookModal'
 import { QuickStartModal } from './components/shell/QuickStartModal'
+import { ScoutModal } from './components/shell/ScoutModal'
 import { usePersistence } from './hooks/usePersistence'
 import { useShortcuts } from './hooks/useShortcuts'
 import { useUITheme } from './hooks/useUITheme'
@@ -48,6 +49,7 @@ export default function App() {
       </div>
       <BottomDock />
       <QuickStartModal />
+      <ScoutModal />
       <PlaybookModal />
     </div>
   )
