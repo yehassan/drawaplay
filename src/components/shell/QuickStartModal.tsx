@@ -137,87 +137,6 @@ export function QuickStartModal() {
                   </div>
                   <p className="pt-2 text-xs text-chrome-500">{def.formation}</p>
                 </section>
-                {!showOther && (
-                  <button
-                    type="button"
-                    onClick={() => setShowOther(true)}
-                    className="flex w-full items-center justify-center gap-1.5 rounded-full border border-dashed border-chrome-600 px-3 py-2 text-xs font-medium text-chrome-400 transition-colors hover:border-accent-400 hover:text-accent-400"
-                  >
-                    + Add Defense
-                  </button>
-                )}
-                {showOther && (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
-                        Scout Defense
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setShowOther(false)}
-                        className="text-xs text-chrome-400 hover:text-defense-400"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                    <section>
-                      <p className="pb-2 text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
-                        Front
-                      </p>
-                      <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6">
-                        {DEFENSE_FRONTS.map((f) => (
-                          <button
-                            key={`scout-${f.key}`}
-                            type="button"
-                            onClick={() => setFront(f.key)}
-                            title={f.formation}
-                            className={`rounded-[16px] border px-2 py-2 text-center transition-colors ${
-                              front === f.key
-                                ? 'border-accent-400 bg-accent-400'
-                                : 'border-chrome-700 bg-chrome-850 hover:border-chrome-600 hover:bg-chrome-800'
-                            }`}
-                          >
-                            <span
-                              className={`block font-display text-lg font-semibold leading-none ${
-                                front === f.key ? 'text-chrome-950' : 'text-chrome-200'
-                              }`}
-                            >
-                              {f.dl}-{f.lb}-{f.cb + f.s}
-                            </span>
-                            <span
-                              className={`mt-1 block text-[9px] leading-tight ${
-                                front === f.key ? 'text-chrome-950/80' : 'text-chrome-500'
-                              }`}
-                            >
-                              {f.dl}DL·{f.lb}LB·{f.cb + f.s}DB
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                      <p className="pt-2 text-xs text-chrome-500">{defFront.formation}</p>
-                    </section>
-                    <section>
-                      <p className="pb-2 text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
-                        Coverage shell
-                      </p>
-                      <div className="flex rounded-[16px] border border-chrome-700 p-0.5">
-                        {DEFENSE_SHELLS.map((sh) => (
-                          <button
-                            key={`scout-${sh.key}`}
-                            type="button"
-                            onClick={() => setShell(sh.key)}
-                            title={sh.hint}
-                            className={`flex-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                              shell === sh.key ? 'bg-accent-400 text-chrome-950' : 'text-chrome-300 hover:bg-chrome-800'
-                            }`}
-                          >
-                            {sh.label}
-                          </button>
-                        ))}
-                      </div>
-                    </section>
-                  </>
-                )}
               </>
             ) : (
               <>
@@ -285,70 +204,6 @@ export function QuickStartModal() {
                       : 'Two-high safeties split the deep field.'}
                   </p>
                 </section>
-                {!showOther && (
-                  <button
-                    type="button"
-                    onClick={() => setShowOther(true)}
-                    className="flex w-full items-center justify-center gap-1.5 rounded-full border border-dashed border-chrome-600 px-3 py-2 text-xs font-medium text-chrome-400 transition-colors hover:border-accent-400 hover:text-accent-400"
-                  >
-                    + Add Offense
-                  </button>
-                )}
-                {showOther && (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
-                        Scout Offense
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setShowOther(false)}
-                        className="text-xs text-chrome-400 hover:text-defense-400"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                    <section>
-                      <p className="pb-2 text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
-                        Personnel
-                      </p>
-                      <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6">
-                        {PERSONNEL.map((p) => (
-                          <button
-                            key={`scout-${p.key}`}
-                            type="button"
-                            onClick={() => {
-                              setPersonnel(p.key)
-                              setUnderCenter(p.uc)
-                            }}
-                            title={p.formation}
-                            className={`rounded-[16px] border px-2 py-2 text-center transition-colors ${
-                              personnel === p.key
-                                ? 'border-accent-400 bg-accent-400'
-                                : 'border-chrome-700 bg-chrome-850 hover:border-chrome-600 hover:bg-chrome-800'
-                            }`}
-                          >
-                            <span
-                              className={`block font-display text-lg font-semibold leading-none ${
-                                personnel === p.key ? 'text-chrome-950' : 'text-chrome-200'
-                              }`}
-                            >
-                              {p.key}
-                            </span>
-                            <span
-                              className={`mt-1 block text-[9px] leading-tight ${
-                                personnel === p.key ? 'text-chrome-950/80' : 'text-chrome-500'
-                              }`}
-                            >
-                              {p.rb}RB·{p.te}TE·{p.wr}WR
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                      <p className="pt-2 text-xs text-chrome-500">{def.formation}</p>
-                    </section>
-                  </>
-                )}
               </>
             )}
 
@@ -448,6 +303,151 @@ export function QuickStartModal() {
                 <span className="text-xs text-chrome-500">yard line (both sides: 50 = midfield)</span>
               </div>
             </section>
+                {mode === 'offense' && !showOther && (
+                  <button
+                    type="button"
+                    onClick={() => setShowOther(true)}
+                    className="flex w-full items-center justify-center gap-1.5 rounded-full border border-dashed border-chrome-600 px-3 py-2 text-xs font-medium text-chrome-400 transition-colors hover:border-accent-400 hover:text-accent-400"
+                  >
+                    + Add Defense
+                  </button>
+                )}
+                {mode === 'offense' && showOther && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
+                        Scout Defense
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setShowOther(false)}
+                        className="text-xs text-chrome-400 hover:text-defense-400"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <section>
+                      <p className="pb-2 text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
+                        Front
+                      </p>
+                      <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6">
+                        {DEFENSE_FRONTS.map((f) => (
+                          <button
+                            key={`scout-${f.key}`}
+                            type="button"
+                            onClick={() => setFront(f.key)}
+                            title={f.formation}
+                            className={`rounded-[16px] border px-2 py-2 text-center transition-colors ${
+                              front === f.key
+                                ? 'border-accent-400 bg-accent-400'
+                                : 'border-chrome-700 bg-chrome-850 hover:border-chrome-600 hover:bg-chrome-800'
+                            }`}
+                          >
+                            <span
+                              className={`block font-display text-lg font-semibold leading-none ${
+                                front === f.key ? 'text-chrome-950' : 'text-chrome-200'
+                              }`}
+                            >
+                              {f.dl}-{f.lb}-{f.cb + f.s}
+                            </span>
+                            <span
+                              className={`mt-1 block text-[9px] leading-tight ${
+                                front === f.key ? 'text-chrome-950/80' : 'text-chrome-500'
+                              }`}
+                            >
+                              {f.dl}DL·{f.lb}LB·{f.cb + f.s}DB
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                      <p className="pt-2 text-xs text-chrome-500">{defFront.formation}</p>
+                    </section>
+                    <section>
+                      <p className="pb-2 text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
+                        Coverage shell
+                      </p>
+                      <div className="flex rounded-[16px] border border-chrome-700 p-0.5">
+                        {DEFENSE_SHELLS.map((sh) => (
+                          <button
+                            key={`scout-${sh.key}`}
+                            type="button"
+                            onClick={() => setShell(sh.key)}
+                            title={sh.hint}
+                            className={`flex-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                              shell === sh.key ? 'bg-accent-400 text-chrome-950' : 'text-chrome-300 hover:bg-chrome-800'
+                            }`}
+                          >
+                            {sh.label}
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                  </>
+                )}
+                {mode === 'defense' && !showOther && (
+                  <button
+                    type="button"
+                    onClick={() => setShowOther(true)}
+                    className="flex w-full items-center justify-center gap-1.5 rounded-full border border-dashed border-chrome-600 px-3 py-2 text-xs font-medium text-chrome-400 transition-colors hover:border-accent-400 hover:text-accent-400"
+                  >
+                    + Add Offense
+                  </button>
+                )}
+                {mode === 'defense' && showOther && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
+                        Scout Offense
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setShowOther(false)}
+                        className="text-xs text-chrome-400 hover:text-defense-400"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <section>
+                      <p className="pb-2 text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
+                        Personnel
+                      </p>
+                      <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6">
+                        {PERSONNEL.map((p) => (
+                          <button
+                            key={`scout-${p.key}`}
+                            type="button"
+                            onClick={() => {
+                              setPersonnel(p.key)
+                              setUnderCenter(p.uc)
+                            }}
+                            title={p.formation}
+                            className={`rounded-[16px] border px-2 py-2 text-center transition-colors ${
+                              personnel === p.key
+                                ? 'border-accent-400 bg-accent-400'
+                                : 'border-chrome-700 bg-chrome-850 hover:border-chrome-600 hover:bg-chrome-800'
+                            }`}
+                          >
+                            <span
+                              className={`block font-display text-lg font-semibold leading-none ${
+                                personnel === p.key ? 'text-chrome-950' : 'text-chrome-200'
+                              }`}
+                            >
+                              {p.key}
+                            </span>
+                            <span
+                              className={`mt-1 block text-[9px] leading-tight ${
+                                personnel === p.key ? 'text-chrome-950/80' : 'text-chrome-500'
+                              }`}
+                            >
+                              {p.rb}RB·{p.te}TE·{p.wr}WR
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                      <p className="pt-2 text-xs text-chrome-500">{def.formation}</p>
+                    </section>
+                  </>
+                )}
           </div>
         )}
 
