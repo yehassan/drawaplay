@@ -95,11 +95,13 @@ function EmptyState({ count }: { count: number }) {
 function PathInspector({ pathId }: { pathId: string }) {
   const path = useEditorStore((s) => s.paths.find((p) => p.id === pathId))
   const tokens = useEditorStore((s) => s.tokens)
+  const allPaths = useEditorStore((s) => s.paths)
   const updatePathType = useEditorStore((s) => s.updatePathType)
   const deletePaths = useEditorStore((s) => s.deletePaths)
   const mirrorPath = useEditorStore((s) => s.mirrorPath)
   const setMotionSnapAt = useEditorStore((s) => s.setMotionSnapAt)
   const setPathTarget = useEditorStore((s) => s.setPathTarget)
+  const setPassTrajectory = useEditorStore((s) => s.setPassTrajectory)
   if (!path) return null
   const from = tokens.find((t) => t.id === path.tokenId)
 
@@ -189,6 +191,48 @@ function PathInspector({ pathId }: { pathId: string }) {
           </div>
         </div>
       )}
+      {path.type === 'pass' &&
+        (() => {
+          const thrower = path.tokenId ? tokens.find((t) => t.id === path.tokenId) : null
+          const target = path.endTokenId ? tokens.find((t) => t.id === path.endTokenId) : null
+          if (!thrower || !target) return null
+          const recRoute = allPaths.find(
+            (q: import('../../stores/editorStore').PlayPath) =>
+              q.tokenId === target.id &&
+              q.type !== 'pass' &&
+              q.type !== 'handoff' &&
+              q.type !== 'toss' &&
+              q.type !== 'snap' &&
+              q.type !== 'motion' &&
+              q.points.length >= 2,
+          )
+          const toPos = recRoute ? recRoute.points[recRoute.points.length - 1] : { x: target.x, y: target.y }
+          const d = Math.hypot(toPos.x - thrower.x, toPos.y - thrower.y)
+          if (d < 10 || d >= 25) return null
+          const traj = path.passTrajectory ?? 'standard'
+          return (
+            <div className="mt-4 rounded-[16px] border border-chrome-700 bg-chrome-850 p-3">
+              <p className="text-xs font-semibold text-chrome-300">Trajectory</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-chrome-500">
+                {d.toFixed(1)} yd — touch lofts over the backer, standard is rhythm.
+              </p>
+              <div className="mt-2 flex rounded-full border border-chrome-700 p-0.5">
+                {(['standard', 'touch'] as const).map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setPassTrajectory(path.id, v)}
+                    className={`flex-1 rounded-full px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
+                      traj === v ? 'bg-accent-400 text-chrome-950' : 'text-chrome-300 hover:bg-chrome-800'
+                    }`}
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )
+        })()}
 
       {PLAYER_DRIVEN.has(path.type) && path.type !== 'motion' && (
         <RouteLibraryGrid pathId={path.id} />

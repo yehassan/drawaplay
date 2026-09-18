@@ -154,6 +154,7 @@ export function reschedule(paths: PlayPath[]): Map<string, Timing> {
           // ~40% of that route's duration — long enough to read as a real
           // throw, never a slow float across the whole window.
           let dur = Math.round(targetRouteDur * 0.4)
+          if (f.passTrajectory === 'touch') dur = Math.round(dur / 0.85)
           dur = Math.max(MIN_DURATION_MS, Math.min(FLIGHT_MAX_MS, dur))
           let launchAt = targetEnd - dur
           if (launchAt < ready) {

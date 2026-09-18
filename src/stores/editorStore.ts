@@ -44,6 +44,8 @@ export interface PlayPath {
   userLocked?: boolean
   /** for motion only: fraction of duration where snap occurs (0.1..1.0, 1 = stop before snap) */
   motionSnapAt?: number
+  /** for pass only: Touch lofts over the backer (only matters 10-25yd) */
+  passTrajectory?: 'standard' | 'touch'
 }
 
 export type Speed = 0.5 | 1 | 2
@@ -145,6 +147,7 @@ interface EditorState {
   setPathLocked: (id: string, userLocked: boolean) => void
   setMotionSnapAt: (id: string, snapAt: number) => void
   setPathTarget: (id: string, targetId: string | null) => void
+  setPassTrajectory: (id: string, traj: 'standard' | 'touch') => void
   reorderPath: (id: string, dir: -1 | 1) => void
   setPathEndpointLive: (
     id: string,
@@ -370,6 +373,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     get().beginHistory()
     set((s) => ({
       paths: applySchedule(s.paths.map((p) => (p.id === id ? { ...p, motionSnapAt: clamped } : p))),
+    }))
+  },
+
+  setPassTrajectory: (id, traj) => {
+    get().beginHistory()
+    set((s) => ({
+      paths: applySchedule(s.paths.map((p) => (p.id === id ? { ...p, passTrajectory: traj } : p))),
     }))
   },
 
