@@ -102,6 +102,7 @@ function PathInspector({ pathId }: { pathId: string }) {
   const setMotionSnapAt = useEditorStore((s) => s.setMotionSnapAt)
   const setPathTarget = useEditorStore((s) => s.setPathTarget)
   const setPassTrajectory = useEditorStore((s) => s.setPassTrajectory)
+  const setRouteDepth = useEditorStore((s) => s.setRouteDepth)
   if (!path) return null
   const from = tokens.find((t) => t.id === path.tokenId)
 
@@ -236,6 +237,37 @@ function PathInspector({ pathId }: { pathId: string }) {
       {PLAYER_DRIVEN.has(path.type) && path.type !== 'motion' && (
         <RouteLibraryGrid pathId={path.id} />
       )}
+
+      {path.type === 'route' &&
+        (() => {
+          const anchor = path.tokenId ? tokens.find((t) => t.id === path.tokenId) : null
+          if (!anchor || path.points.length < 2) return null
+          const curDepth = anchor.y - path.points[path.points.length - 1].y
+          return (
+            <div className="mt-4 rounded-[16px] border border-chrome-700 bg-chrome-850 p-3">
+              <p className="text-xs font-semibold text-chrome-300">Break depth</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-chrome-500">
+                How many yards downfield the break lands — drag to adjust.
+              </p>
+              <div className="mt-3 flex items-center gap-2">
+                <span className="text-[10px] text-chrome-500">4 yd</span>
+                <input
+                  type="range"
+                  min={4}
+                  max={18}
+                  step={0.5}
+                  value={Math.max(4, Math.min(18, curDepth))}
+                  onChange={(e) => setRouteDepth(path.id, Number(e.target.value))}
+                  className="flex-1 accent-accent-400"
+                />
+                <span className="text-[10px] text-chrome-500">18 yd</span>
+              </div>
+              <p className="mt-1 text-center text-[10px] font-medium text-chrome-400">
+                {curDepth.toFixed(1)} yd
+              </p>
+            </div>
+          )
+        })()}
 
       <button
         type="button"

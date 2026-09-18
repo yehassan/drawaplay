@@ -148,6 +148,7 @@ interface EditorState {
   setMotionSnapAt: (id: string, snapAt: number) => void
   setPathTarget: (id: string, targetId: string | null) => void
   setPassTrajectory: (id: string, traj: 'standard' | 'touch') => void
+  setRouteDepth: (id: string, depthYd: number) => void
   reorderPath: (id: string, dir: -1 | 1) => void
   setPathEndpointLive: (
     id: string,
@@ -381,6 +382,26 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set((s) => ({
       paths: applySchedule(s.paths.map((p) => (p.id === id ? { ...p, passTrajectory: traj } : p))),
     }))
+  },
+
+  setRouteDepth: (id, depthYd) => {
+    const clamped = Math.max(4, Math.min(18, depthYd))
+    get().beginHistory()
+    set((s) => {
+      const path = s.paths.find((p) => p.id === id)
+      if (!path || !path.tokenId || path.points.length < 2) return {}
+      const anchor = s.tokens.find((t) => t.id === path.tokenId)
+      if (!anchor) return {}
+      const curDepth = anchor.y - path.points[path.points.length - 1].y
+      if (Math.abs(curDepth) < 0.5) return {}
+      const scale = clamped / curDepth
+      const points = path.points.map((pt, i) =>
+        i === 0 ? { x: anchor.x, y: anchor.y } : { x: Math.max(1.5, Math.min(51.8, anchor.x + (pt.x - anchor.x) * scale)), y: anchor.y - (anchor.y - pt.y) * scale },
+      )
+      return {
+        paths: applySchedule(s.paths.map((p) => (p.id === id ? { ...p, points, d: catmullRomPath(points) } : p))),
+      }
+    })
   },
 
   setPathTarget: (id, targetId) => {
