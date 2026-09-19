@@ -1,7 +1,7 @@
 import type { Token } from '../stores/editorStore'
 import { HASH_X, losY, type Hash } from './formations'
 
-export type Shell = '1-high' | '2-high'
+export type Shell = 'zero' | '1-high' | '2-high' | '3-high'
 
 export interface DefenseFrontDef {
   key: string
@@ -25,8 +25,10 @@ export const DEFENSE_FRONTS: DefenseFrontDef[] = [
 ]
 
 export const DEFENSE_SHELLS: ReadonlyArray<{ key: Shell; label: string; hint: string }> = [
+  { key: 'zero', label: 'Zero', hint: 'no deep safeties — press / blitz look' },
   { key: '1-high', label: '1-High', hint: 'single-high safety, SS in the box' },
   { key: '2-high', label: '2-High', hint: 'two-high safeties' },
+  { key: '3-high', label: '3-High', hint: '3 deep safeties — drop 8, disguise' },
 ]
 
 interface SeedToken extends Omit<Token, 'id'> {
@@ -78,10 +80,16 @@ export function buildDefenseFormation(spec: DefenseSpec): BuiltDefense {
     t: (id: string, pos: Token['pos'], dx: number, depth: number) => void,
     sh: Shell,
   ): void => {
-    if (sh === '1-high') {
+    if (sh === 'zero') {
+      t('SS', 'S', -4, 3.5)
+      t('FS', 'S', 4, 3.5)
+    } else if (sh === '1-high') {
       // box safety + single-high (BDB 1-deep: ~7yd box / ~12.8yd high)
       t('SS', 'S', -6, 7)
       t('FS', 'S', 4, 12.5)
+    } else if (sh === '3-high') {
+      t('SS', 'S', -8, 13)
+      t('FS', 'S', 8, 13)
     } else {
       // two-high shell (BDB median depth 10.4 / |lat| 6.1)
       t('SS', 'S', -6, 10.5)
@@ -100,10 +108,15 @@ export function buildDefenseFormation(spec: DefenseSpec): BuiltDefense {
       tok('DL3', 'DL', 2.2, 0.8)
       tok('DL4', 'DL', 6.5, 0.8)
       tok('MIKE', 'LB', 0, 4.5)
-      tok('CB1', 'CB', -12.6, 4.2)
-      tok('CB2', 'CB', 12.6, 4.2)
-      tok('NB', 'CB', 9, 2.5)
-      tok('DIME', 'CB', -9, 2.5)
+      tok('CB1', 'CB', -12.6, shell === 'zero' ? 1.5 : 4.2)
+      tok('CB2', 'CB', 12.6, shell === 'zero' ? 1.5 : 4.2)
+      if (shell === '3-high') {
+        tok('NB', 'CB', 6, 12)
+        tok('DIME', 'CB', -6, 12)
+      } else {
+        tok('NB', 'CB', 9, shell === 'zero' ? 1.2 : 2.5)
+        tok('DIME', 'CB', -9, shell === 'zero' ? 1.2 : 2.5)
+      }
       shells(tok, shell)
       break
     }
@@ -114,12 +127,12 @@ export function buildDefenseFormation(spec: DefenseSpec): BuiltDefense {
       tok('DL1', 'DL', -3.5, 0.8)
       tok('DL2', 'DL', 0, 0.8)
       tok('DL3', 'DL', 3.5, 0.8)
-      tok('OLB1', 'LB', -6.3, 1.3)
-      tok('OLB2', 'LB', 6.3, 1.3)
-      tok('ILB1', 'LB', -2.5, 4)
-      tok('ILB2', 'LB', 2.5, 4)
-      tok('CB1', 'CB', -12.6, 4.2)
-      tok('CB2', 'CB', 12.6, 4.2)
+      tok('OLB1', 'LB', -6.3, shell === 'zero' ? 1.0 : 1.3)
+      tok('OLB2', 'LB', 6.3, shell === 'zero' ? 1.0 : 1.3)
+      tok('ILB1', 'LB', -2.5, shell === 'zero' ? 1.5 : 4)
+      tok('ILB2', 'LB', 2.5, shell === 'zero' ? 1.5 : 4)
+      tok('CB1', 'CB', -12.6, shell === 'zero' ? 1.5 : 4.2)
+      tok('CB2', 'CB', 12.6, shell === 'zero' ? 1.5 : 4.2)
       shells(tok, shell)
       break
     }
@@ -129,11 +142,11 @@ export function buildDefenseFormation(spec: DefenseSpec): BuiltDefense {
       tok('DL2', 'DL', -2.2, 0.8)
       tok('DL3', 'DL', 2.2, 0.8)
       tok('DL4', 'DL', 6.5, 0.8)
-      tok('MIKE', 'LB', 0, 3.5)
-      tok('SAM', 'LB', -3.5, 3.5)
-      tok('WILL', 'LB', 3.5, 3.5)
-      tok('CB1', 'CB', -12.6, 4.2)
-      tok('CB2', 'CB', 12.6, 4.2)
+      tok('MIKE', 'LB', 0, shell === 'zero' ? 1.5 : 3.5)
+      tok('SAM', 'LB', -3.5, shell === 'zero' ? 1.5 : 3.5)
+      tok('WILL', 'LB', 3.5, shell === 'zero' ? 1.5 : 3.5)
+      tok('CB1', 'CB', -12.6, shell === 'zero' ? 1.5 : 4.2)
+      tok('CB2', 'CB', 12.6, shell === 'zero' ? 1.5 : 4.2)
       shells(tok, shell)
       break
     }
@@ -144,10 +157,10 @@ export function buildDefenseFormation(spec: DefenseSpec): BuiltDefense {
       tok('DL3', 'DL', 0, 0.8)
       tok('DL4', 'DL', 3.8, 0.8)
       tok('DL5', 'DL', 7.5, 0.8)
-      tok('MIKE', 'LB', -2.5, 4)
-      tok('WILL', 'LB', 2.5, 4)
-      tok('CB1', 'CB', -12.6, 4.2)
-      tok('CB2', 'CB', 12.6, 4.2)
+      tok('MIKE', 'LB', -2.5, shell === 'zero' ? 1.5 : 4)
+      tok('WILL', 'LB', 2.5, shell === 'zero' ? 1.5 : 4)
+      tok('CB1', 'CB', -12.6, shell === 'zero' ? 1.5 : 4.2)
+      tok('CB2', 'CB', 12.6, shell === 'zero' ? 1.5 : 4.2)
       shells(tok, shell)
       break
     }
@@ -159,9 +172,10 @@ export function buildDefenseFormation(spec: DefenseSpec): BuiltDefense {
       tok('MIKE', 'LB', 0, 4)
       tok('SAM', 'LB', -3.5, 3.5)
       tok('WILL', 'LB', 3.5, 3.5)
-      tok('CB1', 'CB', -12.6, 4.2)
-      tok('CB2', 'CB', 12.6, 4.2)
-      tok('NB', 'CB', 9, 2.5)
+      tok('CB1', 'CB', -12.6, shell === 'zero' ? 1.5 : 4.2)
+      tok('CB2', 'CB', 12.6, shell === 'zero' ? 1.5 : 4.2)
+      if (shell === '3-high') tok('NB', 'CB', 0, 14)
+      else tok('NB', 'CB', 9, shell === 'zero' ? 1.2 : 2.5)
       shells(tok, shell)
       break
     }
@@ -172,10 +186,15 @@ export function buildDefenseFormation(spec: DefenseSpec): BuiltDefense {
       tok('DL3', 'DL', 3.5, 0.8)
       tok('MIKE', 'LB', -2.5, 4)
       tok('WILL', 'LB', 2.5, 4)
-      tok('CB1', 'CB', -12.6, 4.2)
-      tok('CB2', 'CB', 12.6, 4.2)
-      tok('NB', 'CB', 9, 2.5)
-      tok('DIME', 'CB', -9, 2.5)
+      tok('CB1', 'CB', -12.6, shell === 'zero' ? 1.5 : 4.2)
+      tok('CB2', 'CB', 12.6, shell === 'zero' ? 1.5 : 4.2)
+      if (shell === '3-high') {
+        tok('NB', 'CB', 6, 12)
+        tok('DIME', 'CB', -6, 12)
+      } else {
+        tok('NB', 'CB', 9, shell === 'zero' ? 1.2 : 2.5)
+        tok('DIME', 'CB', -9, shell === 'zero' ? 1.2 : 2.5)
+      }
       shells(tok, shell)
       break
     }
@@ -185,13 +204,18 @@ export function buildDefenseFormation(spec: DefenseSpec): BuiltDefense {
       tok('DL2', 'DL', 0, 0.8)
       tok('DL3', 'DL', 3.5, 0.8)
       tok('MIKE', 'LB', 0, 4.5)
-      tok('CB1', 'CB', -12.6, 4.2)
-      tok('CB2', 'CB', 12.6, 4.2)
-      tok('NB', 'CB', 9, 2.5)
-      tok('DIME', 'CB', -9, 2.5)
+      tok('CB1', 'CB', -12.6, shell === 'zero' ? 1.5 : 4.2)
+      tok('CB2', 'CB', 12.6, shell === 'zero' ? 1.5 : 4.2)
+      if (shell === '3-high') {
+        tok('NB', 'CB', 6, 12)
+        tok('DIME', 'CB', -6, 12)
+      } else {
+        tok('NB', 'CB', 9, shell === 'zero' ? 1.2 : 2.5)
+        tok('DIME', 'CB', -9, shell === 'zero' ? 1.2 : 2.5)
+      }
       shells(tok, shell)
-      // 7th DB as deep middle
-      tok('DOLLAR', 'S', 0, 15)
+      // 7th DB as deep middle — deeper in 3-high, shallow in zero
+      tok('DOLLAR', 'S', 0, shell === 'zero' ? 4 : shell === '3-high' ? 16 : 15)
       break
     }
     case '146': {
@@ -201,10 +225,15 @@ export function buildDefenseFormation(spec: DefenseSpec): BuiltDefense {
       tok('OLB2', 'LB', 6.3, 1.3)
       tok('ILB1', 'LB', -2.5, 4)
       tok('ILB2', 'LB', 2.5, 4)
-      tok('CB1', 'CB', -12.6, 4.2)
-      tok('CB2', 'CB', 12.6, 4.2)
-      tok('NB', 'CB', 9, 2.5)
-      tok('DIME', 'CB', -9, 2.5)
+      tok('CB1', 'CB', -12.6, shell === 'zero' ? 1.5 : 4.2)
+      tok('CB2', 'CB', 12.6, shell === 'zero' ? 1.5 : 4.2)
+      if (shell === '3-high') {
+        tok('NB', 'CB', 6, 12)
+        tok('DIME', 'CB', -6, 12)
+      } else {
+        tok('NB', 'CB', 9, shell === 'zero' ? 1.2 : 2.5)
+        tok('DIME', 'CB', -9, shell === 'zero' ? 1.2 : 2.5)
+      }
       shells(tok, shell)
       break
     }
@@ -216,14 +245,15 @@ export function buildDefenseFormation(spec: DefenseSpec): BuiltDefense {
       tok('DL3', 'DL', 2.2, 0.8)
       tok('DL4', 'DL', 6.5, 0.8)
       // linebackers (BDB median depth 3.5 / |lat| 3.5)
-      tok('LB1', 'LB', -3.5, 3.5)
-      tok('LB2', 'LB', 3.5, 3.5)
+      tok('LB1', 'LB', -3.5, shell === 'zero' ? 1.5 : 3.5)
+      tok('LB2', 'LB', 3.5, shell === 'zero' ? 1.5 : 3.5)
       // outside corners (BDB median depth 4.2 / |lat| 12.6)
-      tok('CB1', 'CB', -12.6, 4.2)
-      tok('CB2', 'CB', 12.6, 4.2)
+      tok('CB1', 'CB', -12.6, shell === 'zero' ? 1.5 : 4.2)
+      tok('CB2', 'CB', 12.6, shell === 'zero' ? 1.5 : 4.2)
       // nickel over the slot (BDB innermost-CB median depth 2.8 / |lat| 9.1 —
-      // ~1yd in front of the LB level, not on it)
-      tok('NB', 'CB', 9, 2.5)
+      // ~1yd in front of the LB level, not on it); 3-high drops him deep
+      if (shell === '3-high') tok('NB', 'CB', 0, 14)
+      else tok('NB', 'CB', 9, shell === 'zero' ? 1.2 : 2.5)
       shells(tok, shell)
       break
   }
