@@ -174,7 +174,7 @@ export function buildDefenseFormation(spec: DefenseSpec): BuiltDefense {
       tok('WILL', 'LB', 3.5, 3.5)
       tok('CB1', 'CB', -12.6, shell === 'zero' ? 1.5 : 4.2)
       tok('CB2', 'CB', 12.6, shell === 'zero' ? 1.5 : 4.2)
-      if (shell === '3-high') tok('NB', 'CB', 0, 14)
+      if (shell === '3-high') tok('NB', 'S', 0, 14)
       else tok('NB', 'CB', 9, shell === 'zero' ? 1.2 : 2.5)
       shells(tok, shell)
       break
