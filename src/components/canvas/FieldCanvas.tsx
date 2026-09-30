@@ -498,6 +498,12 @@ export function FieldCanvas() {
       if (!s.moved) clickSelect(s.lastSx, s.lastSy)
       else finalizeStroke(s.raw)
     }
+
+    if (s.type === 'drag' && !s.began && s.origins.size === 1) {
+      const [only] = [...s.origins.keys()]
+      const t = st.tokens.find((x) => x.id === only)
+      st.showTechBar(t && t.side === 'defense' && t.pos === 'DL' ? only : null)
+    }
     if (s.type === 'pathEnd') st.applyScheduleNow()
     if (s.type === 'drag' || s.type === 'textDrag') setGuides({ xs: [], ys: [] })
     sessionRef.current = null
