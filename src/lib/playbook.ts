@@ -10,6 +10,7 @@ export interface PlayRecord {
   ballStartId: string | null
   /** line-of-scrimmage metadata from quickstart (LOS marker) */
   los?: { side: 'ours' | 'theirs'; n: number }
+  defenseRefX?: number
   fieldTheme?: string
   ruleset?: string
   folderId?: string | null

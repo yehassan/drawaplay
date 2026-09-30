@@ -21,6 +21,7 @@ export function usePersistence(): void {
           paths: rec.paths,
           textNotes: (rec.textNotes as never) ?? [],
           los: rec.los ?? null,
+          defenseRefX: rec.defenseRefX,
           fieldTheme: (rec.fieldTheme as never) ?? undefined,
           ruleset: (rec.ruleset as never) ?? undefined,
         })
@@ -52,6 +53,7 @@ export function usePersistence(): void {
             textNotes: st.textNotes.map((n) => ({ ...n })),
             ballStartId: st.ballStartId,
             los: st.losSpec ?? undefined,
+            defenseRefX: st.defenseRefX ?? undefined,
             fieldTheme: st.fieldTheme,
             ruleset: st.ruleset,
             updatedAt: now,
@@ -70,6 +72,7 @@ export function usePersistence(): void {
         textNotes: st.textNotes.map((n) => ({ ...n })),
         ballStartId: st.ballStartId,
         los: st.losSpec ?? undefined,
+        defenseRefX: st.defenseRefX ?? undefined,
         fieldTheme: st.fieldTheme,
         ruleset: st.ruleset,
         tags: [],

@@ -52,6 +52,11 @@ export function applyShortcut(e: ShortcutEvent): void {
     }
     return
   }
+  if (e.key === 'Escape' && st.techBarFor) {
+    st.showTechBar(null)
+    return
+  }
+
   if (e.key === 'Escape' && st.typeBarFor) {
     st.showTypeBar(null)
     return

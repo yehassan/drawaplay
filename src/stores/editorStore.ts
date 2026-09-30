@@ -4,7 +4,14 @@ import { applySchedule, timelineDuration, type Timing } from '../lib/timing'
 import { resolveFlightTarget } from '../lib/target'
 import { PLAYER_DRIVEN } from '../lib/pathStyles'
 import { buildRoutePoints, routeConcept } from '../lib/routeTemplates'
+import {
+  olAnchors,
+  techniqueX,
+  type DlTechnique,
+  type TechniqueAssignment,
+} from '../lib/techniques'
 import type { FieldTheme } from '../lib/theme'
+import { FIELD_CENTER_X } from '../lib/formations'
 import type { Pt, Ruleset } from '../lib/field'
 import type { PathType } from '../lib/pathStyles'
 
@@ -90,6 +97,12 @@ interface EditorState {
   uiTheme: 'dark' | 'light'
   /** path id whose one-shot type bar is showing */
   typeBarFor: string | null
+  /** defense token id whose technique chip row is showing */
+  techBarFor: string | null
+  /** explicit technique assignment per defense lineman */
+  defenseTech: Record<string, TechniqueAssignment>
+  /** ball x the defense was built against, for technique fallback with no offense */
+  defenseRefX: number | null
   /** bumped whenever a whole play loads so the canvas can re-fit */
   fitNonce: number
   /** persisted record id for the current doc (null = not yet saved) */
@@ -170,12 +183,21 @@ interface EditorState {
   deleteSelected: () => void
   select: (ids: string[]) => void
   setBallStart: (id: string | null) => void
+  showTechBar: (id: string | null) => void
+  setDefenseTechnique: (
+    tokenId: string,
+    tech: DlTechnique,
+    inverted: boolean,
+    mirrored?: boolean,
+  ) => void
+  clearDefenseTechnique: (tokenId: string) => void
   loadPlay: (play: {
     name: string
     tokens: Token[]
     paths: (Omit<PlayPath, 'id' | 'timing'> & { timing?: Timing })[]
     textNotes?: TextNote[]
     los?: LosSpec | null
+    defenseRefX?: number
     fieldTheme?: FieldTheme
     ruleset?: Ruleset
   }) => void
@@ -219,6 +241,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   selectedIds: [],
   camera: { zoom: 16, tx: 0, ty: 0 },
   typeBarFor: null,
+  techBarFor: null,
+  defenseTech: {},
+  defenseRefX: null,
   fitNonce: 0,
   losSpec: null,
   fieldTheme: 'green',
@@ -317,7 +342,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         const u = updates[t.id]
         if (u) deltas.set(t.id, { x: u.x - t.x, y: u.y - t.y })
       }
+      // a hand-dragged lineman is no longer on his assigned technique
+      let defenseTech = s.defenseTech
+      for (const id of Object.keys(defenseTech)) {
+        if (updates[id]) {
+          if (defenseTech === s.defenseTech) defenseTech = { ...defenseTech }
+          delete defenseTech[id]
+        }
+      }
       return {
+        defenseTech,
         tokens: s.tokens.map((t) => {
           const u = updates[t.id]
           return u ? { ...t, x: u.x, y: u.y } : t
@@ -649,6 +683,33 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       playback: { ...s.playback, playing: false, tMs: 0 },
     })),
 
+  showTechBar: (techBarFor) => set({ techBarFor }),
+
+  setDefenseTechnique: (tokenId, tech, inverted, mirrored = false) => {
+    const st = get()
+    const tok = st.tokens.find((t) => t.id === tokenId)
+    if (!tok) return
+    st.beginHistory()
+    const anchors = olAnchors(st.tokens, st.defenseRefX ?? FIELD_CENTER_X)
+    const x = Math.max(1.5, Math.min(51.8, techniqueX(anchors, tech, inverted, mirrored)))
+    set((s) => ({
+      defenseTech: { ...s.defenseTech, [tokenId]: { tech, inverted, mirrored } },
+      tokens: s.tokens.map((t) => (t.id === tokenId ? { ...t, x } : t)),
+      techBarFor: null,
+    }))
+  },
+
+  clearDefenseTechnique: (tokenId) => {
+    const st = get()
+    if (!st.defenseTech[tokenId]) return
+    st.beginHistory()
+    set((s) => {
+      const next = { ...s.defenseTech }
+      delete next[tokenId]
+      return { defenseTech: next, techBarFor: null }
+    })
+  },
+
   loadPlay: (play) =>
     set((s) => {
       // remap seed token ids to fresh ids so path anchors follow
@@ -680,6 +741,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return {
         playName: play.name,
         losSpec: play.los ?? null,
+        defenseRefX: play.defenseRefX ?? null,
+        defenseTech: {},
+        techBarFor: null,
         fieldTheme: play.fieldTheme ?? s.fieldTheme,
         ruleset: play.ruleset ?? s.ruleset,
         tokens,
@@ -701,6 +765,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       past: [...s.past.slice(-49), snap({ tokens: s.tokens, paths: s.paths, textNotes: s.textNotes })],
       future: [],
       typeBarFor: null,
+      techBarFor: null,
       // any edit returns the play to rest so the editor always shows true positions
       playback: { ...s.playback, playing: false, tMs: 0 },
     })),
