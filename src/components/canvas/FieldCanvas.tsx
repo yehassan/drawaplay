@@ -20,16 +20,7 @@ import { timelineDuration } from '../../lib/timing'
 import { POSITIONS } from '../../lib/positions'
 import { useEditorStore, type Token } from '../../stores/editorStore'
 import { computeScene } from '../../lib/render'
-import { losY as losYof, FIELD_CENTER_X } from '../../lib/formations'
-import {
-  DL_TECHNIQUES,
-  MIRRORABLE_TECHNIQUES,
-  ROLE_TECHNIQUES,
-  nearestTechnique,
-  dlRole,
-  olAnchors,
-  techniqueLabel,
-} from '../../lib/techniques'
+import { losY as losYof } from '../../lib/formations'
 import { paletteFor } from '../../lib/theme'
 import { Icon } from '../ui/icons'
 import { TypeSample } from '../ui/TypeSample'
@@ -88,10 +79,6 @@ export function FieldCanvas() {
   const typeBarFor = useEditorStore((s) => s.typeBarFor)
   const showTypeBar = useEditorStore((s) => s.showTypeBar)
   const updatePathType = useEditorStore((s) => s.updatePathType)
-  const techBarFor = useEditorStore((s) => s.techBarFor)
-  const setDefenseTechnique = useEditorStore((s) => s.setDefenseTechnique)
-  const defenseTech = useEditorStore((s) => s.defenseTech)
-  const defenseRefX = useEditorStore((s) => s.defenseRefX)
 
   // rAF playback clock: tMs is the single source of truth
   useEffect(() => {
@@ -484,7 +471,6 @@ export function FieldCanvas() {
       const tiny = Math.abs(l.x - s.x0) < 4 && Math.abs(l.y - s.y0) < 4
       if (tiny) {
         st.select([])
-        st.showTechBar(null)
       } else {
         const a = screenToField(st.camera, Math.min(s.x0, l.x), Math.min(s.y0, l.y))
         const b = screenToField(st.camera, Math.max(s.x0, l.x), Math.max(s.y0, l.y))
@@ -499,12 +485,6 @@ export function FieldCanvas() {
       // a click in pen mode selects whatever is under the cursor
       if (!s.moved) clickSelect(s.lastSx, s.lastSy)
       else finalizeStroke(s.raw)
-    }
-
-    if (s.type === 'drag' && !s.began && s.origins.size === 1) {
-      const [only] = [...s.origins.keys()]
-      const t = st.tokens.find((x) => x.id === only)
-      st.showTechBar(t && t.side === 'defense' && t.pos === 'DL' ? only : null)
     }
     if (s.type === 'pathEnd') st.applyScheduleNow()
     if (s.type === 'drag' || s.type === 'textDrag') setGuides({ xs: [], ys: [] })
@@ -536,8 +516,6 @@ export function FieldCanvas() {
     }
     if (bestTok) {
       st.select([bestTok])
-      const t = st.tokens.find((x) => x.id === bestTok)
-      st.showTechBar(t && t.side === 'defense' && t.pos === 'DL' ? bestTok : null)
       return
     }
     let bestNote: string | null = null
@@ -724,17 +702,6 @@ export function FieldCanvas() {
   const typeBarPath = typeBarFor ? renderedPaths.find((p) => p.id === typeBarFor) : undefined
   const typeBarTip = typeBarPath?.points[typeBarPath.points.length - 1]
   const typeBarActive = !!typeBarTip && !playing
-
-  const techBarToken = techBarFor ? tokens.find((t) => t.id === techBarFor) : undefined
-  const techAnchors = techBarToken
-    ? olAnchors(tokens, defenseRefX ?? FIELD_CENTER_X)
-    : undefined
-  const techCurrent =
-    techAnchors && techBarToken
-      ? (defenseTech[techBarFor!] ?? nearestTechnique(techAnchors, techBarToken.x))
-      : undefined
-  const techRole = techAnchors && techBarToken ? dlRole(techAnchors, techBarToken.x) : undefined
-  const techBarActive = !!techBarToken && !!techCurrent && !!techRole && !playing
 
   return (
     <div ref={wrapRef} className="absolute inset-0" onDragOver={(e) => {
@@ -1009,80 +976,6 @@ export function FieldCanvas() {
           })}
           <div className="pointer-events-none absolute -bottom-5 right-0 whitespace-nowrap text-[9px] text-chrome-500">
             1–{PATH_TYPE_ORDER.length} set type · Esc close
-          </div>
-        </div>
-      )}
-
-      {/* defensive technique chips */}
-      {techBarActive && techBarToken && techCurrent && (
-        <div
-          className="absolute z-20 flex -translate-x-1/2 items-center gap-0.5 rounded-[16px] border border-[var(--color-inspector-border)] bg-[var(--color-inspector-unselected)] p-1 shadow-[0_0_0_1px_rgba(4,23,43,0.05),0_8px_40px_0px_rgba(0,0,0,0.1)] backdrop-blur"
-          style={{
-            left: techBarToken.x * camera.zoom + camera.tx,
-            top: techBarToken.y * camera.zoom + camera.ty - 34,
-          }}
-        >
-          {(techRole ? ROLE_TECHNIQUES[techRole] : DL_TECHNIQUES).map((tech) => {
-            const active =
-              techCurrent.tech === tech && !techCurrent.inverted && !techCurrent.mirrored
-            return (
-              <button
-                key={tech}
-                type="button"
-                onClick={() => setDefenseTechnique(techBarToken.id, tech, false, false)}
-                className={`grid size-7 place-items-center rounded-[10px] text-xs font-bold tabular-nums transition-colors ${
-                  active
-                    ? 'bg-accent-400 text-chrome-950'
-                    : 'text-[var(--color-inspector-text)] hover:bg-[var(--color-inspector-hover)]'
-                }`}
-              >
-                {tech}
-              </button>
-            )
-          })}
-          <div className="mx-0.5 h-5 w-px bg-[var(--color-inspector-border)]" />
-          <button
-            type="button"
-            title="Invert — shade to the inside shoulder"
-            onClick={() =>
-              setDefenseTechnique(
-                techBarToken.id,
-                techCurrent.tech,
-                !techCurrent.inverted,
-                techCurrent.mirrored,
-              )
-            }
-            disabled={techCurrent.tech === 0}
-            className={`grid h-7 w-8 place-items-center rounded-[10px] text-xs font-bold transition-colors disabled:opacity-30 ${
-              techCurrent.inverted
-                ? 'bg-accent-400 text-chrome-950'
-                : 'text-[var(--color-inspector-text)] hover:bg-[var(--color-inspector-hover)]'
-            }`}
-          >
-            i
-          </button>
-          <button
-            type="button"
-            title="Mirror to the other side of the ball"
-            onClick={() =>
-              setDefenseTechnique(
-                techBarToken.id,
-                techCurrent.tech,
-                techCurrent.inverted,
-                !techCurrent.mirrored,
-              )
-            }
-            disabled={techRole !== 'de' || !MIRRORABLE_TECHNIQUES.includes(techCurrent.tech)}
-            className={`grid h-7 w-8 place-items-center rounded-[10px] text-sm transition-colors disabled:opacity-30 ${
-              techCurrent.mirrored
-                ? 'bg-accent-400 text-chrome-950'
-                : 'text-[var(--color-inspector-text)] hover:bg-[var(--color-inspector-hover)]'
-            }`}
-          >
-            ⇄
-          </button>
-          <div className="pointer-events-none absolute -bottom-4 left-0 whitespace-nowrap text-[9px] text-chrome-500">
-            {techniqueLabel(techCurrent)} · {techRole?.toUpperCase()} · Esc close
           </div>
         </div>
       )}

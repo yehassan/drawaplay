@@ -1,4 +1,3 @@
-import type { DlTechnique } from './techniques'
 import type { PlayPath, TextNote, Token } from '../stores/editorStore'
 
 /** A persisted play document. */
@@ -11,8 +10,6 @@ export interface PlayRecord {
   ballStartId: string | null
   /** line-of-scrimmage metadata from quickstart (LOS marker) */
   los?: { side: 'ours' | 'theirs'; n: number }
-  defenseRefX?: number
-  defenseTech?: Record<string, { tech: DlTechnique; inverted: boolean; mirrored: boolean }>
   fieldTheme?: string
   ruleset?: string
   folderId?: string | null

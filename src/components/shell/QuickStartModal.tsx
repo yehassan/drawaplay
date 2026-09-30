@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { PERSONNEL, buildFormation, HASH_X, type Hash } from '../../lib/formations'
+import { PERSONNEL, buildFormation, type Hash } from '../../lib/formations'
 import {
   DEFENSE_FRONTS,
   DEFENSE_SHELLS,
@@ -482,7 +482,6 @@ export function QuickStartModal() {
                 loadPlay({
                   name,
                   los: { side, n },
-                  defenseRefX: HASH_X[hash],
                   tokens,
                   paths: snap
                     ? [
