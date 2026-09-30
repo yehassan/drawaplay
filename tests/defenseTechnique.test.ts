@@ -138,3 +138,47 @@ describe('clearDefenseTechnique', () => {
     expect(useEditorStore.getState().past.length).toBe(0)
   })
 })
+
+describe('persisting techniques through loadPlay', () => {
+  it('remaps assignment keys onto the fresh token ids', () => {
+    useEditorStore.getState().loadPlay({
+      name: 'Mint',
+      tokens: [...offense(), ...defense()],
+      paths: [],
+      defenseRefX: 26.65,
+      defenseTech: { DL1: { tech: 4, inverted: true, mirrored: false } },
+    })
+    const st = useEditorStore.getState()
+    const keys = Object.keys(st.defenseTech)
+    expect(keys).toHaveLength(1)
+    expect(keys[0]).not.toBe('DL1')
+    expect(st.tokens.some((t) => t.id === keys[0])).toBe(true)
+  })
+
+  it('drops assignments whose token did not survive', () => {
+    useEditorStore.getState().loadPlay({
+      name: 'Ghost',
+      tokens: [...defense()],
+      paths: [],
+      defenseRefX: 26.65,
+      defenseTech: { DL1: { tech: 4, inverted: true, mirrored: false }, NOPE: { tech: 0, inverted: false, mirrored: false } },
+    })
+    expect(Object.keys(useEditorStore.getState().defenseTech)).toHaveLength(1)
+  })
+
+  it('starts clean when a play carries no assignments', () => {
+    useEditorStore.getState().loadPlay({
+      name: 'Plain',
+      tokens: [...defense()],
+      paths: [],
+    })
+    expect(useEditorStore.getState().defenseTech).toEqual({})
+  })
+
+  it('clears stale assignments when a template play loads', () => {
+    const { dl } = loadBoth()
+    useEditorStore.getState().setDefenseTechnique(dl, 5, false)
+    useEditorStore.getState().loadPlay({ name: 'New', tokens: [...defense()], paths: [] })
+    expect(useEditorStore.getState().defenseTech).toEqual({})
+  })
+})

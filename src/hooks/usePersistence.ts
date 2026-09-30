@@ -22,6 +22,7 @@ export function usePersistence(): void {
           textNotes: (rec.textNotes as never) ?? [],
           los: rec.los ?? null,
           defenseRefX: rec.defenseRefX,
+          defenseTech: rec.defenseTech,
           fieldTheme: (rec.fieldTheme as never) ?? undefined,
           ruleset: (rec.ruleset as never) ?? undefined,
         })
@@ -54,6 +55,7 @@ export function usePersistence(): void {
             ballStartId: st.ballStartId,
             los: st.losSpec ?? undefined,
             defenseRefX: st.defenseRefX ?? undefined,
+            defenseTech: st.defenseTech,
             fieldTheme: st.fieldTheme,
             ruleset: st.ruleset,
             updatedAt: now,
@@ -73,6 +75,7 @@ export function usePersistence(): void {
         ballStartId: st.ballStartId,
         los: st.losSpec ?? undefined,
         defenseRefX: st.defenseRefX ?? undefined,
+        defenseTech: st.defenseTech,
         fieldTheme: st.fieldTheme,
         ruleset: st.ruleset,
         tags: [],

@@ -198,6 +198,7 @@ interface EditorState {
     textNotes?: TextNote[]
     los?: LosSpec | null
     defenseRefX?: number
+    defenseTech?: Record<string, TechniqueAssignment>
     fieldTheme?: FieldTheme
     ruleset?: Ruleset
   }) => void
@@ -738,11 +739,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         })),
       )
       const textNotes = (play.textNotes ?? []).map((n) => ({ ...n, id: uid() }))
+      // assignments are keyed by the saved token ids, which we just replaced
+      const defenseTech: Record<string, TechniqueAssignment> = {}
+      for (const [oldId, a] of Object.entries(play.defenseTech ?? {})) {
+        const nextId = idMap.get(oldId)
+        if (nextId) defenseTech[nextId] = { ...a }
+      }
       return {
         playName: play.name,
         losSpec: play.los ?? null,
         defenseRefX: play.defenseRefX ?? null,
-        defenseTech: {},
+        defenseTech,
         techBarFor: null,
         fieldTheme: play.fieldTheme ?? s.fieldTheme,
         ruleset: play.ruleset ?? s.ruleset,

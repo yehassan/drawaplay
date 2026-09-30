@@ -794,6 +794,7 @@ export function FieldCanvas() {
             <TokenView
               key={t.id}
               token={t}
+              tag={defenseTech[t.id] ? techniqueLabel(defenseTech[t.id]) : undefined}
               selected={selectedIds.includes(t.id)}
               posOverride={animActive ? scene.tokenPositions.get(t.id) : undefined}
               onPointerDown={onTokenPointerDown}

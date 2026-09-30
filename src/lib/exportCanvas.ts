@@ -1,6 +1,7 @@
 import { hashX, numberX, type Ruleset } from './field'
 import { PATH_STYLES } from './pathStyles'
 import { POSITIONS } from './positions'
+import { techniqueLabel, type DlTechnique } from './techniques'
 import { paletteFor, styleColor, type FieldTheme } from './theme'
 import type { Scene } from './render'
 import type { LosSpecLike } from './los'
@@ -15,7 +16,11 @@ export const FIELD_L_YD = 120
 /** Paint the full animated frame for a scene onto a 2D context (scale = px/yd). */
 export function drawFrame(
   ctx: CanvasRenderingContext2D,
-  input: Scene & { tokens: Token[]; textNotes?: TextNote[] },
+  input: Scene & {
+    tokens: Token[]
+    textNotes?: TextNote[]
+    defenseTech?: Record<string, { tech: DlTechnique; inverted: boolean; mirrored: boolean }>
+  },
   opts: { scale: number; losSpec?: LosSpecLike | null; view?: ViewRect; theme?: FieldTheme; ruleset?: Ruleset },
 ): void {
   const theme: FieldTheme = opts.theme ?? 'green'
@@ -245,6 +250,27 @@ export function drawFrame(
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText(label, pos.x, pos.y + 0.04)
+    }
+
+    const tech = input.defenseTech?.[t.id]
+    if (tech) {
+      const text = techniqueLabel(tech)
+      const w = 0.34 + text.length * 0.3
+      ctx.fillStyle = '#0d1420'
+      ctx.strokeStyle = ring
+      ctx.lineWidth = 0.06
+      const r = 0.16
+      const x0 = pos.x - w / 2
+      const y0 = pos.y + 0.82
+      ctx.beginPath()
+      ctx.roundRect(x0, y0, w, 0.5, r)
+      ctx.fill()
+      ctx.stroke()
+      ctx.fillStyle = ring
+      ctx.font = `700 ${0.5}px Oswald, "Archivo", sans-serif`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(text, pos.x, pos.y + 1.07)
     }
   }
 
