@@ -24,6 +24,8 @@ import { losY as losYof, FIELD_CENTER_X } from '../../lib/formations'
 import {
   DL_TECHNIQUES,
   MIRRORABLE_TECHNIQUES,
+  ROLE_TECHNIQUES,
+  dlRole,
   nearestTechnique,
   olAnchors,
   techniqueLabel,
@@ -731,7 +733,8 @@ export function FieldCanvas() {
     techAnchors && techBarToken
       ? (defenseTech[techBarFor!] ?? nearestTechnique(techAnchors, techBarToken.x))
       : undefined
-  const techBarActive = !!techBarToken && !!techCurrent && !playing
+  const techRole = techAnchors && techBarToken ? dlRole(techAnchors, techBarToken.x) : undefined
+  const techBarActive = !!techBarToken && !!techCurrent && !!techRole && !playing
 
   return (
     <div ref={wrapRef} className="absolute inset-0" onDragOver={(e) => {
@@ -1019,7 +1022,7 @@ export function FieldCanvas() {
             top: techBarToken.y * camera.zoom + camera.ty - 34,
           }}
         >
-          {DL_TECHNIQUES.map((tech) => {
+          {(techRole ? ROLE_TECHNIQUES[techRole] : DL_TECHNIQUES).map((tech) => {
             const active =
               techCurrent.tech === tech && !techCurrent.inverted && !techCurrent.mirrored
             return (
@@ -1069,7 +1072,7 @@ export function FieldCanvas() {
                 !techCurrent.mirrored,
               )
             }
-            disabled={!MIRRORABLE_TECHNIQUES.includes(techCurrent.tech)}
+            disabled={techRole !== 'de' || !MIRRORABLE_TECHNIQUES.includes(techCurrent.tech)}
             className={`grid h-7 w-8 place-items-center rounded-[10px] text-sm transition-colors disabled:opacity-30 ${
               techCurrent.mirrored
                 ? 'bg-accent-400 text-chrome-950'
@@ -1079,7 +1082,7 @@ export function FieldCanvas() {
             ⇄
           </button>
           <div className="pointer-events-none absolute -bottom-4 left-0 whitespace-nowrap text-[9px] text-chrome-500">
-            {techniqueLabel(techCurrent)} · Esc close
+            {techniqueLabel(techCurrent)} · {techRole?.toUpperCase()} · Esc close
           </div>
         </div>
       )}

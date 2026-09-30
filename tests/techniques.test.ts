@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_TECHNIQUE_TOLERANCE,
+  ROLE_TECHNIQUES,
+  dlRole,
   olAnchors,
   nearestTechnique,
   techniqueLabel,
   techniqueX,
   type DlTechnique,
 } from '../src/lib/techniques'
+
+const DL_ALL: DlTechnique[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 import type { Token } from '../src/stores/editorStore'
 
 const defAnchors = {
@@ -200,5 +204,68 @@ describe('DEFAULT_TECHNIQUE_TOLERANCE', () => {
     }
     const minGap = Math.min(...gaps.filter((g) => g > 0))
     expect(DEFAULT_TECHNIQUE_TOLERANCE).toBeLessThan(minGap / 2)
+  })
+})
+
+describe('dlRole', () => {
+  it('reads a nose off a defender inside the guards', () => {
+    for (const t of [0, 1] as DlTechnique[]) {
+      expect(dlRole(defAnchors, techniqueX(defAnchors, t, false))).toBe('nt')
+    }
+  })
+
+  it('reads a defensive tackle off a defender on or between the guards', () => {
+    for (const t of [2, 3, 4, 5] as DlTechnique[]) {
+      expect(dlRole(defAnchors, techniqueX(defAnchors, t, false))).toBe('dt')
+    }
+  })
+
+  it('reads an edge off a defender outside the tackle', () => {
+    for (const t of [6, 7, 8, 9] as DlTechnique[]) {
+      expect(dlRole(defAnchors, techniqueX(defAnchors, t, false))).toBe('de')
+    }
+  })
+
+  it('reads an A-gap shade as a nose', () => {
+    expect(dlRole(defAnchors, techniqueX(defAnchors, 4, true))).toBe('nt')
+    expect(dlRole(defAnchors, techniqueX(defAnchors, 2, true))).toBe('nt')
+  })
+
+  it('reads a shade inside the guard as a tackle, not a nose', () => {
+    expect(dlRole(defAnchors, techniqueX(defAnchors, 3, true))).toBe('dt')
+    expect(dlRole(defAnchors, techniqueX(defAnchors, 5, true))).toBe('dt')
+  })
+
+  it('follows the defender when he is moved out to the edge', () => {
+    expect(dlRole(defAnchors, techniqueX(defAnchors, 2, false))).toBe('dt')
+    expect(dlRole(defAnchors, techniqueX(defAnchors, 9, false))).toBe('de')
+  })
+
+  it('reads a head-up 2 as a tackle and a head-up 6 as an edge', () => {
+    expect(dlRole(defAnchors, techniqueX(defAnchors, 2, false))).toBe('dt')
+    expect(dlRole(defAnchors, techniqueX(defAnchors, 6, false))).toBe('de')
+  })
+})
+
+describe('ROLE_TECHNIQUES', () => {
+  it('never offers a nose technique to an edge', () => {
+    expect(ROLE_TECHNIQUES.de).not.toContain(0)
+    expect(ROLE_TECHNIQUES.de).not.toContain(1)
+  })
+
+  it('never offers an edge technique to an interior defender', () => {
+    expect(ROLE_TECHNIQUES.nt).not.toContain(6)
+    expect(ROLE_TECHNIQUES.nt).not.toContain(7)
+    expect(ROLE_TECHNIQUES.dt).not.toContain(8)
+    expect(ROLE_TECHNIQUES.dt).not.toContain(9)
+  })
+
+  it('gives every technique to at least one role', () => {
+    const covered = new Set<DlTechnique>([
+      ...ROLE_TECHNIQUES.nt,
+      ...ROLE_TECHNIQUES.dt,
+      ...ROLE_TECHNIQUES.de,
+    ])
+    for (const t of DL_ALL) expect(covered.has(t)).toBe(true)
   })
 })

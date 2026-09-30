@@ -18,6 +18,20 @@ export interface TechniqueAssignment {
 
 export const DL_TECHNIQUES: readonly DlTechnique[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
+/**
+ * A technique number is a role assignment, not just a coordinate: a 0 is a nose
+ * over the center and a 9 is an edge, so the same number means different things
+ * to different defenders. Role comes from where the defender is standing
+ * relative to the guards and tackles, and it changes as he is moved.
+ */
+export type DlRole = 'nt' | 'dt' | 'de'
+
+export const ROLE_TECHNIQUES: Record<DlRole, readonly DlTechnique[]> = {
+  nt: [0, 1],
+  dt: [1, 2, 3, 4, 5],
+  de: [5, 6, 7, 8, 9],
+}
+
 /** lateral offset from the center in units of the guard half-span */
 const SPOT: Record<DlTechnique, number> = {
   0: 0,
@@ -103,9 +117,21 @@ export function techniqueX(
  * Mirror is only meaningful past the guards: a mirrored 3 already *is* a 5, and
  * a mirrored 4 is a 2, so the opposite-side number covers 1-5 on its own.
  * From 6 out there is no left-hand number in standard notation, so the mirror
- * carries real information.
+ * carries real information — and only an edge defender ever needs it.
  */
 export const MIRRORABLE_TECHNIQUES: readonly DlTechnique[] = [6, 7, 8, 9]
+
+export function dlRole(a: OlAnchors, x: number): DlRole {
+  const g = (a.rg - a.lg) / 2
+  const t = (a.rt - a.lt) / 2
+  const off = Math.abs(x - a.c)
+  const eps = 0.05
+  // a nose lives in the A-gap itself; a shade that is merely *inside* a guard
+  // (a 3i or a 5i) is still a tackle, and a head-up 2 is a tackle
+  if (off < g / 2 + eps) return 'nt'
+  if (off < t - eps) return 'dt'
+  return 'de'
+}
 
 /** inverse of techniqueX — the chip row uses this to show what's active */
 export function nearestTechnique(a: OlAnchors, x: number): TechniqueAssignment {
