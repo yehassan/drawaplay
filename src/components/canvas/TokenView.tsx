@@ -8,8 +8,6 @@ interface TokenViewProps {
   selected: boolean
   /** animated position during playback; undefined = rest position */
   posOverride?: Pt
-  /** small tag under the token, e.g. a defensive technique like `3i` */
-  tag?: string
   onPointerDown: (e: ReactPointerEvent<SVGGElement>, id: string) => void
 }
 
@@ -18,10 +16,9 @@ const SIDE_COLOR: Record<Token['side'], string> = {
   defense: 'var(--color-defense-400)',
 }
 
-export function TokenView({ token, selected, posOverride, tag, onPointerDown }: TokenViewProps) {
+export function TokenView({ token, selected, posOverride, onPointerDown }: TokenViewProps) {
   const color = SIDE_COLOR[token.side]
   const label = token.num || token.letter || POSITIONS[token.pos].label
-  const tagW = tag ? 0.34 + tag.length * 0.3 : 0
 
   return (
     <g
@@ -61,33 +58,6 @@ export function TokenView({ token, selected, posOverride, tag, onPointerDown }: 
             strokeDasharray="0.3 0.21"
             pointerEvents="none"
           />
-        )}
-
-        {tag && (
-          <g pointerEvents="none">
-            <rect
-              x={-tagW / 2}
-              y="0.82"
-              width={tagW}
-              height="0.5"
-              rx="0.16"
-              fill="var(--color-chrome-900)"
-              stroke={color}
-              strokeWidth="0.06"
-              opacity="0.95"
-            />
-            <text
-              y="1.07"
-              fill={color}
-              fontSize="0.38"
-              fontWeight="700"
-              textAnchor="middle"
-              dominantBaseline="central"
-              style={{ fontFamily: 'var(--font-display)', userSelect: 'none' }}
-            >
-              {tag}
-            </text>
-          </g>
         )}
       </g>
     </g>

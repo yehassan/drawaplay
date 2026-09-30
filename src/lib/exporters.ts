@@ -1,6 +1,5 @@
 import { computeScene, fitView, type ViewRect } from './render'
 import { drawFrame } from './exportCanvas'
-import type { DlTechnique } from './techniques'
 import { timelineDuration } from './timing'
 import type { LosSpecLike } from './los'
 import type { Ruleset } from './field'
@@ -13,7 +12,6 @@ export interface ExportDoc {
   textNotes?: TextNote[]
   ballStartId: string | null
   losSpec?: LosSpecLike | null
-  defenseTech?: Record<string, { tech: DlTechnique; inverted: boolean; mirrored: boolean }>
   fieldTheme?: 'green' | 'white' | 'black'
   ruleset?: Ruleset
 }
@@ -59,7 +57,7 @@ export async function exportPNG(doc: ExportDoc): Promise<void> {
   canvas.height = Math.round(view.h * scale)
   const ctx = canvas.getContext('2d')!
   const scene = computeScene(doc.tokens, doc.paths, { tMs: 0, playing: false, ballStartId: doc.ballStartId })
-  drawFrame(ctx, { ...scene, tokens: doc.tokens, textNotes: doc.textNotes, defenseTech: doc.defenseTech }, { scale, losSpec: doc.losSpec ?? null, view, theme: doc.fieldTheme, ruleset: doc.ruleset })
+  drawFrame(ctx, { ...scene, tokens: doc.tokens, textNotes: doc.textNotes }, { scale, losSpec: doc.losSpec ?? null, view, theme: doc.fieldTheme, ruleset: doc.ruleset })
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
   if (!blob) throw new Error('PNG export failed')
   download(blob, `${safeFilename(doc.name)}.png`)
@@ -103,7 +101,7 @@ export async function exportWebM(
   if (doc.paths.length === 0) throw new Error('Nothing to record — draw some routes first')
 
   const scene0 = computeScene(doc.tokens, doc.paths, { tMs: 0, playing: true, ballStartId: doc.ballStartId })
-  drawFrame(ctx, { ...scene0, tokens: doc.tokens, textNotes: doc.textNotes, defenseTech: doc.defenseTech }, { scale, losSpec: doc.losSpec ?? null, view, theme: doc.fieldTheme, ruleset: doc.ruleset })
+  drawFrame(ctx, { ...scene0, tokens: doc.tokens, textNotes: doc.textNotes }, { scale, losSpec: doc.losSpec ?? null, view, theme: doc.fieldTheme, ruleset: doc.ruleset })
 
   let stream: MediaStream
   let track: MediaStreamTrack
@@ -138,7 +136,7 @@ export async function exportWebM(
 
   const drawAt = (t: number): void => {
     const scene = computeScene(doc.tokens, doc.paths, { tMs: t, playing: true, ballStartId: doc.ballStartId })
-    drawFrame(ctx, { ...scene, tokens: doc.tokens, textNotes: doc.textNotes, defenseTech: doc.defenseTech }, { scale, losSpec: doc.losSpec ?? null, view, theme: doc.fieldTheme, ruleset: doc.ruleset })
+    drawFrame(ctx, { ...scene, tokens: doc.tokens, textNotes: doc.textNotes }, { scale, losSpec: doc.losSpec ?? null, view, theme: doc.fieldTheme, ruleset: doc.ruleset })
   }
 
   if (canRequestFrame) {
