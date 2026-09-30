@@ -17,7 +17,21 @@ import type { PathType } from '../lib/pathStyles'
 
 export type Tool = 'select' | 'draw' | 'erase' | 'pan' | 'text'
 export type Side = 'offense' | 'defense'
-export type PosId = 'QB' | 'RB' | 'FB' | 'WR' | 'TE' | 'C' | 'G' | 'T' | 'DL' | 'LB' | 'CB' | 'S'
+export type PosId =
+  | 'QB'
+  | 'RB'
+  | 'FB'
+  | 'WR'
+  | 'TE'
+  | 'C'
+  | 'G'
+  | 'T'
+  | 'DL'
+  | 'DT'
+  | 'DE'
+  | 'LB'
+  | 'CB'
+  | 'S'
 
 export interface Token {
   id: string

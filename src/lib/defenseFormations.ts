@@ -1,7 +1,15 @@
 import type { Token } from '../stores/editorStore'
 import { HASH_X, losY, type Hash } from './formations'
+import { defaultAnchors, dlRole } from './techniques'
 
 export type Shell = 'zero' | '1-high' | '2-high' | '3-high'
+
+/**
+ * Every defender is placed a half yard off the LOS rather than on it. The
+ * synthetic line depths put a 0-technique nose directly on top of the center,
+ * and with a 0.69yd token radius the two bodies overlap by over half a yard.
+ */
+export const DEFENSE_STANDOFF = 0.5
 
 export interface DefenseFrontDef {
   key: string
@@ -63,15 +71,20 @@ export function buildDefenseFormation(spec: DefenseSpec): BuiltDefense {
   const bx = HASH_X[hash]
   const ly = losY(side, yardLine)
 
+  const anchors = defaultAnchors(bx)
+
   const toks: SeedToken[] = []
   const tok = (id: string, pos: Token['pos'], dx: number, depth: number): void => {
+    // fronts declare a generic `DL`; the real role follows from where he stands
+    const placed: Token['pos'] =
+      pos === 'DL' ? (dlRole(anchors, bx + dx) === 'de' ? 'DE' : 'DT') : pos
     toks.push({
       id,
       side: 'defense',
-      pos,
+      pos: placed,
       num: '',
       x: Math.max(1.5, Math.min(51.8, bx + dx)),
-      y: ly - depth,
+      y: ly - (depth + DEFENSE_STANDOFF),
     })
   }
 

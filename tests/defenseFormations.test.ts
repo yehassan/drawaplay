@@ -4,9 +4,13 @@ import {
   buildDefenseFormation,
   type Shell,
 } from '../src/lib/defenseFormations'
+import { DEFENSE_STANDOFF } from '../src/lib/defenseFormations'
 import { losY } from '../src/lib/formations'
+import { LINE_POSES } from '../src/lib/positions'
 
-const depthOf = (ly: number, y: number) => ly - y
+/** depth the front asked for, with the deliberate standoff taken back off */
+const seedDepth = (ly: number, y: number) => ly - y - DEFENSE_STANDOFF
+const depthOf = seedDepth
 
 describe('nickel front', () => {
   it('declares 4-2-5 counts', () => {
@@ -27,7 +31,7 @@ describe('nickel front', () => {
         expect(t.x, `${t.id}`).toBeLessThanOrEqual(51.8)
       }
       const cnt = (pos: string) => f.tokens.filter((t) => t.pos === pos).length
-      expect(cnt('DL')).toBe(4)
+      expect(f.tokens.filter((t) => LINE_POSES.has(t.pos)).length).toBe(4)
       expect(cnt('LB')).toBe(2)
       expect(cnt('CB')).toBe(3)
       expect(cnt('S')).toBe(2)
@@ -94,15 +98,15 @@ describe('3-4 front', () => {  it('declares 3-4-4 counts', () => {
     const at = (id: string) => f.tokens.find((t) => t.id === id)!
     // edge OLBs ~1.3yd deep / ±6.3 wide, inside ~4.0 / ±2.5
     for (const id of ['OLB1', 'OLB2']) {
-      expect(ly - at(id).y, id).toBeCloseTo(1.3, 1)
+      expect(seedDepth(ly, at(id).y), id).toBeCloseTo(1.3, 1)
       expect(Math.abs(at(id).x - 26.65), id).toBeCloseTo(6.3, 1)
     }
     for (const id of ['ILB1', 'ILB2']) {
-      expect(ly - at(id).y, id).toBeCloseTo(4, 1)
+      expect(seedDepth(ly, at(id).y), id).toBeCloseTo(4, 1)
       expect(Math.abs(at(id).x - 26.65), id).toBeCloseTo(2.5, 1)
     }
     const cnt = (pos: string) => f.tokens.filter((t) => t.pos === pos).length
-    expect(cnt('DL')).toBe(3)
+    expect(f.tokens.filter((t) => LINE_POSES.has(t.pos)).length).toBe(3)
     expect(cnt('LB')).toBe(4)
     expect(cnt('CB')).toBe(2)
     expect(cnt('S')).toBe(2)
@@ -144,9 +148,9 @@ describe('dime front', () => {
       expect(f.tokens).toHaveLength(11)
       const ly = losY('ours', 25)
       const at = (id: string) => f.tokens.find((t) => t.id === id)!
-      expect(ly - at('DIME').y, `${shell} dime depth`).toBeCloseTo(2.5, 1)
+      expect(seedDepth(ly, at('DIME').y), `${shell} dime depth`).toBeCloseTo(2.5, 1)
       expect(at('DIME').x, `${shell} dime lat`).toBeCloseTo(26.65 - 9, 1)
-      expect(ly - at('MIKE').y, `${shell} mike`).toBeCloseTo(4.5, 1)
+      expect(seedDepth(ly, at('MIKE').y), `${shell} mike`).toBeCloseTo(4.5, 1)
       // standard two-safety shell, same as nickel
       expect(ly - at('SS').y).toBeGreaterThan(0)
       expect(ly - at('FS').y).toBeGreaterThan(0)
@@ -177,7 +181,8 @@ describe('all fronts', () => {
         const f = buildDefenseFormation({ front: def.key, shell, hash: 'center', side: 'ours', yardLine: 25 })
         expect(f.tokens, `${def.key} ${shell} count`).toHaveLength(11)
         const cnt = (pos: string) => f.tokens.filter((t) => t.pos === pos).length
-        expect([cnt('DL'), cnt('LB'), cnt('CB'), cnt('S')], `${def.key} counts`).toEqual([def.dl, def.lb, def.cb, def.s])
+        const line = f.tokens.filter((t) => LINE_POSES.has(t.pos)).length
+        expect([line, cnt('LB'), cnt('CB'), cnt('S')], `${def.key} counts`).toEqual([def.dl, def.lb, def.cb, def.s])
         // spacing
         for (let i = 0; i < f.tokens.length; i++) {
           for (let j = i + 1; j < f.tokens.length; j++) {
@@ -189,5 +194,62 @@ describe('all fronts', () => {
         }
       }
     }
+  })
+})
+
+describe('defensive standoff', () => {
+  it('stands every defender off the LOS by the standoff', () => {
+    for (const def of DEFENSE_FRONTS) {
+      const f = buildDefenseFormation({ front: def.key, shell: '2-high', hash: 'center', side: 'ours', yardLine: 25 })
+      const ly = losY('ours', 25)
+      for (const t of f.tokens) {
+        expect(ly - t.y, `${def.key} ${t.id}`).toBeGreaterThanOrEqual(DEFENSE_STANDOFF)
+      }
+    }
+  })
+
+  it('pulls a nose off the center by exactly the standoff', () => {
+    const f = buildDefenseFormation({ front: '335', shell: '2-high', hash: 'center', side: 'theirs', yardLine: 20 })
+    const ly = losY('theirs', 20)
+    const nose = f.tokens.find((t) => t.id === 'DL2')!
+    // the front seeds a nose at 0.8; 0.69yd bodies need 1.38 to fully clear, so
+    // a half-yard standoff leaves ~0.08yd of graze rather than a real overlap
+    expect(ly - nose.y).toBeCloseTo(0.8 + DEFENSE_STANDOFF, 5)
+    expect(ly - nose.y).toBeLessThan(0.69 * 2)
+  })
+})
+
+describe('DT / DE split', () => {
+  it('labels a defender outside the tackle as a DE', () => {
+    const f = buildDefenseFormation({ front: '43', shell: '2-high', hash: 'center', side: 'ours', yardLine: 25 })
+    const at = (id: string) => f.tokens.find((t) => t.id === id)!
+    expect(at('DL1').pos).toBe('DE')
+    expect(at('DL4').pos).toBe('DE')
+  })
+
+  it('labels a defender inside the tackle as a DT', () => {
+    const f = buildDefenseFormation({ front: '43', shell: '2-high', hash: 'center', side: 'ours', yardLine: 25 })
+    const at = (id: string) => f.tokens.find((t) => t.id === id)!
+    expect(at('DL2').pos).toBe('DT')
+    expect(at('DL3').pos).toBe('DT')
+  })
+
+  it('keeps a nose as a DT, since there is no separate nose position', () => {
+    const f = buildDefenseFormation({ front: '335', shell: '2-high', hash: 'center', side: 'ours', yardLine: 25 })
+    expect(f.tokens.find((t) => t.id === 'DL2')!.pos).toBe('DT')
+  })
+
+  it('never seeds the generic DL once a front is built', () => {
+    for (const def of DEFENSE_FRONTS) {
+      const f = buildDefenseFormation({ front: def.key, shell: '2-high', hash: 'center', side: 'ours', yardLine: 25 })
+      expect(f.tokens.some((t) => t.pos === 'DL'), def.key).toBe(false)
+    }
+  })
+
+  it('leaves linebackers and secondary positions alone', () => {
+    const f = buildDefenseFormation({ front: '43', shell: '2-high', hash: 'center', side: 'ours', yardLine: 25 })
+    expect(f.tokens.find((t) => t.id === 'MIKE')!.pos).toBe('LB')
+    expect(f.tokens.find((t) => t.id === 'CB1')!.pos).toBe('CB')
+    expect(f.tokens.find((t) => t.id === 'SS')!.pos).toBe('S')
   })
 })

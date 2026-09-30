@@ -3,6 +3,7 @@ import { useEditorStore } from '../src/stores/editorStore'
 import { buildDefenseFormation } from '../src/lib/defenseFormations'
 import { buildFormation } from '../src/lib/formations'
 import { olAnchors, techniqueX } from '../src/lib/techniques'
+import { LINE_POSES } from '../src/lib/positions'
 import type { Token } from '../src/stores/editorStore'
 
 const offense = (): Token[] => buildFormation({ personnel: '11', underCenter: false, hash: 'center', side: 'theirs', yardLine: 20 }).tokens
@@ -13,7 +14,7 @@ const defense = (): Token[] =>
 const loadBoth = (): { dl: string } => {
   const tokens = [...offense(), ...defense()]
   useEditorStore.setState({ tokens, defenseRefX: 26.65, defenseTech: {}, past: [], future: [] })
-  const dl = tokens.find((t) => t.side === 'defense' && t.pos === 'DL')!
+  const dl = tokens.find((t) => t.side === 'defense' && LINE_POSES.has(t.pos))!
   return { dl: dl.id }
 }
 
@@ -59,7 +60,7 @@ describe('setDefenseTechnique', () => {
     const anchors = olAnchors(useEditorStore.getState().tokens, 10)
     const dl = useEditorStore
       .getState()
-      .tokens.find((t) => t.side === 'defense' && t.pos === 'DL')!.id
+      .tokens.find((t) => t.side === 'defense' && LINE_POSES.has(t.pos))!.id
     useEditorStore.getState().setDefenseTechnique(dl, 0, false)
     expect(xOf(dl)).toBeCloseTo(anchors.c, 5)
   })
@@ -109,7 +110,7 @@ describe('hand-dragging a lineman', () => {
     const { dl } = loadBoth()
     const other = useEditorStore
       .getState()
-      .tokens.filter((t) => t.side === 'defense' && t.pos === 'DL')
+      .tokens.filter((t) => t.side === 'defense' && LINE_POSES.has(t.pos))
       .map((t) => t.id)[1]
     useEditorStore.getState().setDefenseTechnique(dl, 3, false)
     useEditorStore.getState().setDefenseTechnique(other, 5, false)

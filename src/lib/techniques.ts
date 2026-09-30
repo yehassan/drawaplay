@@ -71,6 +71,17 @@ const DEFAULT_TACKLE_HALF = 3.6
 /** how far off a technique a token may drift before it reads as something else */
 export const DEFAULT_TECHNIQUE_TOLERANCE = 0.35
 
+/** the line a defense is drawn against when no offense is on the field */
+export function defaultAnchors(refX: number): OlAnchors {
+  return {
+    c: refX,
+    lg: refX - DEFAULT_GUARD_HALF,
+    rg: refX + DEFAULT_GUARD_HALF,
+    lt: refX - DEFAULT_TACKLE_HALF,
+    rt: refX + DEFAULT_TACKLE_HALF,
+  }
+}
+
 export function techniqueLabel(a: TechniqueAssignment): string {
   return `${a.tech}${a.inverted ? 'i' : ''}${a.mirrored ? '\u21c4' : ''}`
 }
@@ -89,13 +100,24 @@ export function olAnchors(tokens: Token[], refX: number): OlAnchors {
   const tackles = xs('T')
 
   const anchor = centers.length ? centers[0] : refX
+  const d = defaultAnchors(anchor)
   return {
     c: anchor,
-    lg: guards.length >= 2 ? Math.min(...guards) : anchor - DEFAULT_GUARD_HALF,
-    rg: guards.length >= 2 ? Math.max(...guards) : anchor + DEFAULT_GUARD_HALF,
-    lt: tackles.length >= 2 ? Math.min(...tackles) : anchor - DEFAULT_TACKLE_HALF,
-    rt: tackles.length >= 2 ? Math.max(...tackles) : anchor + DEFAULT_TACKLE_HALF,
+    lg: guards.length >= 2 ? Math.min(...guards) : d.lg,
+    rg: guards.length >= 2 ? Math.max(...guards) : d.rg,
+    lt: tackles.length >= 2 ? Math.min(...tackles) : d.lt,
+    rt: tackles.length >= 2 ? Math.max(...tackles) : d.rt,
   }
+}
+
+/**
+ * Role for a placed defender. A stored `DE` is trusted so an edge can sit on a
+ * 5-technique; everything else derives from where he stands, which keeps a
+ * nose reading as a nose even though a nose is stored as a `DT`.
+ */
+export function tokenRole(t: Token, a: OlAnchors): DlRole {
+  if (t.pos === 'DE') return 'de'
+  return dlRole(a, t.x)
 }
 
 /** field-x for a defender on the given technique */
