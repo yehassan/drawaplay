@@ -10,15 +10,10 @@ export const POSITIONS: Record<PosId, { label: string; side: Side }> = {
   G: { label: 'G', side: 'offense' },
   T: { label: 'T', side: 'offense' },
   DL: { label: 'DL', side: 'defense' },
-  DT: { label: 'DT', side: 'defense' },
-  DE: { label: 'DE', side: 'defense' },
   LB: { label: 'LB', side: 'defense' },
   CB: { label: 'CB', side: 'defense' },
   S: { label: 'S', side: 'defense' },
 }
-
-/** every position that stands on the line of scrimmage */
-export const LINE_POSES: ReadonlySet<PosId> = new Set<PosId>(['DL', 'DT', 'DE'])
 
 export const PALETTE_GROUPS: ReadonlyArray<{ side: Side; title: string; positions: readonly PosId[] }> = [
   {
@@ -26,7 +21,7 @@ export const PALETTE_GROUPS: ReadonlyArray<{ side: Side; title: string; position
     title: 'Offense',
     positions: ['QB', 'RB', 'FB', 'WR', 'TE', 'C', 'G', 'T'],
   },
-  { side: 'defense', title: 'Defense', positions: ['DL', 'DT', 'DE', 'LB', 'CB', 'S'] },
+  { side: 'defense', title: 'Defense', positions: ['DL', 'LB', 'CB', 'S'] },
 ]
 
 export const ALIGNMENT_TOKENS: ReadonlyArray<{ pos: PosId; letter: string; title: string }> = [

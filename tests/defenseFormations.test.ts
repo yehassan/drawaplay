@@ -6,7 +6,6 @@ import {
 } from '../src/lib/defenseFormations'
 import { DEFENSE_STANDOFF } from '../src/lib/defenseFormations'
 import { losY } from '../src/lib/formations'
-import { LINE_POSES } from '../src/lib/positions'
 
 /** depth the front asked for, with the deliberate standoff taken back off */
 const seedDepth = (ly: number, y: number) => ly - y - DEFENSE_STANDOFF
@@ -31,7 +30,7 @@ describe('nickel front', () => {
         expect(t.x, `${t.id}`).toBeLessThanOrEqual(51.8)
       }
       const cnt = (pos: string) => f.tokens.filter((t) => t.pos === pos).length
-      expect(f.tokens.filter((t) => LINE_POSES.has(t.pos)).length).toBe(4)
+      expect(cnt('DL')).toBe(4)
       expect(cnt('LB')).toBe(2)
       expect(cnt('CB')).toBe(3)
       expect(cnt('S')).toBe(2)
@@ -106,7 +105,7 @@ describe('3-4 front', () => {  it('declares 3-4-4 counts', () => {
       expect(Math.abs(at(id).x - 26.65), id).toBeCloseTo(2.5, 1)
     }
     const cnt = (pos: string) => f.tokens.filter((t) => t.pos === pos).length
-    expect(f.tokens.filter((t) => LINE_POSES.has(t.pos)).length).toBe(3)
+    expect(cnt('DL')).toBe(3)
     expect(cnt('LB')).toBe(4)
     expect(cnt('CB')).toBe(2)
     expect(cnt('S')).toBe(2)
@@ -181,8 +180,7 @@ describe('all fronts', () => {
         const f = buildDefenseFormation({ front: def.key, shell, hash: 'center', side: 'ours', yardLine: 25 })
         expect(f.tokens, `${def.key} ${shell} count`).toHaveLength(11)
         const cnt = (pos: string) => f.tokens.filter((t) => t.pos === pos).length
-        const line = f.tokens.filter((t) => LINE_POSES.has(t.pos)).length
-        expect([line, cnt('LB'), cnt('CB'), cnt('S')], `${def.key} counts`).toEqual([def.dl, def.lb, def.cb, def.s])
+        expect([cnt('DL'), cnt('LB'), cnt('CB'), cnt('S')], `${def.key} counts`).toEqual([def.dl, def.lb, def.cb, def.s])
         // spacing
         for (let i = 0; i < f.tokens.length; i++) {
           for (let j = i + 1; j < f.tokens.length; j++) {
@@ -216,40 +214,5 @@ describe('defensive standoff', () => {
     // a half-yard standoff leaves ~0.08yd of graze rather than a real overlap
     expect(ly - nose.y).toBeCloseTo(0.8 + DEFENSE_STANDOFF, 5)
     expect(ly - nose.y).toBeLessThan(0.69 * 2)
-  })
-})
-
-describe('DT / DE split', () => {
-  it('labels a defender outside the tackle as a DE', () => {
-    const f = buildDefenseFormation({ front: '43', shell: '2-high', hash: 'center', side: 'ours', yardLine: 25 })
-    const at = (id: string) => f.tokens.find((t) => t.id === id)!
-    expect(at('DL1').pos).toBe('DE')
-    expect(at('DL4').pos).toBe('DE')
-  })
-
-  it('labels a defender inside the tackle as a DT', () => {
-    const f = buildDefenseFormation({ front: '43', shell: '2-high', hash: 'center', side: 'ours', yardLine: 25 })
-    const at = (id: string) => f.tokens.find((t) => t.id === id)!
-    expect(at('DL2').pos).toBe('DT')
-    expect(at('DL3').pos).toBe('DT')
-  })
-
-  it('keeps a nose as a DT, since there is no separate nose position', () => {
-    const f = buildDefenseFormation({ front: '335', shell: '2-high', hash: 'center', side: 'ours', yardLine: 25 })
-    expect(f.tokens.find((t) => t.id === 'DL2')!.pos).toBe('DT')
-  })
-
-  it('never seeds the generic DL once a front is built', () => {
-    for (const def of DEFENSE_FRONTS) {
-      const f = buildDefenseFormation({ front: def.key, shell: '2-high', hash: 'center', side: 'ours', yardLine: 25 })
-      expect(f.tokens.some((t) => t.pos === 'DL'), def.key).toBe(false)
-    }
-  })
-
-  it('leaves linebackers and secondary positions alone', () => {
-    const f = buildDefenseFormation({ front: '43', shell: '2-high', hash: 'center', side: 'ours', yardLine: 25 })
-    expect(f.tokens.find((t) => t.id === 'MIKE')!.pos).toBe('LB')
-    expect(f.tokens.find((t) => t.id === 'CB1')!.pos).toBe('CB')
-    expect(f.tokens.find((t) => t.id === 'SS')!.pos).toBe('S')
   })
 })

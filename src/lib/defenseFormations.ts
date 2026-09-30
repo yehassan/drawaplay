@@ -1,6 +1,5 @@
 import type { Token } from '../stores/editorStore'
 import { HASH_X, losY, type Hash } from './formations'
-import { defaultAnchors, dlRole } from './techniques'
 
 export type Shell = 'zero' | '1-high' | '2-high' | '3-high'
 
@@ -71,17 +70,12 @@ export function buildDefenseFormation(spec: DefenseSpec): BuiltDefense {
   const bx = HASH_X[hash]
   const ly = losY(side, yardLine)
 
-  const anchors = defaultAnchors(bx)
-
   const toks: SeedToken[] = []
   const tok = (id: string, pos: Token['pos'], dx: number, depth: number): void => {
-    // fronts declare a generic `DL`; the real role follows from where he stands
-    const placed: Token['pos'] =
-      pos === 'DL' ? (dlRole(anchors, bx + dx) === 'de' ? 'DE' : 'DT') : pos
     toks.push({
       id,
       side: 'defense',
-      pos: placed,
+      pos,
       num: '',
       x: Math.max(1.5, Math.min(51.8, bx + dx)),
       y: ly - (depth + DEFENSE_STANDOFF),

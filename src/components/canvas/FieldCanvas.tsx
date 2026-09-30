@@ -17,7 +17,7 @@ import { inferPathType } from '../../lib/infer'
 import { resolveFlightTarget } from '../../lib/target'
 import { PATH_STYLES, PATH_TYPE_ORDER, PLAYER_DRIVEN } from '../../lib/pathStyles'
 import { timelineDuration } from '../../lib/timing'
-import { LINE_POSES, POSITIONS } from '../../lib/positions'
+import { POSITIONS } from '../../lib/positions'
 import { useEditorStore, type Token } from '../../stores/editorStore'
 import { computeScene } from '../../lib/render'
 import { losY as losYof, FIELD_CENTER_X } from '../../lib/formations'
@@ -26,9 +26,9 @@ import {
   MIRRORABLE_TECHNIQUES,
   ROLE_TECHNIQUES,
   nearestTechnique,
+  dlRole,
   olAnchors,
   techniqueLabel,
-  tokenRole,
 } from '../../lib/techniques'
 import { paletteFor } from '../../lib/theme'
 import { Icon } from '../ui/icons'
@@ -504,7 +504,7 @@ export function FieldCanvas() {
     if (s.type === 'drag' && !s.began && s.origins.size === 1) {
       const [only] = [...s.origins.keys()]
       const t = st.tokens.find((x) => x.id === only)
-      st.showTechBar(t && t.side === 'defense' && LINE_POSES.has(t.pos) ? only : null)
+      st.showTechBar(t && t.side === 'defense' && t.pos === 'DL' ? only : null)
     }
     if (s.type === 'pathEnd') st.applyScheduleNow()
     if (s.type === 'drag' || s.type === 'textDrag') setGuides({ xs: [], ys: [] })
@@ -537,7 +537,7 @@ export function FieldCanvas() {
     if (bestTok) {
       st.select([bestTok])
       const t = st.tokens.find((x) => x.id === bestTok)
-      st.showTechBar(t && t.side === 'defense' && LINE_POSES.has(t.pos) ? bestTok : null)
+      st.showTechBar(t && t.side === 'defense' && t.pos === 'DL' ? bestTok : null)
       return
     }
     let bestNote: string | null = null
@@ -733,8 +733,7 @@ export function FieldCanvas() {
     techAnchors && techBarToken
       ? (defenseTech[techBarFor!] ?? nearestTechnique(techAnchors, techBarToken.x))
       : undefined
-  const techRole =
-    techAnchors && techBarToken ? tokenRole(techBarToken, techAnchors) : undefined
+  const techRole = techAnchors && techBarToken ? dlRole(techAnchors, techBarToken.x) : undefined
   const techBarActive = !!techBarToken && !!techCurrent && !!techRole && !playing
 
   return (

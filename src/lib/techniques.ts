@@ -110,15 +110,6 @@ export function olAnchors(tokens: Token[], refX: number): OlAnchors {
   }
 }
 
-/**
- * Role for a placed defender. A stored `DE` is trusted so an edge can sit on a
- * 5-technique; everything else derives from where he stands, which keeps a
- * nose reading as a nose even though a nose is stored as a `DT`.
- */
-export function tokenRole(t: Token, a: OlAnchors): DlRole {
-  if (t.pos === 'DE') return 'de'
-  return dlRole(a, t.x)
-}
 
 /** field-x for a defender on the given technique */
 export function techniqueX(
