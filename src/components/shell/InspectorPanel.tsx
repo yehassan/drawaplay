@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useEditorStore } from '../../stores/editorStore'
-import { POSITIONS } from '../../lib/positions'
+import { posLabel } from '../../lib/positions'
 import { PATH_STYLES, PATH_TYPE_ORDER, PLAYER_DRIVEN } from '../../lib/pathStyles'
 import { ROUTE_CONCEPTS } from '../../lib/routeTemplates'
 import { TypeSample } from '../ui/TypeSample'
@@ -113,7 +113,7 @@ function PathInspector({ pathId }: { pathId: string }) {
       <p className="mb-2 text-xs text-chrome-500">
         From{' '}
         <span className="font-semibold text-offense-400">
-          {from ? from.num || from.letter || POSITIONS[from.pos].label : '—'}
+          {from ? from.num || from.letter || posLabel(from.pos) : '—'}
         </span>{' '}
         · inferred, click to change
       </p>
@@ -186,7 +186,7 @@ function PathInspector({ pathId }: { pathId: string }) {
                       : 'border-chrome-700 bg-chrome-900 text-chrome-300 hover:border-chrome-600 hover:bg-chrome-800'
                   }`}
                 >
-                  {t.num || t.letter || POSITIONS[t.pos].label}
+                  {t.num || t.letter || posLabel(t.pos)}
                 </button>
               ))}
           </div>
@@ -347,7 +347,7 @@ function TokenInspector({ tokenId }: { tokenId: string }) {
         <input
           value={token.num}
           onChange={(e) => renameToken(token.id, e.target.value)}
-          placeholder={POSITIONS[token.pos].label}
+          placeholder={posLabel(token.pos)}
           spellCheck={false}
           maxLength={3}
           className="mt-1 w-full rounded-[16px] border border-chrome-700 bg-chrome-850 px-2.5 py-1.5 text-sm font-medium text-chrome-200 outline-none focus:border-accent-400/60"
@@ -408,7 +408,7 @@ function TokenInspector({ tokenId }: { tokenId: string }) {
                   }}
                   className="rounded-[12px] border border-chrome-700 bg-chrome-900 px-2 py-1.5 text-xs font-medium text-chrome-300 transition-colors hover:border-chrome-600 hover:bg-chrome-800"
                 >
-                  {t.num || t.letter || POSITIONS[t.pos].label}
+                  {t.num || t.letter || posLabel(t.pos)}
                 </button>
               ))}
           </div>

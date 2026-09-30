@@ -6,6 +6,8 @@ import {
 } from '../src/lib/defenseFormations'
 import { DEFENSE_STANDOFF } from '../src/lib/defenseFormations'
 import { losY } from '../src/lib/formations'
+import { useEditorStore, type Side, type Token } from '../src/stores/editorStore'
+import { posLabel } from '../src/lib/positions'
 
 /** depth the front asked for, with the deliberate standoff taken back off */
 const seedDepth = (ly: number, y: number) => ly - y - DEFENSE_STANDOFF
@@ -214,5 +216,39 @@ describe('defensive standoff', () => {
     // a half-yard standoff leaves ~0.08yd of graze rather than a real overlap
     expect(ly - nose.y).toBeCloseTo(0.8 + DEFENSE_STANDOFF, 5)
     expect(ly - nose.y).toBeLessThan(0.69 * 2)
+  })
+})
+
+describe('recovering from a removed position', () => {
+  const saved = (pos: string, side: Side): Token => ({
+    id: 'x1',
+    side,
+    pos,
+    num: '',
+    x: 26.65,
+    y: 50,
+  } as Token)
+
+  it('maps a removed defensive position to DL', () => {
+    useEditorStore.getState().loadPlay({
+      name: 'Old Mint',
+      tokens: [saved('DT', 'defense'), saved('DE', 'defense')],
+      paths: [],
+    })
+    expect(useEditorStore.getState().tokens.map((t) => t.pos)).toEqual(['DL', 'DL'])
+  })
+
+  it('keeps a still-valid position untouched', () => {
+    useEditorStore.getState().loadPlay({
+      name: 'Fine',
+      tokens: [saved('CB', 'defense'), saved('WR', 'offense')],
+      paths: [],
+    })
+    expect(useEditorStore.getState().tokens.map((t) => t.pos)).toEqual(['CB', 'WR'])
+  })
+
+  it('still renders a label for an unknown position', () => {
+    expect(posLabel('DT')).toBe('DT')
+    expect(posLabel('CB')).toBe('CB')
   })
 })

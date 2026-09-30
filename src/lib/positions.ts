@@ -15,6 +15,25 @@ export const POSITIONS: Record<PosId, { label: string; side: Side }> = {
   S: { label: 'S', side: 'defense' },
 }
 
+/**
+ * Position label for rendering. Falls back to the raw value so a token saved
+ * under a position that no longer exists still draws instead of blanking the
+ * whole canvas.
+ */
+export function posLabel(p: string): string {
+  return POSITIONS[p as PosId]?.label ?? p
+}
+
+/**
+ * Repair a persisted position that the current build no longer supports. A
+ * play saved while a position existed must not become unloadable when it is
+ * removed, so unknown values fall back to the generic position for that side.
+ */
+export function coercePos(raw: string, side: Side): PosId {
+  if (POSITIONS[raw as PosId]) return raw as PosId
+  return side === 'defense' ? 'DL' : 'WR'
+}
+
 export const PALETTE_GROUPS: ReadonlyArray<{ side: Side; title: string; positions: readonly PosId[] }> = [
   {
     side: 'offense',

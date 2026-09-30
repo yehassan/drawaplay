@@ -4,6 +4,7 @@ import { applySchedule, timelineDuration, type Timing } from '../lib/timing'
 import { resolveFlightTarget } from '../lib/target'
 import { PLAYER_DRIVEN } from '../lib/pathStyles'
 import { buildRoutePoints, routeConcept } from '../lib/routeTemplates'
+import { coercePos } from '../lib/positions'
 import {
   olAnchors,
   techniqueX,
@@ -718,7 +719,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const tokens = play.tokens.map((t) => {
         const id = uid()
         idMap.set(t.id, id)
-        return { ...t, id }
+        // a play saved under a position this build no longer has must still load
+        return { ...t, id, pos: coercePos(t.pos, t.side) }
       })
       const paths = applySchedule(
         play.paths.map((p) => ({

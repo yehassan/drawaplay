@@ -1,5 +1,5 @@
 import type { PointerEvent as ReactPointerEvent } from 'react'
-import { POSITIONS } from '../../lib/positions'
+import { posLabel } from '../../lib/positions'
 import type { Pt } from '../../lib/field'
 import type { Token } from '../../stores/editorStore'
 
@@ -18,7 +18,7 @@ const SIDE_COLOR: Record<Token['side'], string> = {
 
 export function TokenView({ token, selected, posOverride, onPointerDown }: TokenViewProps) {
   const color = SIDE_COLOR[token.side]
-  const label = token.num || token.letter || POSITIONS[token.pos].label
+  const label = token.num || token.letter || posLabel(token.pos)
 
   return (
     <g
