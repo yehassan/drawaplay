@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { reschedule } from '../src/lib/timing'
 import { computeScene } from '../src/lib/render'
+import { useEditorStore } from '../src/stores/editorStore'
 import type { PlayPath, Token } from '../src/stores/editorStore'
+
+const st = () => useEditorStore.getState()
 
 /**
  * A runner sells a handoff or toss by moving *before* the ball gets there, so
@@ -179,5 +182,79 @@ describe('a pass into a receiver still arrives after his route', () => {
     const arrival = s.get('pass')!.delayMs + s.get('pass')!.durationMs
     const scene = computeScene(tokens, paths, { tMs: arrival + 30, playing: true, ballStartId: 'qb' })
     expect(scene.tokenPositions.get('wr')!.y).toBeLessThan(78.5)
+  })
+})
+describe('addTransfer — authoring possession without drawing', () => {
+  const setup = () => {
+    useEditorStore.setState({ tokens: [], paths: [], selectedIds: [], past: [], future: [] })
+    st().addToken({ side: 'offense', pos: 'QB', num: '', x: 26, y: 93 })
+    st().addToken({ side: 'offense', pos: 'RB', num: '', x: 26, y: 88 })
+    st().addToken({ side: 'offense', pos: 'WR', num: '', x: 14, y: 88 })
+    return st().tokens
+  }
+  const byPos = (p: string) => st().tokens.find((t) => t.pos === p)!
+
+  it('hands the ball from the snap recipient', () => {
+    setup()
+    st().addPath({
+      tokenId: byPos('QB').id,
+      endTokenId: null,
+      type: 'snap',
+      points: [{ x: 26, y: 90 }, { x: 26, y: 92.6 }],
+      d: '',
+    })
+    const id = st().addTransfer('toss', byPos('RB').id)!
+    const p = st().paths.find((x) => x.id === id)!
+    expect(p.type).toBe('toss')
+    expect(p.endTokenId).toBe(byPos('RB').id)
+  })
+
+  it('chains from the previous recipient, so the track flows in order', () => {
+    setup()
+    const toRb = st().addTransfer('handoff', byPos('RB').id)!
+    const rb = st().paths.find((x) => x.id === toRb)!
+    const fromId = rb.tokenId
+    expect(fromId).toBeTruthy()
+    const toWr = st().addTransfer('pass', byPos('WR').id)!
+    const wr = st().paths.find((x) => x.id === toWr)!
+    expect(wr.tokenId).toBe(rb.endTokenId)
+  })
+
+  it('does not change the selection, so the track stays usable', () => {
+    setup()
+    useEditorStore.setState({ selectedIds: [byPos('WR').id] })
+    st().addTransfer('pass', byPos('WR').id)
+    expect(st().selectedIds).toEqual([byPos('WR').id])
+  })
+
+  it('undo removes the transfer', () => {
+    setup()
+    st().addTransfer('toss', byPos('RB').id)
+    expect(st().paths).toHaveLength(1)
+    st().undo()
+    expect(st().paths).toHaveLength(0)
+  })
+
+  it('refuses a defender as the receiver', () => {
+    setup()
+    st().addToken({ side: 'defense', pos: 'CB', num: '', x: 20, y: 40 })
+    const cb = st().tokens.find((t) => t.side === 'defense')!
+    expect(st().addTransfer('pass', cb.id)).toBeNull()
+  })
+
+  it('refuses handing the ball to whoever already has it', () => {
+    setup()
+    expect(st().addTransfer('handoff', byPos('QB').id)).toBeNull()
+  })
+
+  it('aims at the end of the receiver\'s route', () => {
+    setup()
+    const route = st().setPlayerPathType(byPos('WR').id, 'route')!
+    st().applyRouteTemplate(route, 'go')
+    const rp = st().paths.find((p) => p.id === route)!
+    const tip = rp.points[rp.points.length - 1]
+    const id = st().addTransfer('pass', byPos('WR').id)!
+    const pass = st().paths.find((p) => p.id === id)!
+    expect(pass.points[pass.points.length - 1]).toEqual(tip)
   })
 })

@@ -3,6 +3,8 @@ import { catmullRomPath } from '../lib/geometry'
 import { applySchedule, timelineDuration, type Timing } from '../lib/timing'
 import { resolveFlightTarget } from '../lib/target'
 import { FLIGHT_TYPES, PANEL_ADDABLE, PLAYER_DRIVEN, type BlockDir } from '../lib/pathStyles'
+import { defaultBallStart } from '../lib/ball'
+import { EXCHANGE_MS } from '../lib/timing'
 import { buildRoutePoints, routeConcept } from '../lib/routeTemplates'
 import { forwardY } from '../lib/formations'
 import { coercePos } from '../lib/positions'
@@ -144,6 +146,12 @@ interface EditorState {
   setPlayerPathType: (tokenId: string, type: PathType) => string | null
   /** add a short angled block in a given direction, defaulting to one yard */
   addBlock: (tokenId: string, dir: BlockDir) => string | null
+  /**
+   * Hand the ball to a player, from whoever is holding it now. This is the
+   * authoring path for possession — the coach says "RB has it here" instead of
+   * drawing a line and hoping the ball model infers the transfer.
+   */
+  addTransfer: (type: 'handoff' | 'toss' | 'pass', toId: string) => string | null
   updatePathType: (id: string, type: PathType) => void
   /** reshape an existing path to a named route template (BDB medians) */
   applyRouteTemplate: (id: string, conceptKey: string, depthScale?: number) => void
@@ -427,6 +435,42 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       d: catmullRomPath(points),
       id: uid(),
       timing: { delayMs: 0, durationMs: 600 },
+    }
+    st.beginHistory()
+    set((s) => ({ paths: applySchedule([...s.paths, created]) }))
+    return created.id
+  },
+
+  addTransfer: (type, toId) => {
+    const st = get()
+    const to = st.tokens.find((t) => t.id === toId)
+    if (!to || to.side !== 'offense') return null
+    // whoever is holding the ball at this point in the track: the last delivery
+    // that has landed, else the snap's recipient
+    const flights = st.paths
+      .filter((p) => FLIGHT_TYPES.has(p.type) && p.points.length >= 2)
+      .sort((a, b) => a.timing.delayMs - b.timing.delayMs)
+    let fromId = defaultBallStart(st.paths, st.tokens)
+    for (const f of flights) {
+      if (f.endTokenId && st.tokens.some((t) => t.id === f.endTokenId)) fromId = f.endTokenId
+    }
+    if (!fromId || fromId === toId) return null
+    const from = st.tokens.find((t) => t.id === fromId)!
+    // aim at where the receiver actually finishes, so the ball lands on him
+    const driven = st.paths.filter(
+      (p) => p.tokenId === toId && PLAYER_DRIVEN.has(p.type) && p.points.length >= 2,
+    )
+    const dest = driven.find((p) => p.type === 'route') ?? driven[driven.length - 1]
+    const toPos = dest ? dest.points[dest.points.length - 1] : { x: to.x, y: to.y }
+    const points = [{ x: from.x, y: from.y }, toPos]
+    const created: PlayPath = {
+      tokenId: fromId,
+      endTokenId: toId,
+      type,
+      points,
+      d: catmullRomPath(points),
+      id: uid(),
+      timing: { delayMs: 0, durationMs: EXCHANGE_MS },
     }
     st.beginHistory()
     set((s) => ({ paths: applySchedule([...s.paths, created]) }))
