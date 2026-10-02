@@ -102,16 +102,16 @@ describe('template store actions', () => {
     useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
     const tok = useEditorStore.getState().tokens[0]
     useEditorStore.setState({ selectedIds: [tok.id] })
-    useEditorStore.getState().setPlayerPathType(tok.id, 'route')
+    useEditorStore.getState().setPlayerRoute(tok.id, 'go')
     expect(useEditorStore.getState().selectedIds).toEqual([tok.id])
   })
 
   it('does not change the selection when he already has one of that type', () => {
     useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
     const tok = useEditorStore.getState().tokens[0]
-    useEditorStore.getState().setPlayerPathType(tok.id, 'route')
+    useEditorStore.getState().setPlayerRoute(tok.id, 'go')
     useEditorStore.setState({ selectedIds: [tok.id] })
-    useEditorStore.getState().setPlayerPathType(tok.id, 'route')
+    useEditorStore.getState().setPlayerRoute(tok.id, 'go')
     expect(useEditorStore.getState().selectedIds).toEqual([tok.id])
   })
 
@@ -184,7 +184,7 @@ describe('setPlayerPathType', () => {
   it('creates a path anchored at the player when he has none', () => {
     useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
     const tok = useEditorStore.getState().tokens[0]
-    const id = useEditorStore.getState().setPlayerPathType(tok.id, 'route')!
+    const id = useEditorStore.getState().setPlayerRoute(tok.id, 'go')!
     const st = useEditorStore.getState()
     expect(id).not.toBeNull()
     expect(st.paths).toHaveLength(1)
@@ -197,71 +197,34 @@ describe('setPlayerPathType', () => {
     useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
     useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 40, y: 88 })
     const [a, b] = useEditorStore.getState().tokens
-    useEditorStore.getState().setPlayerPathType(a.id, 'route')
-    useEditorStore.getState().setPlayerPathType(b.id, 'route')
+    useEditorStore.getState().setPlayerRoute(a.id, 'go')
+    useEditorStore.getState().setPlayerRoute(b.id, 'go')
     expect(useEditorStore.getState().paths).toHaveLength(2)
   })
 
   it('reuses the existing path of that type instead of stacking a second', () => {
     useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
     const tok = useEditorStore.getState().tokens[0]
-    const first = useEditorStore.getState().setPlayerPathType(tok.id, 'route')!
-    const again = useEditorStore.getState().setPlayerPathType(tok.id, 'route')
+    const first = useEditorStore.getState().setPlayerRoute(tok.id, 'go')!
+    const again = useEditorStore.getState().setPlayerRoute(tok.id, 'go')
     expect(again).toBe(first)
     expect(useEditorStore.getState().paths).toHaveLength(1)
-  })
-
-  it('refuses motion, run and drop — those have to be drawn', () => {
-    useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
-    const tok = useEditorStore.getState().tokens[0]
-    for (const type of ['motion', 'run', 'drop', 'pass'] as const) {
-      expect(useEditorStore.getState().setPlayerPathType(tok.id, type), type).toBeNull()
-    }
-    expect(useEditorStore.getState().paths).toHaveLength(0)
   })
 
   it('keeps one route per player while allowing a block alongside it', () => {
     useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
     const tok = useEditorStore.getState().tokens[0]
-    useEditorStore.getState().setPlayerPathType(tok.id, 'route')
+    useEditorStore.getState().setPlayerRoute(tok.id, 'go')
     useEditorStore.getState().addBlock(tok.id, 'forward')
-    useEditorStore.getState().setPlayerPathType(tok.id, 'route')
+    useEditorStore.getState().setPlayerRoute(tok.id, 'go')
     expect(useEditorStore.getState().paths.filter((p) => p.type === 'route')).toHaveLength(1)
     expect(useEditorStore.getState().paths.filter((p) => p.type === 'block')).toHaveLength(1)
-  })
-
-  it('moves a defensive player toward the offense', () => {
-    useEditorStore.getState().addToken({ side: 'defense', pos: 'CB', num: '', x: 20, y: 40 })
-    const tok = useEditorStore.getState().tokens[0]
-    const id = useEditorStore.getState().setPlayerPathType(tok.id, 'route')!
-    useEditorStore.getState().applyRouteTemplate(id, 'go')
-    const p = useEditorStore.getState().paths.find((x) => x.id === id)!
-    expect(p.points[p.points.length - 1].y).toBeGreaterThan(40)
-  })
-
-  it('refuses a snap, which belongs to the formation', () => {
-    useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
-    const tok = useEditorStore.getState().tokens[0]
-    expect(useEditorStore.getState().setPlayerPathType(tok.id, 'snap')).toBeNull()
-    expect(useEditorStore.getState().paths).toHaveLength(0)
-  })
-
-  it('accepts a toss or handoff the player gives away', () => {
-    useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
-    const tok = useEditorStore.getState().tokens[0]
-    const toss = useEditorStore.getState().setPlayerPathType(tok.id, 'toss')!
-    expect(useEditorStore.getState().paths.find((p) => p.id === toss)!.type).toBe('toss')
-    expect(useEditorStore.getState().setPlayerPathType(tok.id, 'handoff')).not.toBeNull()
-  })
-
-  it('ignores an unknown player', () => {
-    expect(useEditorStore.getState().setPlayerPathType('nope', 'route')).toBeNull()
   })
 
   it('undo removes an inspector-created path', () => {
     useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
     const tok = useEditorStore.getState().tokens[0]
-    useEditorStore.getState().setPlayerPathType(tok.id, 'route')
+    useEditorStore.getState().setPlayerRoute(tok.id, 'go')
     useEditorStore.getState().undo()
     expect(useEditorStore.getState().paths).toHaveLength(0)
   })
@@ -288,7 +251,7 @@ describe('direction follows the player side', () => {
     useEditorStore.setState({ tokens: [], paths: [], selectedIds: [], past: [], future: [] })
     useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
     const tok = useEditorStore.getState().tokens[0]
-    const id = useEditorStore.getState().setPlayerPathType(tok.id, 'route')!
+    const id = useEditorStore.getState().setPlayerRoute(tok.id, 'go')!
     useEditorStore.getState().applyRouteTemplate(id, 'slant')
     const p = useEditorStore.getState().paths.find((x) => x.id === id)!
     expect(p.points[p.points.length - 1].y).toBeLessThan(88)
@@ -298,7 +261,7 @@ describe('direction follows the player side', () => {
     useEditorStore.setState({ tokens: [], paths: [], selectedIds: [], past: [], future: [] })
     useEditorStore.getState().addToken({ side: 'defense', pos: 'CB', num: '', x: 12, y: 40 })
     const tok = useEditorStore.getState().tokens[0]
-    const id = useEditorStore.getState().setPlayerPathType(tok.id, 'route')!
+    const id = useEditorStore.getState().setPlayerRoute(tok.id, 'go')!
     useEditorStore.getState().applyRouteTemplate(id, 'slant')
     const p = useEditorStore.getState().paths.find((x) => x.id === id)!
     expect(p.points[p.points.length - 1].y).toBeGreaterThan(40)
@@ -313,7 +276,7 @@ describe('setRouteDepth', () => {
   it('shrinks an offensive route toward the LOS without flipping it', () => {
     useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
     const tok = useEditorStore.getState().tokens[0]
-    const id = useEditorStore.getState().setPlayerPathType(tok.id, 'route')!
+    const id = useEditorStore.getState().setPlayerRoute(tok.id, 'go')!
     useEditorStore.getState().applyRouteTemplate(id, 'go')
     useEditorStore.getState().setRouteDepth(id, 4)
     const p = useEditorStore.getState().paths.find((x) => x.id === id)!
@@ -325,7 +288,7 @@ describe('setRouteDepth', () => {
   it('shrinks a defensive route without flipping it', () => {
     useEditorStore.getState().addToken({ side: 'defense', pos: 'CB', num: '', x: 12, y: 40 })
     const tok = useEditorStore.getState().tokens[0]
-    const id = useEditorStore.getState().setPlayerPathType(tok.id, 'route')!
+    const id = useEditorStore.getState().setPlayerRoute(tok.id, 'go')!
     useEditorStore.getState().applyRouteTemplate(id, 'go')
     useEditorStore.getState().setRouteDepth(id, 4)
     const p = useEditorStore.getState().paths.find((x) => x.id === id)!
@@ -337,7 +300,7 @@ describe('setRouteDepth', () => {
   it('scales lateral break at the same time', () => {
     useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
     const tok = useEditorStore.getState().tokens[0]
-    const id = useEditorStore.getState().setPlayerPathType(tok.id, 'route')!
+    const id = useEditorStore.getState().setPlayerRoute(tok.id, 'go')!
     useEditorStore.getState().applyRouteTemplate(id, 'post')
     const before = useEditorStore.getState().paths.find((x) => x.id === id)!
     const latBefore = Math.abs(before.points[before.points.length - 1].x - 12)

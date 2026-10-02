@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useEditorStore } from '../stores/editorStore'
-import { PATH_TYPE_ORDER } from '../lib/pathStyles'
+import { TYPE_FAMILY } from '../lib/pathStyles'
 
 export interface ShortcutEvent {
   key: string
@@ -42,15 +42,17 @@ export function applyShortcut(e: ShortcutEvent): void {
   }
   if (mod) return
 
-  // number keys retype the selected path, mirroring the inspector's type chips
+  // number keys pick within the selected path's type family, matching the
+  // chips the inspector actually shows (a route is never a snap)
   if (/^[1-9]$/.test(e.key)) {
     const sel = st.selectedIds
     if (sel.length === 1) {
       const path = st.paths.find((p) => p.id === sel[0])
       const idx = Number(e.key) - 1
-      if (path && idx < PATH_TYPE_ORDER.length) {
+      const family = path ? TYPE_FAMILY[path.type] : null
+      if (path && family && idx < family.length) {
         e.preventDefault?.()
-        st.updatePathType(path.id, PATH_TYPE_ORDER[idx]!)
+        st.updatePathType(path.id, family[idx]!)
         return
       }
     }

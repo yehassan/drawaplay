@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { applyShortcut } from '../src/hooks/useShortcuts'
 import { useEditorStore } from '../src/stores/editorStore'
 import type { PlayPath } from '../src/stores/editorStore'
-import { PATH_TYPE_ORDER } from '../src/lib/pathStyles'
+import { TYPE_FAMILY } from '../src/lib/pathStyles'
 
 const ev = (key: string, mods: Partial<{ mod: boolean; shift: boolean; alt: boolean; targetTag: string }> = {}) => ({
   key,
@@ -120,11 +120,26 @@ describe('nudge & delete keys', () => {
 })
 
 describe('path type hotkeys', () => {
-  it('digits retype the selected path', () => {
+  it('digits pick within the path\'s own type family', () => {
     const pass = P('p1', null, 'pass', [[26, 92], [18, 84]])
     useEditorStore.setState({ paths: [pass], selectedIds: ['p1'], playName: 'T' })
-    applyShortcut(ev('3')) // index 2 -> block
-    expect(useEditorStore.getState().paths[0].type).toBe('block')
+    applyShortcut(ev('2')) // pass family: pass, handoff, toss
+    expect(useEditorStore.getState().paths[0].type).toBe('handoff')
+  })
+
+  it('a digit cannot turn a route into a snap', () => {
+    const route = P('p1', null, 'route', [[26, 92], [18, 84]])
+    useEditorStore.setState({ paths: [route], selectedIds: ['p1'], playName: 'T' })
+    applyShortcut(ev('9'))
+    // the movement family only goes to index 4, so 9 is ignored entirely
+    expect(useEditorStore.getState().paths[0].type).toBe('route')
+  })
+
+  it('a digit cannot turn a pass into a block', () => {
+    const pass = P('p1', null, 'pass', [[26, 92], [18, 84]])
+    useEditorStore.setState({ paths: [pass], selectedIds: ['p1'], playName: 'T' })
+    applyShortcut(ev('4'))
+    expect(useEditorStore.getState().paths[0].type).toBe('pass')
   })
 
   it('digits are ignored when nothing is selected', () => {
@@ -153,15 +168,20 @@ describe('path type hotkeys', () => {
     expect(useEditorStore.getState().paths[0].type).toBe('pass')
   })
 
-  it('maps 1..9 onto PATH_TYPE_ORDER', () => {
-    for (let i = 0; i < PATH_TYPE_ORDER.length; i++) {
-      useEditorStore.setState({
-        paths: [P('p1', null, 'route', [[26, 92], [18, 84]])],
-        selectedIds: ['p1'],
-        playName: 'T',
-      })
-      applyShortcut(ev(String(i + 1)))
-      expect(useEditorStore.getState().paths[0].type).toBe(PATH_TYPE_ORDER[i])
+  it('maps each digit onto that family in order', () => {
+    expect(TYPE_FAMILY.route).toEqual(['route', 'drop', 'run', 'motion', 'block'])
+    expect(TYPE_FAMILY.pass).toEqual(['pass', 'handoff', 'toss'])
+    expect(TYPE_FAMILY.snap).toEqual(['snap'])
+    for (const [start, family] of [['route', TYPE_FAMILY.route], ['pass', TYPE_FAMILY.pass]] as const) {
+      for (let i = 0; i < family.length; i++) {
+        useEditorStore.setState({
+          paths: [P('p1', null, start as never, [[26, 92], [18, 84]])],
+          selectedIds: ['p1'],
+          playName: 'T',
+        })
+        applyShortcut(ev(String(i + 1)))
+        expect(useEditorStore.getState().paths[0].type).toBe(family[i])
+      }
     }
   })
 })

@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { catmullRomPath } from '../lib/geometry'
 import { applySchedule, timelineDuration, type Timing } from '../lib/timing'
 import { resolveFlightTarget } from '../lib/target'
-import { FLIGHT_TYPES, PANEL_ADDABLE, PLAYER_DRIVEN, type BlockDir } from '../lib/pathStyles'
+import { FLIGHT_TYPES, PLAYER_DRIVEN, type BlockDir } from '../lib/pathStyles'
 import { defaultBallStart } from '../lib/ball'
 import { EXCHANGE_MS } from '../lib/timing'
 import { buildRoutePoints, routeConcept } from '../lib/routeTemplates'
@@ -143,8 +143,6 @@ interface EditorState {
    * path he already has of that type, or makes one anchored at him — so a
    * play can be built entirely from the inspector, with no drawing.
    */
-  setPlayerPathType: (tokenId: string, type: PathType) => string | null
-  /** add a short angled block in a given direction, defaulting to one yard */
   addBlock: (tokenId: string, dir: BlockDir) => string | null
   /**
    * Hand the ball to a player, from whoever is holding it now. This is the
@@ -152,6 +150,12 @@ interface EditorState {
    * drawing a line and hoping the ball model infers the transfer.
    */
   addTransfer: (type: 'handoff' | 'toss' | 'pass', toId: string) => string | null
+  /**
+   * The primary way to give a player a route: pick a concept and it either
+   * creates his route or reshapes the one he already has. A player only ever
+   * has one route, so this never stacks a second on top.
+   */
+  setPlayerRoute: (tokenId: string, conceptKey: string) => string | null
   updatePathType: (id: string, type: PathType) => void
   /** reshape an existing path to a named route template (BDB medians) */
   applyRouteTemplate: (id: string, conceptKey: string, depthScale?: number) => void
@@ -365,51 +369,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     return created.id
   },
 
-  setPlayerPathType: (tokenId, type) => {
-    const st = get()
-    const anchor = st.tokens.find((t) => t.id === tokenId)
-    if (!anchor) return null
-    // the panel may only add the things that have no meaningful freehand shape:
-    // a route (you pick a concept for it) and the ball flights the holder gives
-    // away. motion / run / drop are authored by drawing them.
-    if (!PANEL_ADDABLE.has(type)) return null
-    const existing = st.paths.find((p) => p.tokenId === tokenId && p.type === type)
-    if (existing) return existing.id
-    const fwd = anchor.side === 'offense' ? -1 : 1
-    let points: Pt[]
-    let endTokenId: string | null = null
-    if (FLIGHT_TYPES.has(type)) {
-      // a flight needs someone on the other end — the path panel picks the
-      // receiver, so start it as a short stub from the player
-      points = [
-        { x: anchor.x, y: anchor.y },
-        { x: anchor.x, y: Math.max(1, Math.min(119, anchor.y + 6 * fwd)) },
-      ]
-    } else {
-      // a drop comes back toward the LOS, everything else pushes forward
-      const depth = (type === 'drop' ? -3 : type === 'run' ? 10 : type === 'motion' ? 5 : 8) * fwd
-      points = [
-        { x: anchor.x, y: anchor.y },
-        { x: anchor.x, y: Math.max(1, Math.min(119, anchor.y + depth)) },
-      ]
-    }
-    // committed directly rather than through addPath: the player panel owns this
-    // action, and addPath selecting the new path would navigate the inspector
-    // away from the player and lose the jersey / ball controls
-    const created: PlayPath = {
-      tokenId,
-      endTokenId,
-      type,
-      points,
-      d: catmullRomPath(points),
-      id: uid(),
-      timing: { delayMs: 0, durationMs: 600 },
-    }
-    st.beginHistory()
-    set((s) => ({ paths: applySchedule([...s.paths, created]) }))
-    return created.id
-  },
-
   addBlock: (tokenId, dir) => {
     const st = get()
     const anchor = st.tokens.find((t) => t.id === tokenId)
@@ -431,6 +390,36 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       tokenId,
       endTokenId: null,
       type: 'block',
+      points,
+      d: catmullRomPath(points),
+      id: uid(),
+      timing: { delayMs: 0, durationMs: 600 },
+    }
+    st.beginHistory()
+    set((s) => ({ paths: applySchedule([...s.paths, created]) }))
+    return created.id
+  },
+
+  setPlayerRoute: (tokenId, conceptKey) => {
+    const st = get()
+    const anchor = st.tokens.find((t) => t.id === tokenId)
+    if (!anchor) return null
+    const existing = st.paths.find((p) => p.tokenId === tokenId && p.type === 'route')
+    if (existing) {
+      // applyRouteTemplate pushes its own history point and reshapes in place
+      st.applyRouteTemplate(existing.id, conceptKey)
+      return existing.id
+    }
+    const points = buildRoutePoints(
+      routeConcept(conceptKey),
+      anchor,
+      1,
+      forwardY(anchor.side),
+    )
+    const created: PlayPath = {
+      tokenId,
+      endTokenId: null,
+      type: 'route',
       points,
       d: catmullRomPath(points),
       id: uid(),

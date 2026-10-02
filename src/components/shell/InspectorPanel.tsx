@@ -4,8 +4,8 @@ import { posLabel } from '../../lib/positions'
 import {
   FLIGHT_TYPES,
   PATH_STYLES,
-  PATH_TYPE_ORDER,
   PLAYER_DRIVEN,
+  TYPE_FAMILY,
   type BlockDir,
 } from '../../lib/pathStyles'
 import { ROUTE_CONCEPTS } from '../../lib/routeTemplates'
@@ -46,12 +46,16 @@ function SectionLabel({ children }: { children: string }) {
   )
 }
 
-/** named-route picker (BDB median shapes): reshapes the selected route */
-function RouteLibraryGrid({ pathId }: { pathId: string }) {
+/**
+ * Named-route picker (BDB median shapes). Given a token it creates or reshapes
+ * that player's route; given a path it reshapes that path.
+ */
+function RouteLibraryGrid({ pathId, tokenId }: { pathId?: string; tokenId?: string }) {
   const applyRouteTemplate = useEditorStore((s) => s.applyRouteTemplate)
+  const setPlayerRoute = useEditorStore((s) => s.setPlayerRoute)
 
   return (
-    <div className="mt-4">
+    <div>
       <p className="pb-2 text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
         Route library
       </p>
@@ -60,7 +64,10 @@ function RouteLibraryGrid({ pathId }: { pathId: string }) {
           <button
             key={c.key}
             type="button"
-            onClick={() => applyRouteTemplate(pathId, c.key)}
+            onClick={() => {
+              if (pathId) applyRouteTemplate(pathId, c.key)
+              else if (tokenId) setPlayerRoute(tokenId, c.key)
+            }}
             title={c.label}
             className="rounded-[12px] border border-[var(--color-inspector-border)] bg-[var(--color-inspector-unselected)] px-1 py-1.5 text-[11px] font-medium text-[var(--color-inspector-text)] transition-colors hover:border-[var(--color-inspector-hover-border)] hover:bg-[var(--color-inspector-hover)]"
           >
@@ -256,7 +263,7 @@ function PathInspector({ pathId }: { pathId: string }) {
       </p>
 
       <div className="grid grid-cols-2 gap-1.5">
-        {PATH_TYPE_ORDER.map((type, i) => {
+        {TYPE_FAMILY[path.type].map((type, i) => {
           const st = PATH_STYLES[type]
           const active = path.type === type
           return (
@@ -467,13 +474,14 @@ function TokenInspector({ tokenId }: { tokenId: string }) {
   const select = useEditorStore((s) => s.select)
   const reorderPath = useEditorStore((s) => s.reorderPath)
   const renameToken = useEditorStore((s) => s.renameToken)
-  const setPlayerPathType = useEditorStore((s) => s.setPlayerPathType)
   const addBlock = useEditorStore((s) => s.addBlock)
   if (!token) return null
 
   // his movement sequence, in play order — this is the chain the scheduler
   // walks, so the row order is the order he does things
   const movement = paths.filter((p) => p.tokenId === token.id && PLAYER_DRIVEN.has(p.type))
+  // picking a concept reshapes his route in place; there is only ever one
+  const routePath = movement.find((p) => p.type === 'route')
 
   return (
     <>
@@ -537,15 +545,14 @@ function TokenInspector({ tokenId }: { tokenId: string }) {
           </ul>
         )}
         <div className="space-y-2">
-          <button
-            type="button"
-            onClick={() => setPlayerPathType(token.id, 'route')}
-            title="Add a route, then pick its shape from the route library"
-            disabled={movement.some((p) => p.type === 'route')}
-            className="w-full rounded-[12px] border border-[var(--color-inspector-border)] bg-[var(--color-inspector-unselected)] px-2 py-2 text-[11px] font-medium text-[var(--color-inspector-text)] transition-colors hover:border-[var(--color-inspector-hover-border)] hover:bg-[var(--color-inspector-hover)] disabled:opacity-30"
-          >
-            + Route
-          </button>
+          {token.side === 'offense' && (
+            <div>
+              <p className="pb-1 text-[10px] uppercase tracking-[0.06em] text-chrome-600">
+                {routePath ? 'Route shape' : 'Give him a route'}
+              </p>
+              <RouteLibraryGrid tokenId={token.id} />
+            </div>
+          )}
           <div>
             <p className="pb-1 text-[10px] uppercase tracking-[0.06em] text-chrome-600">
               + Block · pick a side

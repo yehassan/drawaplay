@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { reschedule } from '../src/lib/timing'
 import { computeScene } from '../src/lib/render'
 import { useEditorStore } from '../src/stores/editorStore'
@@ -249,12 +249,72 @@ describe('addTransfer — authoring possession without drawing', () => {
 
   it('aims at the end of the receiver\'s route', () => {
     setup()
-    const route = st().setPlayerPathType(byPos('WR').id, 'route')!
-    st().applyRouteTemplate(route, 'go')
+    const route = st().setPlayerRoute(byPos('WR').id, 'go')!
     const rp = st().paths.find((p) => p.id === route)!
     const tip = rp.points[rp.points.length - 1]
     const id = st().addTransfer('pass', byPos('WR').id)!
     const pass = st().paths.find((p) => p.id === id)!
     expect(pass.points[pass.points.length - 1]).toEqual(tip)
+  })
+})
+
+describe('setPlayerRoute — one step from player to route', () => {
+  beforeEach(() => {
+    useEditorStore.setState({ tokens: [], paths: [], selectedIds: [], past: [], future: [] })
+  })
+  const wr = (x = 14, y = 88) => {
+    st().addToken({ side: 'offense', pos: 'WR', num: '', x, y })
+    return st().tokens[st().tokens.length - 1]!
+  }
+
+  it('creates a route from a concept with no intermediate step', () => {
+    const t = wr()
+    const id = st().setPlayerRoute(t.id, 'slant')!
+    const p = st().paths.find((x) => x.id === id)!
+    expect(p.type).toBe('route')
+    expect(p.tokenId).toBe(t.id)
+    expect(p.points[0]).toEqual({ x: 14, y: 88 })
+  })
+
+  it('reshapes rather than stacking a second route', () => {
+    const t = wr()
+    st().setPlayerRoute(t.id, 'slant')
+    const again = st().setPlayerRoute(t.id, 'post')
+    expect(again).toBe(st().paths[0].id)
+    expect(st().paths).toHaveLength(1)
+  })
+
+  it('does not change the selection', () => {
+    const t = wr()
+    useEditorStore.setState({ selectedIds: [t.id] })
+    st().setPlayerRoute(t.id, 'go')
+    expect(st().selectedIds).toEqual([t.id])
+  })
+
+  it('never stacks a route onto an existing one', () => {
+    const t = wr()
+    const first = st().setPlayerRoute(t.id, 'go')!
+    st().setPlayerRoute(t.id, 'corner')
+    expect(st().paths.filter((p) => p.type === 'route')).toHaveLength(1)
+    expect(st().paths[0].id).toBe(first)
+  })
+
+  it('undoes back to no route', () => {
+    const t = wr()
+    st().setPlayerRoute(t.id, 'slant')
+    st().undo()
+    expect(st().paths.filter((p) => p.type === 'route')).toHaveLength(0)
+  })
+
+  it('builds a whole route sheet without drawing anything', () => {
+    const concepts = ['slant', 'post', 'hitch', 'in'] as const
+    const players = [wr(8), wr(16), wr(24), wr(32)]
+    for (const [i, c] of concepts.entries()) st().setPlayerRoute(players[i].id, c)
+    expect(st().paths).toHaveLength(4)
+    expect(st().paths.every((p) => p.type === 'route')).toBe(true)
+  })
+
+  it('ignores an unknown player', () => {
+    expect(st().setPlayerRoute('nope', 'slant')).toBeNull()
   })
 })
