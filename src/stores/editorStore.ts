@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { catmullRomPath } from '../lib/geometry'
 import { applySchedule, timelineDuration, type Timing } from '../lib/timing'
 import { resolveFlightTarget } from '../lib/target'
-import { FLIGHT_TYPES, PLAYER_DRIVEN } from '../lib/pathStyles'
+import { FLIGHT_TYPES, PANEL_ADDABLE, PLAYER_DRIVEN, type BlockDir } from '../lib/pathStyles'
 import { buildRoutePoints, routeConcept } from '../lib/routeTemplates'
 import { forwardY } from '../lib/formations'
 import { coercePos } from '../lib/positions'
@@ -142,11 +142,8 @@ interface EditorState {
    * play can be built entirely from the inspector, with no drawing.
    */
   setPlayerPathType: (tokenId: string, type: PathType) => string | null
-  /**
-   * One-tap pass from the current ball holder to this player. Add-only and
-   * selection-neutral, like setPlayerPathType, for the same reason.
-   */
-  throwToPlayer: (tokenId: string) => string | null
+  /** add a short angled block in a given direction, defaulting to one yard */
+  addBlock: (tokenId: string, dir: BlockDir) => string | null
   updatePathType: (id: string, type: PathType) => void
   /** reshape an existing path to a named route template (BDB medians) */
   applyRouteTemplate: (id: string, conceptKey: string, depthScale?: number) => void
@@ -177,7 +174,6 @@ interface EditorState {
   deleteTextNotes: (ids: string[]) => void
   deleteSelected: () => void
   select: (ids: string[]) => void
-  setBallStart: (id: string | null) => void
   loadPlay: (play: {
     name: string
     tokens: Token[]
@@ -365,8 +361,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const st = get()
     const anchor = st.tokens.find((t) => t.id === tokenId)
     if (!anchor) return null
-    // a snap belongs to the formation, so it is never authored from here
-    if (!PLAYER_DRIVEN.has(type) && !(FLIGHT_TYPES.has(type) && type !== 'snap')) return null
+    // the panel may only add the things that have no meaningful freehand shape:
+    // a route (you pick a concept for it) and the ball flights the holder gives
+    // away. motion / run / drop are authored by drawing them.
+    if (!PANEL_ADDABLE.has(type)) return null
     const existing = st.paths.find((p) => p.tokenId === tokenId && p.type === type)
     if (existing) return existing.id
     const fwd = anchor.side === 'offense' ? -1 : 1
@@ -404,32 +402,29 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     return created.id
   },
 
-  throwToPlayer: (tokenId) => {
+  addBlock: (tokenId, dir) => {
     const st = get()
-    const to = st.tokens.find((t) => t.id === tokenId)
-    if (!to || to.side !== 'offense') return null
-    const autoHolder = st.tokens.find((t) => t.pos === 'QB')?.id ?? null
-    const fromId = st.ballStartId ?? autoHolder
-    if (!fromId || fromId === tokenId) return null
-    const existing = st.paths.find(
-      (p) => p.type === 'pass' && p.tokenId === fromId && p.endTokenId === tokenId,
-    )
-    if (existing) return existing.id
-    const from = st.tokens.find((t) => t.id === fromId)
-    if (!from) return null
-    // aim at where he actually finishes: his route if he has one, else the end
-    // of his last movement
-    const driven = st.paths.filter(
-      (p) => p.tokenId === tokenId && PLAYER_DRIVEN.has(p.type) && p.points.length >= 2,
-    )
-    const dest = driven.find((p) => p.type === 'route') ?? driven[driven.length - 1]
-    const toPos = dest ? dest.points[dest.points.length - 1] : { x: to.x, y: to.y }
+    const anchor = st.tokens.find((t) => t.id === tokenId)
+    if (!anchor) return null
+    // one yard, angled 45 degrees off the player's forward axis. a player
+    // facing up the screen has their left on the -x side, which is the same
+    // sign as their forward axis, so the lateral term follows it
+    const fwd = forwardY(anchor.side)
+    const lat = dir === 'left' ? fwd * 0.7071 : dir === 'right' ? -fwd * 0.7071 : 0
+    const fwdPart = dir === 'forward' ? fwd * 1 : fwd * 0.7071
+    const points: Pt[] = [
+      { x: anchor.x, y: anchor.y },
+      {
+        x: Math.max(1.5, Math.min(51.8, anchor.x + lat)),
+        y: Math.max(1, Math.min(119, anchor.y + fwdPart)),
+      },
+    ]
     const created: PlayPath = {
-      tokenId: fromId,
-      endTokenId: tokenId,
-      type: 'pass',
-      points: [{ x: from.x, y: from.y }, toPos],
-      d: catmullRomPath([{ x: from.x, y: from.y }, toPos]),
+      tokenId,
+      endTokenId: null,
+      type: 'block',
+      points,
+      d: catmullRomPath(points),
       id: uid(),
       timing: { delayMs: 0, durationMs: 600 },
     }
@@ -715,12 +710,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   select: (ids) => set({ selectedIds: ids }),
-
-  setBallStart: (ballStartId) =>
-    set((s) => ({
-      ballStartId,
-      playback: { ...s.playback, playing: false, tMs: 0 },
-    })),
 
   loadPlay: (play) =>
     set((s) => {

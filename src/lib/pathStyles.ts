@@ -67,6 +67,22 @@ export const FLIGHT_TYPES: ReadonlySet<PathType> = new Set([
   'snap',
 ])
 
+/**
+ * The only things the inspector may add for a player. A route is worth adding
+ * because you then pick a concept for it; a toss or handoff has no meaningful
+ * freehand shape. Everything else — motion, run, drop — has to be drawn, since
+ * that is where the shape actually comes from.
+ */
+export const PANEL_ADDABLE: ReadonlySet<PathType> = new Set([
+  'route',
+  'block',
+  'handoff',
+  'toss',
+])
+
+/** screen directions a block can be added in */
+export type BlockDir = 'left' | 'forward' | 'right'
+
 /** compact uppercase names for timeline chips */
 export const SHORT_LABELS: Record<PathType, string> = {
   route: 'Route',
