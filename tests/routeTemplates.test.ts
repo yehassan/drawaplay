@@ -69,23 +69,51 @@ describe('route templates', () => {
   })
 })
 
+/** the real flow now: draw a route path, then pick a named concept for it */
+const makeRoute = (tokenId: string, conceptKey: string): string => {
+  const st = useEditorStore.getState()
+  const anchor = st.tokens.find((t) => t.id === tokenId)!
+  const id = st.addPath({
+    tokenId,
+    endTokenId: null,
+    type: 'route',
+    points: [
+      { x: anchor.x, y: anchor.y },
+      { x: anchor.x, y: anchor.y - 8 },
+    ],
+    d: '',
+  })
+  useEditorStore.getState().applyRouteTemplate(id, conceptKey)
+  return id
+}
+
 describe('template store actions', () => {
-  it('addTemplateRoute anchors at the player and selects', () => {
+  it('picking a concept reshapes the drawn route in place', () => {
     useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
     const tok = useEditorStore.getState().tokens[0]
-    const id = useEditorStore.getState().addTemplateRoute(tok.id, 'slant')
+    const id = makeRoute(tok.id, 'slant')
     const st = useEditorStore.getState()
-    expect(id).not.toBeNull()
     expect(st.paths).toHaveLength(1)
     expect(st.paths[0].type).toBe('route')
     expect(st.paths[0].points[0]).toEqual({ x: 12, y: 88 })
     expect(st.selectedIds).toEqual([id])
   })
 
+  it('picking a second concept reuses the same path, never a second route', () => {
+    useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
+    const tok = useEditorStore.getState().tokens[0]
+    const id = makeRoute(tok.id, 'go')
+    useEditorStore.getState().applyRouteTemplate(id, 'post')
+    useEditorStore.getState().applyRouteTemplate(id, 'corner')
+    const routes = useEditorStore.getState().paths.filter((p) => p.type === 'route')
+    expect(routes).toHaveLength(1)
+    expect(routes[0].id).toBe(id)
+  })
+
   it('applyRouteTemplate reshapes in place, keeps identity', () => {
     useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
     const tok = useEditorStore.getState().tokens[0]
-    const id = useEditorStore.getState().addTemplateRoute(tok.id, 'go')!
+    const id = makeRoute(tok.id, 'go')
     useEditorStore.getState().applyRouteTemplate(id, 'slant')
     const p = useEditorStore.getState().paths.find((x) => x.id === id)!
     expect(p.type).toBe('route')
@@ -94,20 +122,30 @@ describe('template store actions', () => {
     expect(88 - last.y).toBeGreaterThan(0) // went downfield
   })
 
-  it('undo restores the previous shape', () => {
+  it('undo restores the drawn shape when a concept is applied', () => {
     useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
     const tok = useEditorStore.getState().tokens[0]
-    const id = useEditorStore.getState().addTemplateRoute(tok.id, 'go')!
-    const before = useEditorStore.getState().paths.find((x) => x.id === id)!.points.length
+    const id = useEditorStore.getState().addPath({
+      tokenId: tok.id,
+      endTokenId: null,
+      type: 'route',
+      points: [
+        { x: 12, y: 88 },
+        { x: 12, y: 80 },
+      ],
+      d: '',
+    })
+    const drawn = useEditorStore.getState().paths.find((x) => x.id === id)!.points
     useEditorStore.getState().applyRouteTemplate(id, 'slant')
+    expect(useEditorStore.getState().paths.find((x) => x.id === id)!.points).not.toEqual(drawn)
     useEditorStore.getState().undo()
-    expect(useEditorStore.getState().paths.find((x) => x.id === id)!.points).toHaveLength(before)
+    expect(useEditorStore.getState().paths.find((x) => x.id === id)!.points).toEqual(drawn)
   })
 
   it('mirrorPath flips lateral around the anchor, keeps start', () => {
     useEditorStore.getState().addToken({ side: 'offense', pos: 'RB', num: '', x: 26, y: 94 })
     const tok = useEditorStore.getState().tokens[0]
-    const id = useEditorStore.getState().addTemplateRoute(tok.id, 'wheel')!
+    const id = makeRoute(tok.id, 'wheel')
     const before = useEditorStore.getState().paths.find((x) => x.id === id)!.points
     useEditorStore.getState().mirrorPath(id)
     const after = useEditorStore.getState().paths.find((x) => x.id === id)!.points

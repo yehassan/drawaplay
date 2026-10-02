@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { applyShortcut } from '../src/hooks/useShortcuts'
 import { useEditorStore } from '../src/stores/editorStore'
 import type { PlayPath } from '../src/stores/editorStore'
+import { PATH_TYPE_ORDER } from '../src/lib/pathStyles'
 
 const ev = (key: string, mods: Partial<{ mod: boolean; shift: boolean; alt: boolean; targetTag: string }> = {}) => ({
   key,
@@ -42,7 +43,6 @@ function reset(): void {
     playback: { playing: false, tMs: 0, speed: 1, loop: false },
     past: [],
     future: [],
-    typeBarFor: null,
   })
   void st
 }
@@ -119,31 +119,53 @@ describe('nudge & delete keys', () => {
   })
 })
 
-describe('type bar hotkeys', () => {
-  it('digits retype the bar path and close the bar', () => {
+describe('path type hotkeys', () => {
+  it('digits retype the selected path', () => {
     const pass = P('p1', null, 'pass', [[26, 92], [18, 84]])
-    useEditorStore.setState({
-      paths: [pass],
-      selectedIds: ['p1'],
-      typeBarFor: 'p1',
-      playName: 'T',
-    })
-    applyShortcut(ev('3')) // index 2 → block
-    const st = useEditorStore.getState()
-    expect(st.paths[0].type).toBe('block')
-    expect(st.typeBarFor).toBeNull()
+    useEditorStore.setState({ paths: [pass], selectedIds: ['p1'], playName: 'T' })
+    applyShortcut(ev('3')) // index 2 -> block
+    expect(useEditorStore.getState().paths[0].type).toBe('block')
   })
-  it('digits are ignored when no bar is open', () => {
+
+  it('digits are ignored when nothing is selected', () => {
     applyShortcut(ev('3'))
     expect(useEditorStore.getState().paths).toHaveLength(0)
   })
-  it('Esc closes the bar before other escape semantics', () => {
-    const pass = P('p1', null, 'pass', [[26, 92], [18, 84]])
-    useEditorStore.setState({ paths: [pass], typeBarFor: 'p1' })
-    applyShortcut(ev('Escape'))
-    expect(useEditorStore.getState().typeBarFor).toBeNull()
+
+  it('digits are ignored when the selection is not a path', () => {
+    useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
+    const tok = useEditorStore.getState().tokens[0]
+    useEditorStore.setState({ selectedIds: [tok.id], playName: 'T' })
+    applyShortcut(ev('3'))
+    expect(useEditorStore.getState().paths).toHaveLength(0)
+  })
+
+  it('digits are ignored when multiple paths are selected', () => {
+    useEditorStore.setState({
+      paths: [
+        P('p1', null, 'pass', [[26, 92], [18, 84]]),
+        P('p2', null, 'pass', [[26, 92], [30, 84]]),
+      ],
+      selectedIds: ['p1', 'p2'],
+      playName: 'T',
+    })
+    applyShortcut(ev('3'))
+    expect(useEditorStore.getState().paths[0].type).toBe('pass')
+  })
+
+  it('maps 1..9 onto PATH_TYPE_ORDER', () => {
+    for (let i = 0; i < PATH_TYPE_ORDER.length; i++) {
+      useEditorStore.setState({
+        paths: [P('p1', null, 'route', [[26, 92], [18, 84]])],
+        selectedIds: ['p1'],
+        playName: 'T',
+      })
+      applyShortcut(ev(String(i + 1)))
+      expect(useEditorStore.getState().paths[0].type).toBe(PATH_TYPE_ORDER[i])
+    }
   })
 })
+
 
 describe('focus guards', () => {
   it('typing fields swallow shortcuts', () => {

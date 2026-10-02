@@ -42,19 +42,18 @@ export function applyShortcut(e: ShortcutEvent): void {
   }
   if (mod) return
 
-  // one-shot type bar: number keys retype the path
-  if (st.typeBarFor && /^[1-9]$/.test(e.key)) {
-    const idx = Number(e.key) - 1
-    if (idx < PATH_TYPE_ORDER.length) {
-      e.preventDefault?.()
-      st.updatePathType(st.typeBarFor, PATH_TYPE_ORDER[idx]!)
-      st.showTypeBar(null)
+  // number keys retype the selected path, mirroring the inspector's type chips
+  if (/^[1-9]$/.test(e.key)) {
+    const sel = st.selectedIds
+    if (sel.length === 1) {
+      const path = st.paths.find((p) => p.id === sel[0])
+      const idx = Number(e.key) - 1
+      if (path && idx < PATH_TYPE_ORDER.length) {
+        e.preventDefault?.()
+        st.updatePathType(path.id, PATH_TYPE_ORDER[idx]!)
+        return
+      }
     }
-    return
-  }
-  if (e.key === 'Escape' && st.typeBarFor) {
-    st.showTypeBar(null)
-    return
   }
 
   // arrow keys nudge the selection

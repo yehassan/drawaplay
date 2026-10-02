@@ -17,10 +17,12 @@ const SHORTCUTS: ReadonlyArray<readonly [string, string]> = [
   ['Arrows', 'Nudge (⇧ = 2yd)'],
   ['⌘D', 'Duplicate selection'],
   ['Del', 'Delete selection'],
+  ['1-9', 'Set path type (when a path is selected)'],
   ['Alt+click chip', 'Lock / unlock timing'],
   ['⌘Z', 'Undo'],
   ['⇧⌘Z', 'Redo'],
   ['Esc', 'Deselect / exit pen'],
+  ['Backspace', 'Delete selection'],
 ]
 
 function SectionLabel({ children }: { children: string }) {
@@ -31,10 +33,9 @@ function SectionLabel({ children }: { children: string }) {
   )
 }
 
-/** named-route picker (BDB median shapes): reshape a path or create one on a player */
-function RouteLibraryGrid({ pathId, tokenId }: { pathId?: string; tokenId?: string }) {
+/** named-route picker (BDB median shapes): reshapes the selected route */
+function RouteLibraryGrid({ pathId }: { pathId: string }) {
   const applyRouteTemplate = useEditorStore((s) => s.applyRouteTemplate)
-  const addTemplateRoute = useEditorStore((s) => s.addTemplateRoute)
 
   return (
     <div className="mt-4">
@@ -46,10 +47,7 @@ function RouteLibraryGrid({ pathId, tokenId }: { pathId?: string; tokenId?: stri
           <button
             key={c.key}
             type="button"
-            onClick={() => {
-              if (pathId) applyRouteTemplate(pathId, c.key)
-              else if (tokenId) addTemplateRoute(tokenId, c.key)
-            }}
+            onClick={() => applyRouteTemplate(pathId, c.key)}
             title={c.label}
             className="rounded-[12px] border border-[var(--color-inspector-border)] bg-[var(--color-inspector-unselected)] px-1 py-1.5 text-[11px] font-medium text-[var(--color-inspector-text)] transition-colors hover:border-[var(--color-inspector-hover-border)] hover:bg-[var(--color-inspector-hover)]"
           >
@@ -119,7 +117,7 @@ function PathInspector({ pathId }: { pathId: string }) {
       </p>
 
       <div className="grid grid-cols-2 gap-1.5">
-        {PATH_TYPE_ORDER.map((type) => {
+        {PATH_TYPE_ORDER.map((type, i) => {
           const st = PATH_STYLES[type]
           const active = path.type === type
           return (
@@ -136,6 +134,9 @@ function PathInspector({ pathId }: { pathId: string }) {
             >
               <TypeSample type={type} />
               {st.label}
+              <span className="ml-auto text-[9px] font-bold leading-none text-chrome-500">
+                {i + 1}
+              </span>
             </button>
           )
         })}
@@ -234,9 +235,7 @@ function PathInspector({ pathId }: { pathId: string }) {
           )
         })()}
 
-      {PLAYER_DRIVEN.has(path.type) && path.type !== 'motion' && (
-        <RouteLibraryGrid pathId={path.id} />
-      )}
+      {path.type === 'route' && <RouteLibraryGrid pathId={path.id} />}
 
       {path.type === 'route' &&
         (() => {
@@ -333,6 +332,8 @@ function TokenInspector({ tokenId }: { tokenId: string }) {
 
   // this player's movement sequence, in play order
   const chain = paths.filter((p) => p.tokenId === token.id && PLAYER_DRIVEN.has(p.type))
+  // the route library only applies once he actually runs a route
+  const routePath = chain.find((p) => p.type === 'route')
 
   const autoHolder = tokens.find((t) => t.pos === 'QB')?.id ?? null
   const holderId = ballStartId ?? autoHolder
@@ -371,54 +372,39 @@ function TokenInspector({ tokenId }: { tokenId: string }) {
         </p>
       )}
 
-      {token.side === 'offense' && <RouteLibraryGrid tokenId={token.id} />}
-
       {token.side === 'offense' && (
-        <div className="mt-3 rounded-[16px] border border-chrome-700 bg-chrome-850 p-3">
-          <p className="text-xs font-semibold text-chrome-300">Throw to</p>
-          <p className="mt-1 text-[11px] leading-relaxed text-chrome-500">
-            Tap a teammate — a pass will reach them (arrival at their route).
-          </p>
-          <div className="mt-2 grid grid-cols-3 gap-1.5">
-            {tokens
-              .filter((t) => t.side === 'offense' && t.id !== token.id)
-              .map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => {
-                    const recRoute = paths.find(
-                      (q) =>
-                        q.tokenId === t.id &&
-                        q.type !== 'pass' &&
-                        q.type !== 'handoff' &&
-                        q.type !== 'toss' &&
-                        q.type !== 'snap' &&
-                        q.type !== 'motion' &&
-                        q.points.length >= 2,
-                    )
-                    const toPos = recRoute ? recRoute.points[recRoute.points.length - 1] : { x: t.x, y: t.y }
-                    addPath({
-                      tokenId: token.id,
-                      endTokenId: t.id,
-                      type: 'pass',
-                      points: [{ x: token.x, y: token.y }, toPos],
-                      d: '',
-                    })
-                  }}
-                  className="rounded-[12px] border border-chrome-700 bg-chrome-900 px-2 py-1.5 text-xs font-medium text-chrome-300 transition-colors hover:border-chrome-600 hover:bg-chrome-800"
-                >
-                  {t.num || t.letter || posLabel(t.pos)}
-                </button>
-              ))}
-          </div>
-        </div>
+        <button
+          type="button"
+          onClick={() => {
+            const from = tokens.find((t) => t.id === holderId)
+            if (!from) return
+            const recRoute = paths.find(
+              (q) =>
+                q.tokenId === token.id &&
+                PLAYER_DRIVEN.has(q.type) &&
+                q.points.length >= 2,
+            )
+            const toPos = recRoute
+              ? recRoute.points[recRoute.points.length - 1]
+              : { x: token.x, y: token.y }
+            addPath({
+              tokenId: from.id,
+              endTokenId: token.id,
+              type: 'pass',
+              points: [{ x: from.x, y: from.y }, toPos],
+              d: '',
+            })
+          }}
+          className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-full border border-chrome-700 bg-chrome-850 py-2 text-xs font-medium text-chrome-300 transition-colors hover:border-chrome-600 hover:bg-chrome-800"
+        >
+          Throw to this player
+        </button>
       )}
 
       {chain.length > 0 && (
         <div className="mt-3">
           <p className="pb-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
-            Movement sequence
+            Paths
           </p>
           <ul className="space-y-1">
             {chain.map((p, i) => (
@@ -458,6 +444,8 @@ function TokenInspector({ tokenId }: { tokenId: string }) {
           </ul>
         </div>
       )}
+
+      {routePath && token.side === 'offense' && <RouteLibraryGrid pathId={routePath.id} />}
 
       <p className="mt-3 text-xs leading-relaxed text-chrome-500">
         Routes drawn from this player stay attached and will follow it during playback.

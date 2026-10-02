@@ -89,8 +89,6 @@ interface EditorState {
   fieldTheme: FieldTheme
   ruleset: Ruleset
   uiTheme: 'dark' | 'light'
-  /** path id whose one-shot type bar is showing */
-  typeBarFor: string | null
   /** bumped whenever a whole play loads so the canvas can re-fit */
   fitNonce: number
   /** persisted record id for the current doc (null = not yet saved) */
@@ -125,7 +123,6 @@ interface EditorState {
   setUITheme: (t: 'dark' | 'light') => void
   openLibrary: () => void
   closeLibrary: () => void
-  showTypeBar: (id: string | null) => void
   renamePlay: (name: string) => void
   togglePalette: () => void
   toggleInspector: () => void
@@ -143,8 +140,6 @@ interface EditorState {
   applyRouteTemplate: (id: string, conceptKey: string, depthScale?: number) => void
   /** mirror a path laterally around its anchor (e.g. flip a wheel side) */
   mirrorPath: (id: string) => void
-  /** create a templated route anchored at a player, selected like addPath */
-  addTemplateRoute: (tokenId: string, conceptKey: string, depthScale?: number) => string | null
   applyScheduleNow: () => void
   setPathTimingLive: (
     id: string,
@@ -219,7 +214,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   ballStartId: null,
   selectedIds: [],
   camera: { zoom: 16, tx: 0, ty: 0 },
-  typeBarFor: null,
   fitNonce: 0,
   losSpec: null,
   fieldTheme: 'green',
@@ -259,9 +253,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   toggleLoop: () =>
     set((s) => ({ playback: { ...s.playback, loop: !s.playback.loop } })),
 
-  setTool: (tool) => set({ tool, typeBarFor: null }),
+  setTool: (tool) => set({ tool }),
 
-  openQuickStart: () => set({ quickStartOpen: true, typeBarFor: null }),
+  openQuickStart: () => set({ quickStartOpen: true }),
   closeQuickStart: () => set({ quickStartOpen: false }),
   openScout: (mode) =>
     set((s) => ({
@@ -279,9 +273,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({ uiTheme })
     if (typeof localStorage !== 'undefined') localStorage.setItem('dap-ui-theme', uiTheme)
   },
-  openLibrary: () => set({ libraryOpen: true, typeBarFor: null }),
+  openLibrary: () => set({ libraryOpen: true }),
   closeLibrary: () => set({ libraryOpen: false }),
-  showTypeBar: (typeBarFor) => set({ typeBarFor }),
   renamePlay: (playName) => set({ playName }),
   togglePalette: () => set((s) => ({ paletteOpen: !s.paletteOpen })),
   toggleInspector: () => set((s) => ({ inspectorOpen: !s.inspectorOpen })),
@@ -349,10 +342,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     get().beginHistory()
     set((s) => ({
       paths: applySchedule([...s.paths, created]),
-      // select the new path so the inspector/type bar is ready — but keep
-      // whatever tool is armed (pen stays sticky)
+      // select the new path so the inspector is ready — but keep whatever tool
+      // is armed (pen stays sticky)
       selectedIds: [created.id],
-      typeBarFor: created.id,
     }))
     return created.id
   },
@@ -498,29 +490,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         }),
       ),
     }))
-  },
-
-  addTemplateRoute: (tokenId, conceptKey, depthScale = 1) => {
-    const st = get()
-    const anchor = st.tokens.find((t) => t.id === tokenId)
-    if (!anchor) return null
-    const points = buildRoutePoints(routeConcept(conceptKey), anchor, depthScale)
-    const created: PlayPath = {
-      tokenId,
-      endTokenId: null,
-      type: 'route',
-      points,
-      d: catmullRomPath(points),
-      id: uid(),
-      timing: { delayMs: 0, durationMs: 600 },
-    }
-    st.beginHistory()
-    set((s) => ({
-      paths: applySchedule([...s.paths, created]),
-      selectedIds: [created.id],
-      typeBarFor: null,
-    }))
-    return created.id
   },
 
   mirrorPath: (id) => {
@@ -702,7 +671,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set((s) => ({
       past: [...s.past.slice(-49), snap({ tokens: s.tokens, paths: s.paths, textNotes: s.textNotes })],
       future: [],
-      typeBarFor: null,
       // any edit returns the play to rest so the editor always shows true positions
       playback: { ...s.playback, playing: false, tMs: 0 },
     })),

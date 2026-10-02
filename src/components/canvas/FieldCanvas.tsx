@@ -15,7 +15,7 @@ import {
 import { catmullRomPath, dist, minDistToPath, simplifyRDP } from '../../lib/geometry'
 import { inferPathType } from '../../lib/infer'
 import { resolveFlightTarget } from '../../lib/target'
-import { PATH_STYLES, PATH_TYPE_ORDER, PLAYER_DRIVEN } from '../../lib/pathStyles'
+import { PLAYER_DRIVEN } from '../../lib/pathStyles'
 import { timelineDuration } from '../../lib/timing'
 import { POSITIONS } from '../../lib/positions'
 import { useEditorStore, type Token } from '../../stores/editorStore'
@@ -23,7 +23,6 @@ import { computeScene } from '../../lib/render'
 import { losY as losYof } from '../../lib/formations'
 import { paletteFor } from '../../lib/theme'
 import { Icon } from '../ui/icons'
-import { TypeSample } from '../ui/TypeSample'
 import { BallView } from './BallView'
 import { Field } from './Field'
 import { PathView } from './PathView'
@@ -76,9 +75,6 @@ export function FieldCanvas() {
   const playing = useEditorStore((s) => s.playback.playing)
   const tMs = useEditorStore((s) => s.playback.tMs)
   const ballStartId = useEditorStore((s) => s.ballStartId)
-  const typeBarFor = useEditorStore((s) => s.typeBarFor)
-  const showTypeBar = useEditorStore((s) => s.showTypeBar)
-  const updatePathType = useEditorStore((s) => s.updatePathType)
 
   // rAF playback clock: tMs is the single source of truth
   useEffect(() => {
@@ -272,10 +268,6 @@ export function FieldCanvas() {
 
   const onBackgroundPointerDown = (e: ReactPointerEvent<SVGSVGElement>) => {
     const st = useEditorStore.getState()
-
-    if (st.typeBarFor) {
-      st.showTypeBar(null)
-    }
 
     if (e.button === 1 || st.tool === 'pan') {
       const l = toLocal(e)
@@ -699,10 +691,6 @@ export function FieldCanvas() {
       ? renderedPaths.find((p) => p.id === selectedIds[0])
       : undefined
 
-  const typeBarPath = typeBarFor ? renderedPaths.find((p) => p.id === typeBarFor) : undefined
-  const typeBarTip = typeBarPath?.points[typeBarPath.points.length - 1]
-  const typeBarActive = !!typeBarTip && !playing
-
   return (
     <div ref={wrapRef} className="absolute inset-0" onDragOver={(e) => {
       e.preventDefault()
@@ -944,41 +932,6 @@ export function FieldCanvas() {
             </div>
           )
         })()}
-
-      {/* one-shot type bar */}
-      {typeBarActive && typeBarTip && (
-        <div
-          className="absolute z-20 flex -translate-x-1/2 gap-0.5 rounded-[16px] border border-[var(--color-inspector-border)] bg-[var(--color-inspector-unselected)] p-1 shadow-[0_0_0_1px_rgba(4,23,43,0.05),0_8px_40px_0px_rgba(0,0,0,0.1)] backdrop-blur"
-          style={{ left: typeBarTip.x * camera.zoom + camera.tx, top: typeBarTip.y * camera.zoom + camera.ty - 14 }}
-        >
-          {PATH_TYPE_ORDER.map((t, i) => {
-            const active = typeBarPath?.type === t
-            return (
-              <button
-                key={t}
-                type="button"
-                title={`${PATH_STYLES[t].label} (${i + 1})`}
-                onClick={() => {
-                  updatePathType(typeBarFor!, t)
-                  showTypeBar(null)
-                }}
-                className={`flex w-[52px] flex-col items-center gap-0.5 rounded-[12px] px-1 py-1 transition-colors ${
-                  active ? 'bg-accent-400 text-chrome-950' : 'text-[var(--color-inspector-text)] hover:bg-[var(--color-inspector-hover)]'
-                }`}
-              >
-                <TypeSample type={t} />
-                <span className="text-[8px] font-semibold uppercase leading-none tracking-tight">
-                  {PATH_STYLES[t].label}
-                </span>
-                <span className="text-[8px] font-bold leading-none">{i + 1}</span>
-              </button>
-            )
-          })}
-          <div className="pointer-events-none absolute -bottom-5 right-0 whitespace-nowrap text-[9px] text-chrome-500">
-            1–{PATH_TYPE_ORDER.length} set type · Esc close
-          </div>
-        </div>
-      )}
 
       {/* view controls */}
       <div className="absolute right-3 bottom-3 flex flex-col gap-1 rounded-[16px] border border-chrome-700 bg-chrome-900/90 p-1 shadow-[0_0_0_1px_rgba(4,23,43,0.05),0_2px_8px_rgba(0,0,0,0.15)] backdrop-blur">
