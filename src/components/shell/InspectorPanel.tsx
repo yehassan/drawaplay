@@ -3,6 +3,7 @@ import { useEditorStore } from '../../stores/editorStore'
 import { posLabel } from '../../lib/positions'
 import { PATH_STYLES, PATH_TYPE_ORDER, PLAYER_DRIVEN } from '../../lib/pathStyles'
 import { ROUTE_CONCEPTS } from '../../lib/routeTemplates'
+import { forwardY } from '../../lib/formations'
 import { TypeSample } from '../ui/TypeSample'
 import { Icon } from '../ui/icons'
 import { IconButton } from '../ui/IconButton'
@@ -244,7 +245,11 @@ function PathInspector({ pathId }: { pathId: string }) {
         (() => {
           const anchor = path.tokenId ? tokens.find((t) => t.id === path.tokenId) : null
           if (!anchor || path.points.length < 2) return null
-          const curDepth = anchor.y - path.points[path.points.length - 1].y
+          const lastY = path.points[path.points.length - 1].y
+          const curDepth = Math.max(
+            4,
+            Math.min(18, (lastY - anchor.y) * forwardY(anchor.side)),
+          )
           return (
             <div className="mt-4 rounded-[16px] border border-chrome-700 bg-chrome-850 p-3">
               <p className="text-xs font-semibold text-chrome-300">Break depth</p>
@@ -258,7 +263,7 @@ function PathInspector({ pathId }: { pathId: string }) {
                   min={4}
                   max={18}
                   step={0.5}
-                  value={Math.max(4, Math.min(18, curDepth))}
+                  value={curDepth}
                   onChange={(e) => setRouteDepth(path.id, Number(e.target.value))}
                   className="flex-1 accent-accent-400"
                 />

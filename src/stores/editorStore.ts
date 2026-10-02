@@ -4,6 +4,7 @@ import { applySchedule, timelineDuration, type Timing } from '../lib/timing'
 import { resolveFlightTarget } from '../lib/target'
 import { PLAYER_DRIVEN } from '../lib/pathStyles'
 import { buildRoutePoints, routeConcept } from '../lib/routeTemplates'
+import { forwardY } from '../lib/formations'
 import { coercePos } from '../lib/positions'
 import type { FieldTheme } from '../lib/theme'
 import type { Pt, Ruleset } from '../lib/field'
@@ -425,11 +426,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       if (!path || !path.tokenId || path.points.length < 2) return {}
       const anchor = s.tokens.find((t) => t.id === path.tokenId)
       if (!anchor) return {}
-      const curDepth = anchor.y - path.points[path.points.length - 1].y
-      if (Math.abs(curDepth) < 0.5) return {}
+      const dir = forwardY(anchor.side)
+      const last = path.points[path.points.length - 1].y
+      // depth is measured along the player's forward axis so it is positive for
+      // both sides and the slider cannot flip a route by accident
+      const curDepth = (last - anchor.y) * dir
+      if (curDepth < 0.5) return {}
       const scale = clamped / curDepth
       const points = path.points.map((pt, i) =>
-        i === 0 ? { x: anchor.x, y: anchor.y } : { x: Math.max(1.5, Math.min(51.8, anchor.x + (pt.x - anchor.x) * scale)), y: anchor.y - (anchor.y - pt.y) * scale },
+        i === 0
+          ? { x: anchor.x, y: anchor.y }
+          : {
+              x: Math.max(1.5, Math.min(51.8, anchor.x + (pt.x - anchor.x) * scale)),
+              y: Math.max(1, Math.min(119, anchor.y + (pt.y - anchor.y) * scale)),
+            },
       )
       return {
         paths: applySchedule(s.paths.map((p) => (p.id === id ? { ...p, points, d: catmullRomPath(points) } : p))),
@@ -511,7 +521,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           if (p.id !== id || !p.tokenId) return p
           const anchor = s.tokens.find((t) => t.id === p.tokenId)
           if (!anchor) return p
-          const points = buildRoutePoints(routeConcept(conceptKey), anchor, depthScale)
+          const points = buildRoutePoints(
+            routeConcept(conceptKey),
+            anchor,
+            depthScale,
+            forwardY(anchor.side),
+          )
           return { ...p, type: 'route' as const, points, d: catmullRomPath(points) }
         }),
       ),

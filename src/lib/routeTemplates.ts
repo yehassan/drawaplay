@@ -44,12 +44,13 @@ export function buildRoutePoints(
   concept: RouteConcept,
   anchor: Pt,
   depthScale = 1,
+  dirY: -1 | 1 = -1,
 ): Pt[] {
   const rightSide = anchor.x >= FIELD_CENTER_X
   const dir = concept.breaks === 'straight' ? 0 : concept.breaks === 'in' ? -1 : 1
   const s = (rightSide ? 1 : -1) * dir
   return concept.shape.map(([d, l]) => ({
     x: Math.max(1.5, Math.min(51.8, anchor.x + s * l * depthScale)),
-    y: anchor.y - d * depthScale,
+    y: anchor.y + dirY * d * depthScale,
   }))
 }

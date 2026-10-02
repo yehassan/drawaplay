@@ -1,4 +1,4 @@
-import type { Token } from '../stores/editorStore'
+import type { Side, Token } from '../stores/editorStore'
 
 export type Hash = 'center' | 'left' | 'right'
 
@@ -16,6 +16,15 @@ export const HASH_X: Record<Hash, number> = {
  */
 export function losY(side: 'ours' | 'theirs', yardLine: number): number {
   return side === 'ours' ? 110 - yardLine : 10 + yardLine
+}
+
+/**
+ * Which way is downfield. The offense attacks toward decreasing y, so a
+ * defender runs the other way — route geometry has to follow the player's
+ * side, not just the field.
+ */
+export function forwardY(side: Side): -1 | 1 {
+  return side === 'offense' ? -1 : 1
 }
 
 export interface PersonnelDef {

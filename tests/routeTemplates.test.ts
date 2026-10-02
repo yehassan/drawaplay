@@ -245,3 +245,84 @@ describe('setPlayerPathType', () => {
     expect(useEditorStore.getState().paths).toHaveLength(0)
   })
 })
+
+describe('direction follows the player side', () => {
+  it('flips route depth for a defender', () => {
+    const anchor = { x: 26.65, y: 40 }
+    const offense = buildRoutePoints(routeConcept('post'), anchor, 1, -1)
+    const defense = buildRoutePoints(routeConcept('post'), anchor, 1, 1)
+    expect(offense[offense.length - 1].y).toBeLessThan(anchor.y)
+    expect(defense[defense.length - 1].y).toBeGreaterThan(anchor.y)
+    expect(defense[defense.length - 1].x).toBeCloseTo(offense[offense.length - 1].x, 6)
+  })
+
+  it('defaults to the offense direction', () => {
+    const anchor = { x: 26.65, y: 88 }
+    expect(buildRoutePoints(routeConcept('go'), anchor)).toEqual(
+      buildRoutePoints(routeConcept('go'), anchor, 1, -1),
+    )
+  })
+
+  it('keeps the offense unchanged when routed through the inspector', () => {
+    useEditorStore.setState({ tokens: [], paths: [], selectedIds: [], past: [], future: [] })
+    useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
+    const tok = useEditorStore.getState().tokens[0]
+    const id = useEditorStore.getState().setPlayerPathType(tok.id, 'route')!
+    useEditorStore.getState().applyRouteTemplate(id, 'slant')
+    const p = useEditorStore.getState().paths.find((x) => x.id === id)!
+    expect(p.points[p.points.length - 1].y).toBeLessThan(88)
+  })
+
+  it('routes a defender toward the offense, not away from it', () => {
+    useEditorStore.setState({ tokens: [], paths: [], selectedIds: [], past: [], future: [] })
+    useEditorStore.getState().addToken({ side: 'defense', pos: 'CB', num: '', x: 12, y: 40 })
+    const tok = useEditorStore.getState().tokens[0]
+    const id = useEditorStore.getState().setPlayerPathType(tok.id, 'route')!
+    useEditorStore.getState().applyRouteTemplate(id, 'slant')
+    const p = useEditorStore.getState().paths.find((x) => x.id === id)!
+    expect(p.points[p.points.length - 1].y).toBeGreaterThan(40)
+  })
+})
+
+describe('setRouteDepth', () => {
+  beforeEach(() => {
+    useEditorStore.setState({ tokens: [], paths: [], selectedIds: [], past: [], future: [] })
+  })
+
+  it('shrinks an offensive route toward the LOS without flipping it', () => {
+    useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
+    const tok = useEditorStore.getState().tokens[0]
+    const id = useEditorStore.getState().setPlayerPathType(tok.id, 'route')!
+    useEditorStore.getState().applyRouteTemplate(id, 'go')
+    useEditorStore.getState().setRouteDepth(id, 4)
+    const p = useEditorStore.getState().paths.find((x) => x.id === id)!
+    const depth = 88 - p.points[p.points.length - 1].y
+    expect(depth).toBeCloseTo(4, 1)
+    expect(depth).toBeGreaterThan(0)
+  })
+
+  it('shrinks a defensive route without flipping it', () => {
+    useEditorStore.getState().addToken({ side: 'defense', pos: 'CB', num: '', x: 12, y: 40 })
+    const tok = useEditorStore.getState().tokens[0]
+    const id = useEditorStore.getState().setPlayerPathType(tok.id, 'route')!
+    useEditorStore.getState().applyRouteTemplate(id, 'go')
+    useEditorStore.getState().setRouteDepth(id, 4)
+    const p = useEditorStore.getState().paths.find((x) => x.id === id)!
+    const depth = p.points[p.points.length - 1].y - 40
+    expect(depth).toBeCloseTo(4, 1)
+    expect(depth).toBeGreaterThan(0)
+  })
+
+  it('scales lateral break at the same time', () => {
+    useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
+    const tok = useEditorStore.getState().tokens[0]
+    const id = useEditorStore.getState().setPlayerPathType(tok.id, 'route')!
+    useEditorStore.getState().applyRouteTemplate(id, 'post')
+    const before = useEditorStore.getState().paths.find((x) => x.id === id)!
+    const latBefore = Math.abs(before.points[before.points.length - 1].x - 12)
+    useEditorStore.getState().setRouteDepth(id, 4)
+    const after = useEditorStore.getState().paths.find((x) => x.id === id)!
+    const latAfter = Math.abs(after.points[after.points.length - 1].x - 12)
+    expect(latAfter).toBeLessThan(latBefore)
+  })
+})
