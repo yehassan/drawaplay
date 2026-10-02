@@ -401,11 +401,15 @@ function TokenInspector({ tokenId }: { tokenId: string }) {
         </button>
       )}
 
-      {chain.length > 0 && (
-        <div className="mt-3">
-          <p className="pb-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
-            Paths
+      <div className="mt-3">
+        <p className="pb-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
+          Paths
+        </p>
+        {chain.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-chrome-700 px-3 py-2.5 text-[11px] leading-relaxed text-chrome-600">
+            None yet — draw a path from this player to give them one.
           </p>
+        ) : (
           <ul className="space-y-1">
             {chain.map((p, i) => (
               <li
@@ -442,8 +446,8 @@ function TokenInspector({ tokenId }: { tokenId: string }) {
               </li>
             ))}
           </ul>
-        </div>
-      )}
+        )}
+      </div>
 
       {routePath && token.side === 'offense' && <RouteLibraryGrid pathId={routePath.id} />}
 
