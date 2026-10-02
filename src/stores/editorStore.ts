@@ -135,6 +135,12 @@ interface EditorState {
   nudgeSelected: (dx: number, dy: number) => void
   duplicateSelected: () => void
   addPath: (p: Omit<PlayPath, 'id' | 'timing'>) => string
+  /**
+   * Inspector-driven path creation. Picking a type for a player selects the
+   * path he already has of that type, or makes one anchored at him — so a
+   * play can be built entirely from the inspector, with no drawing.
+   */
+  setPlayerPathType: (tokenId: string, type: PathType) => string | null
   updatePathType: (id: string, type: PathType) => void
   /** reshape an existing path to a named route template (BDB medians) */
   applyRouteTemplate: (id: string, conceptKey: string, depthScale?: number) => void
@@ -347,6 +353,26 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       selectedIds: [created.id],
     }))
     return created.id
+  },
+
+  setPlayerPathType: (tokenId, type) => {
+    const st = get()
+    const anchor = st.tokens.find((t) => t.id === tokenId)
+    if (!anchor || !PLAYER_DRIVEN.has(type)) return null
+    const existing = st.paths.find((p) => p.tokenId === tokenId && p.type === type)
+    if (existing) {
+      set({ selectedIds: [existing.id] })
+      return existing.id
+    }
+    // straight starting shape; a drop comes back toward the LOS, everything
+    // else pushes forward — offense attacks -y, defense pushes back toward +y
+    const fwd = anchor.side === 'offense' ? -1 : 1
+    const depth = (type === 'drop' ? -3 : type === 'run' ? 10 : type === 'motion' ? 5 : 8) * fwd
+    const points: Pt[] = [
+      { x: anchor.x, y: anchor.y },
+      { x: anchor.x, y: Math.max(1, Math.min(119, anchor.y + depth)) },
+    ]
+    return st.addPath({ tokenId, endTokenId: null, type, points, d: catmullRomPath(points) })
   },
 
   // hand-tuned timing locks the path against future reschedules

@@ -159,3 +159,89 @@ describe('template store actions', () => {
     expect(useEditorStore.getState().paths.find((x) => x.id === id)!.points).toEqual(after.map((p, i) => (i === 0 ? p : { x: 2 * tok.x - p.x, y: p.y })))
   })
 })
+
+describe('setPlayerPathType', () => {
+  beforeEach(() => {
+    useEditorStore.setState({ tokens: [], paths: [], selectedIds: [], past: [], future: [] })
+  })
+
+  it('creates a path anchored at the player when he has none', () => {
+    useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
+    const tok = useEditorStore.getState().tokens[0]
+    const id = useEditorStore.getState().setPlayerPathType(tok.id, 'route')!
+    const st = useEditorStore.getState()
+    expect(id).not.toBeNull()
+    expect(st.paths).toHaveLength(1)
+    expect(st.paths[0].type).toBe('route')
+    expect(st.paths[0].tokenId).toBe(tok.id)
+    expect(st.paths[0].points[0]).toEqual({ x: 12, y: 88 })
+    expect(st.selectedIds).toEqual([id])
+  })
+
+  it('builds a play with no drawing at all', () => {
+    useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
+    useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 40, y: 88 })
+    const [a, b] = useEditorStore.getState().tokens
+    useEditorStore.getState().setPlayerPathType(a.id, 'route')
+    useEditorStore.getState().setPlayerPathType(b.id, 'route')
+    expect(useEditorStore.getState().paths).toHaveLength(2)
+  })
+
+  it('reuses the existing path of that type instead of stacking a second', () => {
+    useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
+    const tok = useEditorStore.getState().tokens[0]
+    const first = useEditorStore.getState().setPlayerPathType(tok.id, 'route')!
+    const again = useEditorStore.getState().setPlayerPathType(tok.id, 'route')
+    expect(again).toBe(first)
+    expect(useEditorStore.getState().paths).toHaveLength(1)
+  })
+
+  it('keeps one route per player while allowing other types alongside', () => {
+    useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
+    const tok = useEditorStore.getState().tokens[0]
+    useEditorStore.getState().setPlayerPathType(tok.id, 'route')
+    useEditorStore.getState().setPlayerPathType(tok.id, 'motion')
+    useEditorStore.getState().setPlayerPathType(tok.id, 'route')
+    expect(useEditorStore.getState().paths.filter((p) => p.type === 'route')).toHaveLength(1)
+    expect(useEditorStore.getState().paths.filter((p) => p.type === 'motion')).toHaveLength(1)
+  })
+
+  it('pushes a drop back toward the LOS and a run downfield', () => {
+    useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
+    const tok = useEditorStore.getState().tokens[0]
+    const drop = useEditorStore.getState().setPlayerPathType(tok.id, 'drop')!
+    const d = useEditorStore.getState().paths.find((p) => p.id === drop)!
+    expect(d.points[1].y).toBeGreaterThan(88)
+    const run = useEditorStore.getState().setPlayerPathType(tok.id, 'run')!
+    const r = useEditorStore.getState().paths.find((p) => p.id === run)!
+    expect(r.points[1].y).toBeLessThan(88)
+  })
+
+  it('moves a defensive player toward the offense', () => {
+    useEditorStore.getState().addToken({ side: 'defense', pos: 'CB', num: '', x: 20, y: 40 })
+    const tok = useEditorStore.getState().tokens[0]
+    const id = useEditorStore.getState().setPlayerPathType(tok.id, 'drop')!
+    const p = useEditorStore.getState().paths.find((x) => x.id === id)!
+    expect(p.points[1].y).toBeLessThan(40)
+  })
+
+  it('refuses ball-only types that a player cannot anchor', () => {
+    useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
+    const tok = useEditorStore.getState().tokens[0]
+    expect(useEditorStore.getState().setPlayerPathType(tok.id, 'pass')).toBeNull()
+    expect(useEditorStore.getState().setPlayerPathType(tok.id, 'snap')).toBeNull()
+    expect(useEditorStore.getState().paths).toHaveLength(0)
+  })
+
+  it('ignores an unknown player', () => {
+    expect(useEditorStore.getState().setPlayerPathType('nope', 'route')).toBeNull()
+  })
+
+  it('undo removes an inspector-created path', () => {
+    useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
+    const tok = useEditorStore.getState().tokens[0]
+    useEditorStore.getState().setPlayerPathType(tok.id, 'route')
+    useEditorStore.getState().undo()
+    expect(useEditorStore.getState().paths).toHaveLength(0)
+  })
+})

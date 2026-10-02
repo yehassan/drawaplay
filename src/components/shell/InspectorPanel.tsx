@@ -7,6 +7,9 @@ import { TypeSample } from '../ui/TypeSample'
 import { Icon } from '../ui/icons'
 import { IconButton } from '../ui/IconButton'
 
+/** path types a player can be the anchor of */
+const PLAYER_PATH_TYPES = PATH_TYPE_ORDER.filter((t) => PLAYER_DRIVEN.has(t))
+
 const SHORTCUTS: ReadonlyArray<readonly [string, string]> = [
   ['V', 'Select'],
   ['D', 'Pen (sticky)'],
@@ -328,6 +331,7 @@ function TokenInspector({ tokenId }: { tokenId: string }) {
   const ballStartId = useEditorStore((s) => s.ballStartId)
   const setBallStart = useEditorStore((s) => s.setBallStart)
   const addPath = useEditorStore((s) => s.addPath)
+  const setPlayerPathType = useEditorStore((s) => s.setPlayerPathType)
   if (!token) return null
 
   // this player's movement sequence, in play order
@@ -405,9 +409,30 @@ function TokenInspector({ tokenId }: { tokenId: string }) {
         <p className="pb-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-chrome-500">
           Paths
         </p>
+        <div className="mb-2 grid grid-cols-2 gap-1.5">
+          {PLAYER_PATH_TYPES.map((type) => {
+            const active = chain.some((p) => p.type === type)
+            return (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setPlayerPathType(token.id, type)}
+                title={`${active ? 'Select' : 'Add'} ${PATH_STYLES[type].label} for this player`}
+                className={`flex items-center gap-2 rounded-[16px] border px-2.5 py-2 text-xs font-medium transition-colors ${
+                  active
+                    ? 'border-accent-400/60 bg-accent-surface text-accent-400'
+                    : 'border-[var(--color-inspector-border)] bg-[var(--color-inspector-unselected)] text-[var(--color-inspector-text)] hover:border-[var(--color-inspector-hover-border)] hover:bg-[var(--color-inspector-hover)]'
+                }`}
+              >
+                <TypeSample type={type} />
+                {PATH_STYLES[type].label}
+              </button>
+            )
+          })}
+        </div>
         {chain.length === 0 ? (
           <p className="rounded-xl border border-dashed border-chrome-700 px-3 py-2.5 text-[11px] leading-relaxed text-chrome-600">
-            None yet — draw a path from this player to give them one.
+            None yet — pick a type above, or draw one from this player.
           </p>
         ) : (
           <ul className="space-y-1">
