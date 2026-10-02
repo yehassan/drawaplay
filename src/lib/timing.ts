@@ -188,38 +188,6 @@ export function reschedule(paths: PlayPath[]): Map<string, Timing> {
         assign(f.id, { delayMs: ready, durationMs: dur })
       }
     }
-
-    // 5. possession gating: once a delivery (handoff/toss/snap) completes at
-    //    `arr`, every move of the receiver starts at/after it — EXCEPT the one
-    //    move that feeds the exchange (its end nearest `arr`, e.g., the RB's
-    //    step toward the LOS). Distance-based, so draw order never matters.
-    for (const f of paths) {
-      if (f.type !== 'handoff' && f.type !== 'toss' && f.type !== 'snap') continue
-      if (!f.endTokenId || f.points.length < 2) continue
-      const arr = end(f.id)
-      const sibs = paths.filter(
-        (q) =>
-          q.tokenId === f.endTokenId &&
-          !isFlight(q.type) &&
-          q.type !== 'motion' &&
-          q.points.length >= 2,
-      )
-      let feeder: string | null = null
-      let bestGap = Infinity
-      for (const q of sibs) {
-        const e = end(q.id)
-        const gap = Math.abs(e - arr)
-        if (gap < bestGap) {
-          bestGap = gap
-          feeder = q.id
-        }
-      }
-      for (const q of sibs) {
-        if (q.id === feeder) continue
-        const cur = result.get(q.id)!
-        if (cur.delayMs < arr) assign(q.id, { ...cur, delayMs: arr })
-      }
-    }
   }
 
   return result

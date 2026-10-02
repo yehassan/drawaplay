@@ -137,22 +137,45 @@ describe('handoff chains', () => {
       P('handoff', 'QB', 'RB', 'handoff', [[26.4, 92.8], [25.95, 91.4]]),
       P('runlane', 'RB', null, 'run', [[25.95, 91.4], [25.4, 80], [25, 70]]),
     ])
-    const [snap, , , , handoff, runlane] = paths
-    const snapEnd = endOf(snap)
-    expect(handoff.timing.delayMs).toBe(snapEnd)
-    expect(runlane.timing.delayMs).toBeGreaterThanOrEqual(endOf(handoff) - 1)
+    const [snap, , , , handoff] = paths
+    expect(handoff.timing.delayMs).toBe(endOf(snap))
   })
 
-  it('toss fires right after the snap; run waits for possession', () => {
+  // The runner's own chain runs continuously — a receiver sells the exchange by
+  // moving first and the ball is warped to meet him. Gating his later moves on
+  // the delivery landing is what produced a visible stop-and-go.
+  it('does not stall the run lane waiting for the handoff', () => {
+    const paths = applySchedule([
+      P('snap', 'C', 'QB', 'snap', [[26.5, 90], [26.5, 92.6]]),
+      P('approach', 'RB', null, 'route', [[25.8, 94], [25.9, 91.6]]),
+      P('handoff', 'QB', 'RB', 'handoff', [[26.4, 92.8], [25.95, 91.4]]),
+      P('runlane', 'RB', null, 'run', [[25.95, 91.4], [25.4, 80], [25, 70]]),
+    ])
+    const [, approach, handoff, runlane] = paths
+    // the run starts the moment the approach ends, not when the ball lands
+    expect(runlane.timing.delayMs).toBe(endOf(approach))
+    expect(runlane.timing.delayMs).toBeLessThan(endOf(handoff))
+  })
+
+  it('toss fires right after the snap', () => {
     const paths = applySchedule([
       P('snap', 'C', 'QB', 'snap', [[26.5, 90], [26.5, 92.6]]),
       P('sweep', 'RB', null, 'route', [[25.5, 94], [28, 92.5], [32, 90.8]]),
       P('toss', 'QB', 'RB', 'toss', [[26.4, 92.4], [29.5, 91.2], [31.6, 90.9]]),
       P('runlane', 'RB', null, 'run', [[32, 90.7], [34, 82], [35.5, 72]]),
     ])
-    const [snap, , toss, runlane] = paths
+    const [snap, , toss] = paths
     expect(toss.timing.delayMs).toBe(endOf(snap))
-    expect(runlane.timing.delayMs).toBeGreaterThanOrEqual(endOf(toss) - 1)
+  })
+
+  it('chains the run straight off the sweep it follows', () => {
+    const paths = applySchedule([
+      P('snap', 'C', 'QB', 'snap', [[26.5, 90], [26.5, 92.6]]),
+      P('sweep', 'RB', null, 'route', [[25.5, 94], [28, 92.5], [32, 90.8]]),
+      P('runlane', 'RB', null, 'run', [[32, 90.7], [34, 82], [35.5, 72]]),
+    ])
+    const [, sweep, runlane] = paths
+    expect(runlane.timing.delayMs).toBe(endOf(sweep))
   })
 })
 
