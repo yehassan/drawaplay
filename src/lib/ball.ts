@@ -27,6 +27,28 @@ export function defaultBallStart(paths: PlayPath[], tokens: Token[]): string | n
 }
 
 /**
+ * The exchange that put the ball in this player's hands before he moved: a
+ * handoff or a toss. A pass is deliberately excluded — it arrives *after* the
+ * receiver's route, so waiting on it would be circular.
+ *
+ * Returns null when the player has none, or more than one: a receiver caught
+ * twice in a play is not something to guess at.
+ */
+export function incomingExchangeOf(
+  paths: PlayPath[],
+  tokenId: string | null | undefined,
+): PlayPath | null {
+  if (!tokenId) return null
+  const found = paths.filter(
+    (p) =>
+      p.endTokenId === tokenId &&
+      (p.type === 'handoff' || p.type === 'toss') &&
+      p.points.length >= 2,
+  )
+  return found.length === 1 ? found[0] : null
+}
+
+/**
  * Ball position/ownership at time tMs.
  * `positions` maps tokenId → current animated position.
  * `warps` maps flightId → warped geometry (two live anchors: thrower + target).

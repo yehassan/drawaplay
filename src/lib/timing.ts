@@ -1,6 +1,7 @@
 import { polylineLength } from './geometry'
 import type { PlayPath } from '../stores/editorStore'
 import { PLAYER_DRIVEN, type PathType } from './pathStyles'
+import { incomingExchangeOf } from './ball'
 
 export interface Timing {
   delayMs: number
@@ -104,14 +105,22 @@ export function reschedule(paths: PlayPath[]): Map<string, Timing> {
       assign(p.id, { ...result.get(p.id)!, delayMs: snapEnd })
     }
 
-    // 3.5 a player chains their own movements in draw order
+    // 3.5 a player chains their own movements in draw order, and cannot move
+    // before the handoff/toss that gave him the ball has actually landed
     const lastEndByToken = new Map<string, number>()
     for (const p of paths) {
       // motion lives in the pre-snap phase — never chained after other moves
       if (!PLAYER_DRIVEN.has(p.type) || p.type === 'motion') continue
       const cur = result.get(p.id)!
       const prevEnd = lastEndByToken.get(p.tokenId ?? '') ?? 0
-      const delayMs = Math.max(cur.delayMs, prevEnd)
+      // A movement waits for the handoff/toss that gives this player the ball —
+      // but only the ones drawn *after* it. An approach route runs before the
+      // exchange precisely so the ball can reach him in the first place.
+      const exchange = incomingExchangeOf(paths, p.tokenId)
+      const afterExchange =
+        exchange !== null && paths.indexOf(p) > paths.indexOf(exchange)
+      const ballAt = afterExchange ? end(exchange!.id) : 0
+      const delayMs = Math.max(cur.delayMs, prevEnd, ballAt)
       assign(p.id, { ...cur, delayMs })
       if (p.tokenId) lastEndByToken.set(p.tokenId, delayMs + cur.durationMs)
     }

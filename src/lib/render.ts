@@ -1,6 +1,6 @@
 import { pointAtLength, polylineLength, catmullRomPath } from './geometry'
 import { pathEased, timelineDuration } from './timing'
-import { ballStateAt, type BallState } from './ball'
+import { ballStateAt, incomingExchangeOf, type BallState } from './ball'
 import { PLAYER_DRIVEN } from './pathStyles'
 import type { Pt } from './field'
 
@@ -41,9 +41,17 @@ function chainPosAt(
   return pointAtLength(active.points, pathEased(active, t) * polylineLength(active.points))
 }
 
-/** H1: translate a segment so its start meets where the chain actually has the player */
-function bindStartToChain(list: PlayPath[], active: PlayPath): Pt[] {
-  const anchorPos = chainPosAt(list, active.timing.delayMs, active.id)
+/**
+ * H1: translate a segment so its start meets where the chain actually has the
+ * player. A player's first movement instead starts where they received the
+ * ball, so a run lane begins at the catch rather than back at the line.
+ */
+function bindStartToChain(
+  list: PlayPath[],
+  active: PlayPath,
+  reception?: Pt,
+): Pt[] {
+  const anchorPos = chainPosAt(list, active.timing.delayMs, active.id) ?? reception
   if (!anchorPos) return active.points
   const dx = anchorPos.x - active.points[0].x
   const dy = anchorPos.y - active.points[0].y
@@ -91,7 +99,18 @@ export function computeScene(
       tokenPositions.set(t.id, { x: t.x, y: t.y })
       continue
     }
-    const pts = bindStartToChain(list, active)
+    // Where the ball landed in his hands, so a movement drawn *after* that
+    // exchange begins there. An approach route drawn before it must not be
+    // shifted — that is where the receiver lines up to catch the ball.
+    let reception: Pt | undefined
+    const exchange = incomingExchangeOf(paths, t.id)
+    if (exchange && paths.indexOf(active) > paths.indexOf(exchange)) {
+      const arrival = exchange.timing.delayMs + exchange.timing.durationMs
+      reception =
+        chainPosAt(list, arrival, active.id) ??
+        exchange.points[exchange.points.length - 1]
+    }
+    const pts = bindStartToChain(list, active, reception)
     tokenPositions.set(t.id, pointAtLength(pts, pathEased(active, opts.tMs) * polylineLength(pts)))
   }
 
