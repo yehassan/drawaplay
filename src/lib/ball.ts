@@ -1,6 +1,7 @@
 import { pointAtLength, polylineLength } from './geometry'
 import type { Pt } from './field'
 import { pathEased } from './timing'
+import { FLIGHT_TYPES } from './pathStyles'
 import type { PlayPath, Token } from '../stores/editorStore'
 
 export interface BallState {
@@ -8,8 +9,6 @@ export interface BallState {
   angleDeg: number
   flying: boolean
 }
-
-const FLIGHT_TYPES: ReadonlySet<PlayPath['type']> = new Set(['pass', 'handoff', 'toss', 'snap'])
 
 /**
  * Who holds the ball at the snap when the user hasn't picked:

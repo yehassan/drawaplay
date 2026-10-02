@@ -91,12 +91,28 @@ describe('template store actions', () => {
   it('picking a concept reshapes the drawn route in place', () => {
     useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
     const tok = useEditorStore.getState().tokens[0]
-    const id = makeRoute(tok.id, 'slant')
+    makeRoute(tok.id, 'slant')
     const st = useEditorStore.getState()
     expect(st.paths).toHaveLength(1)
     expect(st.paths[0].type).toBe('route')
     expect(st.paths[0].points[0]).toEqual({ x: 12, y: 88 })
-    expect(st.selectedIds).toEqual([id])
+  })
+
+  it('never changes the selection, so the player panel keeps the coach', () => {
+    useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
+    const tok = useEditorStore.getState().tokens[0]
+    useEditorStore.setState({ selectedIds: [tok.id] })
+    useEditorStore.getState().setPlayerPathType(tok.id, 'route')
+    expect(useEditorStore.getState().selectedIds).toEqual([tok.id])
+  })
+
+  it('does not change the selection when he already has one of that type', () => {
+    useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
+    const tok = useEditorStore.getState().tokens[0]
+    useEditorStore.getState().setPlayerPathType(tok.id, 'route')
+    useEditorStore.setState({ selectedIds: [tok.id] })
+    useEditorStore.getState().setPlayerPathType(tok.id, 'route')
+    expect(useEditorStore.getState().selectedIds).toEqual([tok.id])
   })
 
   it('picking a second concept reuses the same path, never a second route', () => {
@@ -175,7 +191,6 @@ describe('setPlayerPathType', () => {
     expect(st.paths[0].type).toBe('route')
     expect(st.paths[0].tokenId).toBe(tok.id)
     expect(st.paths[0].points[0]).toEqual({ x: 12, y: 88 })
-    expect(st.selectedIds).toEqual([id])
   })
 
   it('builds a play with no drawing at all', () => {
@@ -225,12 +240,19 @@ describe('setPlayerPathType', () => {
     expect(p.points[1].y).toBeLessThan(40)
   })
 
-  it('refuses ball-only types that a player cannot anchor', () => {
+  it('refuses a snap, which belongs to the formation', () => {
     useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
     const tok = useEditorStore.getState().tokens[0]
-    expect(useEditorStore.getState().setPlayerPathType(tok.id, 'pass')).toBeNull()
     expect(useEditorStore.getState().setPlayerPathType(tok.id, 'snap')).toBeNull()
     expect(useEditorStore.getState().paths).toHaveLength(0)
+  })
+
+  it('accepts a toss or handoff the player gives away', () => {
+    useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
+    const tok = useEditorStore.getState().tokens[0]
+    const toss = useEditorStore.getState().setPlayerPathType(tok.id, 'toss')!
+    expect(useEditorStore.getState().paths.find((p) => p.id === toss)!.type).toBe('toss')
+    expect(useEditorStore.getState().setPlayerPathType(tok.id, 'handoff')).not.toBeNull()
   })
 
   it('ignores an unknown player', () => {

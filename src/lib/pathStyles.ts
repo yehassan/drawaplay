@@ -59,6 +59,14 @@ export const PLAYER_DRIVEN: ReadonlySet<PathType> = new Set([
   'block',
 ])
 
+/** paths that carry the ball rather than move the player */
+export const FLIGHT_TYPES: ReadonlySet<PathType> = new Set([
+  'pass',
+  'handoff',
+  'toss',
+  'snap',
+])
+
 /** compact uppercase names for timeline chips */
 export const SHORT_LABELS: Record<PathType, string> = {
   route: 'Route',

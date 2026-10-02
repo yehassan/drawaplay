@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { catmullRomPath } from '../lib/geometry'
 import { applySchedule, timelineDuration, type Timing } from '../lib/timing'
 import { resolveFlightTarget } from '../lib/target'
-import { PLAYER_DRIVEN } from '../lib/pathStyles'
+import { FLIGHT_TYPES, PLAYER_DRIVEN } from '../lib/pathStyles'
 import { buildRoutePoints, routeConcept } from '../lib/routeTemplates'
 import { forwardY } from '../lib/formations'
 import { coercePos } from '../lib/positions'
@@ -142,6 +142,11 @@ interface EditorState {
    * play can be built entirely from the inspector, with no drawing.
    */
   setPlayerPathType: (tokenId: string, type: PathType) => string | null
+  /**
+   * One-tap pass from the current ball holder to this player. Add-only and
+   * selection-neutral, like setPlayerPathType, for the same reason.
+   */
+  throwToPlayer: (tokenId: string) => string | null
   updatePathType: (id: string, type: PathType) => void
   /** reshape an existing path to a named route template (BDB medians) */
   applyRouteTemplate: (id: string, conceptKey: string, depthScale?: number) => void
@@ -359,21 +364,78 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setPlayerPathType: (tokenId, type) => {
     const st = get()
     const anchor = st.tokens.find((t) => t.id === tokenId)
-    if (!anchor || !PLAYER_DRIVEN.has(type)) return null
+    if (!anchor) return null
+    // a snap belongs to the formation, so it is never authored from here
+    if (!PLAYER_DRIVEN.has(type) && !(FLIGHT_TYPES.has(type) && type !== 'snap')) return null
     const existing = st.paths.find((p) => p.tokenId === tokenId && p.type === type)
-    if (existing) {
-      set({ selectedIds: [existing.id] })
-      return existing.id
-    }
-    // straight starting shape; a drop comes back toward the LOS, everything
-    // else pushes forward — offense attacks -y, defense pushes back toward +y
+    if (existing) return existing.id
     const fwd = anchor.side === 'offense' ? -1 : 1
-    const depth = (type === 'drop' ? -3 : type === 'run' ? 10 : type === 'motion' ? 5 : 8) * fwd
-    const points: Pt[] = [
-      { x: anchor.x, y: anchor.y },
-      { x: anchor.x, y: Math.max(1, Math.min(119, anchor.y + depth)) },
-    ]
-    return st.addPath({ tokenId, endTokenId: null, type, points, d: catmullRomPath(points) })
+    let points: Pt[]
+    let endTokenId: string | null = null
+    if (FLIGHT_TYPES.has(type)) {
+      // a flight needs someone on the other end — the path panel picks the
+      // receiver, so start it as a short stub from the player
+      points = [
+        { x: anchor.x, y: anchor.y },
+        { x: anchor.x, y: Math.max(1, Math.min(119, anchor.y + 6 * fwd)) },
+      ]
+    } else {
+      // a drop comes back toward the LOS, everything else pushes forward
+      const depth = (type === 'drop' ? -3 : type === 'run' ? 10 : type === 'motion' ? 5 : 8) * fwd
+      points = [
+        { x: anchor.x, y: anchor.y },
+        { x: anchor.x, y: Math.max(1, Math.min(119, anchor.y + depth)) },
+      ]
+    }
+    // committed directly rather than through addPath: the player panel owns this
+    // action, and addPath selecting the new path would navigate the inspector
+    // away from the player and lose the jersey / ball controls
+    const created: PlayPath = {
+      tokenId,
+      endTokenId,
+      type,
+      points,
+      d: catmullRomPath(points),
+      id: uid(),
+      timing: { delayMs: 0, durationMs: 600 },
+    }
+    st.beginHistory()
+    set((s) => ({ paths: applySchedule([...s.paths, created]) }))
+    return created.id
+  },
+
+  throwToPlayer: (tokenId) => {
+    const st = get()
+    const to = st.tokens.find((t) => t.id === tokenId)
+    if (!to || to.side !== 'offense') return null
+    const autoHolder = st.tokens.find((t) => t.pos === 'QB')?.id ?? null
+    const fromId = st.ballStartId ?? autoHolder
+    if (!fromId || fromId === tokenId) return null
+    const existing = st.paths.find(
+      (p) => p.type === 'pass' && p.tokenId === fromId && p.endTokenId === tokenId,
+    )
+    if (existing) return existing.id
+    const from = st.tokens.find((t) => t.id === fromId)
+    if (!from) return null
+    // aim at where he actually finishes: his route if he has one, else the end
+    // of his last movement
+    const driven = st.paths.filter(
+      (p) => p.tokenId === tokenId && PLAYER_DRIVEN.has(p.type) && p.points.length >= 2,
+    )
+    const dest = driven.find((p) => p.type === 'route') ?? driven[driven.length - 1]
+    const toPos = dest ? dest.points[dest.points.length - 1] : { x: to.x, y: to.y }
+    const created: PlayPath = {
+      tokenId: fromId,
+      endTokenId: tokenId,
+      type: 'pass',
+      points: [{ x: from.x, y: from.y }, toPos],
+      d: catmullRomPath([{ x: from.x, y: from.y }, toPos]),
+      id: uid(),
+      timing: { delayMs: 0, durationMs: 600 },
+    }
+    st.beginHistory()
+    set((s) => ({ paths: applySchedule([...s.paths, created]) }))
+    return created.id
   },
 
   // hand-tuned timing locks the path against future reschedules
