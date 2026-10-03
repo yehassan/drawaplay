@@ -2,7 +2,6 @@ import { useState, type ReactNode } from 'react'
 import { useEditorStore } from '../../stores/editorStore'
 import { posLabel } from '../../lib/positions'
 import {
-  FLIGHT_TYPES,
   PATH_STYLES,
   PLAYER_DRIVEN,
   TYPE_FAMILY,
@@ -79,131 +78,11 @@ function RouteLibraryGrid({ pathId, tokenId }: { pathId?: string; tokenId?: stri
   )
 }
 
-const TRANSFER_TYPES = [
+const GIVE_TYPES = [
   { key: 'handoff' as const, label: 'Hand off' },
   { key: 'toss' as const, label: 'Toss' },
   { key: 'pass' as const, label: 'Pass' },
 ]
-
-/**
- * The ball track: an ordered list of who has the ball and how they got it.
- * This is the authoring surface for possession — every row *is* the delivery
- * path, so removing a row removes the transfer and clicking one lets you adjust
- * its geometry.
- */
-function BallTimeline() {
-  const paths = useEditorStore((s) => s.paths)
-  const tokens = useEditorStore((s) => s.tokens)
-  const select = useEditorStore((s) => s.select)
-  const deletePaths = useEditorStore((s) => s.deletePaths)
-  const addTransfer = useEditorStore((s) => s.addTransfer)
-  const setPathTarget = useEditorStore((s) => s.setPathTarget)
-  const [picking, setPicking] = useState<typeof TRANSFER_TYPES[number]['key'] | null>(null)
-
-  const nameOf = (id: string | null | undefined) => {
-    const tk = tokens.find((x) => x.id === id)
-    return tk ? tk.num || tk.letter || posLabel(tk.pos) : '?'
-  }
-
-  // deliveries in the order the ball changes hands
-  const track = paths
-    .filter((p) => FLIGHT_TYPES.has(p.type) && p.endTokenId)
-    .sort((a, b) => a.timing.delayMs - b.timing.delayMs)
-
-  const targets = tokens.filter((t) => t.side === 'offense')
-
-  return (
-    <div className="mb-4 border-b border-chrome-800 pb-4">
-      <SectionLabel>Ball</SectionLabel>
-
-      {track.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-chrome-700 px-3 py-2.5 text-[11px] leading-relaxed text-chrome-600">
-          Nothing changes hands yet. Hand the ball off, toss it, or throw it.
-        </p>
-      ) : (
-        <ul className="space-y-1">
-          {track.map((p, i) => (
-            <li
-              key={p.id}
-              className="flex items-center gap-2 rounded-lg border border-chrome-700 bg-chrome-850 px-2 py-1.5"
-            >
-              <span className="w-4 text-center font-mono text-[10px] text-chrome-500">{i + 1}</span>
-              <TypeSample type={p.type} />
-              <button
-                type="button"
-                title="Edit this delivery"
-                onClick={() => select([p.id])}
-                className="flex-1 truncate text-left text-xs text-chrome-300 hover:text-accent-400"
-              >
-                {nameOf(p.endTokenId)}
-              </button>
-              <select
-                value={p.endTokenId ?? ''}
-                onChange={(e) => setPathTarget(p.id, e.target.value || null)}
-                title="Who receives it"
-                className="rounded border border-chrome-700 bg-chrome-900 px-1 py-0.5 text-[10px] text-chrome-300 outline-none focus:border-accent-400/60"
-              >
-                {targets.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {nameOf(t.id)}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                title="He never gets the ball"
-                onClick={() => deletePaths([p.id])}
-                className="px-1 text-xs text-chrome-400 hover:text-defense-400"
-              >
-                ×
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <div className="mt-2 grid grid-cols-3 gap-1.5">
-        {TRANSFER_TYPES.map((x) => (
-          <button
-            key={x.key}
-            type="button"
-            onClick={() => setPicking(picking === x.key ? null : x.key)}
-            className={`rounded-[12px] border px-1 py-2 text-[11px] font-medium transition-colors ${
-              picking === x.key
-                ? 'border-accent-400/60 bg-accent-surface text-accent-400'
-                : 'border-[var(--color-inspector-border)] bg-[var(--color-inspector-unselected)] text-[var(--color-inspector-text)] hover:border-[var(--color-inspector-hover-border)] hover:bg-[var(--color-inspector-hover)]'
-            }`}
-          >
-            {x.label}
-          </button>
-        ))}
-      </div>
-
-      {picking && (
-        <div className="mt-2">
-          <p className="pb-1 text-[10px] uppercase tracking-[0.06em] text-chrome-600">
-            {TRANSFER_TYPES.find((x) => x.key === picking)!.label} to
-          </p>
-          <div className="grid grid-cols-3 gap-1.5">
-            {targets.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => {
-                  addTransfer(picking, t.id)
-                  setPicking(null)
-                }}
-                className="rounded-[12px] border border-chrome-700 bg-chrome-900 px-2 py-1.5 text-xs font-medium text-chrome-300 transition-colors hover:border-chrome-600 hover:bg-chrome-800"
-              >
-                {nameOf(t.id)}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
 
 function EmptyState({ count }: { count: number }) {
   return (
@@ -247,8 +126,15 @@ function PathInspector({ pathId }: { pathId: string }) {
   const setPathTarget = useEditorStore((s) => s.setPathTarget)
   const setPassTrajectory = useEditorStore((s) => s.setPassTrajectory)
   const setRouteDepth = useEditorStore((s) => s.setRouteDepth)
+  const addTransfer = useEditorStore((s) => s.addTransfer)
+  const [giving, setGiving] = useState<(typeof GIVE_TYPES)[number]['key'] | null>(null)
   if (!path) return null
   const from = tokens.find((t) => t.id === path.tokenId)
+  const nameOf = (id: string | null | undefined) => {
+    const tk = tokens.find((x) => x.id === id)
+    return tk ? tk.num || tk.letter || posLabel(tk.pos) : '?'
+  }
+  const teammates = tokens.filter((t) => t.side === 'offense' && t.id !== path.tokenId)
 
   return (
     <>
@@ -417,6 +303,53 @@ function PathInspector({ pathId }: { pathId: string }) {
             </div>
           )
         })()}
+
+      {from?.side === 'offense' && (
+        <div className="mt-4">
+          <p className="pb-1 text-[10px] uppercase tracking-[0.06em] text-chrome-600">
+            Give the ball away
+          </p>
+          <div className="grid grid-cols-3 gap-1.5">
+            {GIVE_TYPES.map((g) => (
+              <button
+                key={g.key}
+                type="button"
+                onClick={() => setGiving(giving === g.key ? null : g.key)}
+                title={`${g.label} from this player`}
+                className={`rounded-[12px] border px-1 py-2 text-[11px] font-medium transition-colors ${
+                  giving === g.key
+                    ? 'border-accent-400/60 bg-accent-surface text-accent-400'
+                    : 'border-[var(--color-inspector-border)] bg-[var(--color-inspector-unselected)] text-[var(--color-inspector-text)] hover:border-[var(--color-inspector-hover-border)] hover:bg-[var(--color-inspector-hover)]'
+                }`}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
+          {giving && (
+            <div className="mt-2">
+              <p className="pb-1 text-[10px] uppercase tracking-[0.06em] text-chrome-600">
+                {GIVE_TYPES.find((g) => g.key === giving)!.label} to
+              </p>
+              <div className="grid grid-cols-3 gap-1.5">
+                {teammates.map((tk) => (
+                  <button
+                    key={tk.id}
+                    type="button"
+                    onClick={() => {
+                      addTransfer(giving, tk.id, from.id)
+                      setGiving(null)
+                    }}
+                    className="rounded-[12px] border border-chrome-700 bg-chrome-900 px-2 py-1.5 text-xs font-medium text-chrome-300 transition-colors hover:border-chrome-600 hover:bg-chrome-800"
+                  >
+                    {nameOf(tk.id)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <button
         type="button"
@@ -610,7 +543,6 @@ export function InspectorPanel() {
         </IconButton>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-4 pt-0">
-        <BallTimeline />
         {body}
       </div>
     </aside>

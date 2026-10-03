@@ -149,7 +149,11 @@ interface EditorState {
    * authoring path for possession — the coach says "RB has it here" instead of
    * drawing a line and hoping the ball model infers the transfer.
    */
-  addTransfer: (type: 'handoff' | 'toss' | 'pass', toId: string) => string | null
+  addTransfer: (
+    type: 'handoff' | 'toss' | 'pass',
+    toId: string,
+    fromId?: string,
+  ) => string | null
   /**
    * The primary way to give a player a route: pick a concept and it either
    * creates his route or reshapes the one he already has. A player only ever
@@ -430,21 +434,30 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     return created.id
   },
 
-  addTransfer: (type, toId) => {
+  addTransfer: (type, toId, explicitFromId) => {
     const st = get()
     const to = st.tokens.find((t) => t.id === toId)
     if (!to || to.side !== 'offense') return null
-    // whoever is holding the ball at this point in the track: the last delivery
-    // that has landed, else the snap's recipient
-    const flights = st.paths
-      .filter((p) => FLIGHT_TYPES.has(p.type) && p.points.length >= 2)
-      .sort((a, b) => a.timing.delayMs - b.timing.delayMs)
-    let fromId = defaultBallStart(st.paths, st.tokens)
-    for (const f of flights) {
-      if (f.endTokenId && st.tokens.some((t) => t.id === f.endTokenId)) fromId = f.endTokenId
+
+    let from: Token | undefined
+    if (explicitFromId) {
+      from = st.tokens.find((t) => t.id === explicitFromId)
+      if (!from || from.side !== 'offense' || from.id === toId) return null
+    } else {
+      // otherwise whoever is holding the ball now: the last delivery that has
+      // landed, else whoever the snap went to
+      const flights = st.paths
+        .filter((p) => FLIGHT_TYPES.has(p.type) && p.points.length >= 2)
+        .sort((a, b) => a.timing.delayMs - b.timing.delayMs)
+      let fromId = defaultBallStart(st.paths, st.tokens)
+      for (const f of flights) {
+        if (f.endTokenId && st.tokens.some((t) => t.id === f.endTokenId)) fromId = f.endTokenId
+      }
+      if (!fromId || fromId === toId) return null
+      from = st.tokens.find((t) => t.id === fromId)
     }
-    if (!fromId || fromId === toId) return null
-    const from = st.tokens.find((t) => t.id === fromId)!
+    if (!from) return null
+
     // aim at where the receiver actually finishes, so the ball lands on him
     const driven = st.paths.filter(
       (p) => p.tokenId === toId && PLAYER_DRIVEN.has(p.type) && p.points.length >= 2,
@@ -453,7 +466,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const toPos = dest ? dest.points[dest.points.length - 1] : { x: to.x, y: to.y }
     const points = [{ x: from.x, y: from.y }, toPos]
     const created: PlayPath = {
-      tokenId: fromId,
+      tokenId: from.id,
       endTokenId: toId,
       type,
       points,

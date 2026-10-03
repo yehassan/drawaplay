@@ -318,3 +318,49 @@ describe('setPlayerRoute — one step from player to route', () => {
     expect(st().setPlayerRoute('nope', 'slant')).toBeNull()
   })
 })
+
+describe('addTransfer with an explicit giver', () => {
+  beforeEach(() => {
+    useEditorStore.setState({ tokens: [], paths: [], selectedIds: [], past: [], future: [] })
+  })
+  const add = (pos: string, x: number) => {
+    st().addToken({ side: 'offense', pos, num: '', x, y: 88 })
+    return st().tokens[st().tokens.length - 1]!
+  }
+
+  it('hands off from the named player, not the inferred holder', () => {
+    const qb = add('QB', 26)
+    const rb = add('RB', 30)
+    const id = st().addTransfer('handoff', rb.id, qb.id)!
+    const p = st().paths.find((x) => x.id === id)!
+    expect(p.tokenId).toBe(qb.id)
+    expect(p.endTokenId).toBe(rb.id)
+  })
+
+  it('lets the QB throw rather than only hand off', () => {
+    const qb = add('QB', 26)
+    const wr = add('WR', 14)
+    const id = st().addTransfer('pass', wr.id, qb.id)!
+    expect(st().paths.find((x) => x.id === id)!.type).toBe('pass')
+  })
+
+  it('refuses a defender as the giver', () => {
+    const wr = add('WR', 14)
+    st().addToken({ side: 'defense', pos: 'CB', num: '', x: 20, y: 40 })
+    const cb = st().tokens[st().tokens.length - 1]!
+    expect(st().addTransfer('pass', wr.id, cb.id)).toBeNull()
+  })
+
+  it('refuses giving a player the ball from himself', () => {
+    const qb = add('QB', 26)
+    const rb = add('RB', 30)
+    expect(st().addTransfer('handoff', rb.id, rb.id)).toBeNull()
+  })
+
+  it('still infers the holder when no giver is named', () => {
+    const qb = add('QB', 26)
+    const rb = add('RB', 30)
+    const id = st().addTransfer('handoff', rb.id)!
+    expect(st().paths.find((x) => x.id === id)!.tokenId).toBe(qb.id)
+  })
+})
