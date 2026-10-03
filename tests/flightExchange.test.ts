@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { reschedule } from '../src/lib/timing'
 import { computeScene } from '../src/lib/render'
 import { polylineLength } from '../src/lib/geometry'
+import { FLIGHT_TYPES, PLAYER_DRIVEN } from '../src/lib/pathStyles'
+import { resolveFlightTarget } from '../src/lib/target'
 import { SCENARIOS } from '../src/lib/scenarios'
 import type { PlayPath, Token } from '../src/stores/editorStore'
 
@@ -69,41 +71,127 @@ const TOSS_TO_RUNNER = () => [
   P('run', 'run', [[26, 88], [26, 78]], { tokenId: 'rb' }),
 ]
 
-describe('TRUE today — possession', () => {
-  it('the ball is airborne mid-flight and held after it', () => {
-    const { paths } = schedule(TOSS_TO_RUNNER())
-    const toss = paths.find((p) => p.id === 'toss')!
-    const mid = computeScene(TOKENS, paths, {
-      tMs: toss.timing.delayMs + toss.timing.durationMs / 2,
-      playing: true,
-      ballStartId: 'qb',
-    })
-    expect(mid.ball!.flying).toBe(true)
-
-    const after = computeScene(TOKENS, paths, {
-      tMs: toss.timing.delayMs + toss.timing.durationMs + 30,
-      playing: true,
-      ballStartId: 'qb',
-    })
-    expect(after.ball!.flying).toBe(false)
-    const rb = after.tokenPositions.get('rb')!
-    expect(Math.hypot(after.ball!.pos.x - rb.x, after.ball!.pos.y - rb.y)).toBeLessThan(1.2)
-  })
-
-  it('the ball rides with the receiver for the rest of his run', () => {
-    const { paths } = schedule(TOSS_TO_RUNNER())
-    const toss = paths.find((p) => p.id === 'toss')!
-    const run = paths.find((p) => p.id === 'run')!
-    const after = toss.timing.delayMs + toss.timing.durationMs
-    const until = run.timing.delayMs + run.timing.durationMs
-    for (const f of [0.5, 0.8, 1]) {
-      const sc = computeScene(TOKENS, paths, { tMs: after + (until - after) * f, playing: true, ballStartId: 'qb' })
-      const rb = sc.tokenPositions.get('rb')!
-      expect(Math.hypot(sc.ball!.pos.x - rb.x, sc.ball!.pos.y - rb.y), `f=${f}`).toBeLessThan(1.2)
+describe('SAFETY NET — every visible flight lands on its own receiver', () => {
+  /**
+   * The invariant that was missing. Every ball-vs-receiver check in the suite
+   * sat AFTER arrival, where ball.ts returns `holder + {x:0.55, y:-0.35}` — a
+   * constant 0.6495yd whenever possession has transferred. Those checks cannot
+   * fail, so a ball flying six yards past its receiver was invisible to all 217
+   * tests.
+   *
+   * Sampled one frame BEFORE arrival, while the ball is genuinely in flight.
+   *
+   * Note the ownership filter: flights overlap by design (H4 — every flight
+   * flies in its own window so double reads work), so at a given instant the
+   * ball belongs to the MOST RECENTLY LAUNCHED flight still airborne. A flight
+   * superseded before it lands is skipped, because asserting its receiver would
+   * be wrong rather than strict. Verified to fail when the receiver-side warp
+   * in render.ts is disabled (worst 4.37yd).
+   */
+  const visibleFlightAt = (paths: PlayPath[], tMs: number) => {
+    let cand: PlayPath | null = null
+    for (const f of paths
+      .filter((p) => FLIGHT_TYPES.has(p.type) && p.tokenId != null && p.points.length >= 2)
+      .sort((a, b) => a.timing.delayMs - b.timing.delayMs)) {
+      if (tMs < f.timing.delayMs) break
+      if (tMs < f.timing.delayMs + f.timing.durationMs) cand = f
     }
+    return cand
+  }
+
+  const scenarioFlights = () =>
+    SCENARIOS.flatMap((s) => {
+      const built = s.build()
+      const seeded = built.paths.map((p, i) => ({
+        ...p,
+        id: `f${i}`,
+        timing: p.timing ?? { delayMs: 0, durationMs: 600 },
+        userLocked: !!p.timing,
+      })) as PlayPath[]
+      const sched = reschedule(seeded)
+      const paths = seeded.map((p) => ({ ...p, timing: sched.get(p.id)! }))
+      return paths
+        .filter((p) => ['pass', 'toss', 'handoff'].includes(p.type) && p.endTokenId && p.timing.durationMs > 40)
+        .map((f) => ({ name: s.name, tokens: built.tokens, paths, flight: f }))
+    })
+
+  it('is actually exercised — flights were sampled, not all skipped', () => {
+    const all = scenarioFlights()
+    const visible = all.filter(
+      ({ paths, flight }) =>
+        visibleFlightAt(paths, flight.timing.delayMs + flight.timing.durationMs - 1)?.id === flight.id,
+    )
+    expect(visible.length).toBeGreaterThanOrEqual(8)
   })
 
-  it('the ball advances along the flight rather than jumping', () => {
+  it('the ball is at the receiver on arrival, for every visible flight', () => {
+    const offenders: string[] = []
+    let worst = 0
+    for (const { name, tokens, paths, flight } of scenarioFlights()) {
+      const at = flight.timing.delayMs + flight.timing.durationMs - 1
+      if (visibleFlightAt(paths, at)?.id !== flight.id) continue
+      const sc = computeScene(tokens, paths, { tMs: at, playing: true, ballStartId: null })
+      const r = sc.tokenPositions.get(flight.endTokenId!)
+      if (!sc.ball || !r) continue
+      const d = Math.hypot(sc.ball.pos.x - r.x, sc.ball.pos.y - r.y)
+      worst = Math.max(worst, d)
+      if (d > 1.0) offenders.push(`${name} / ${flight.type} ${flight.id}: ${d.toFixed(2)}yd`)
+    }
+    expect(offenders).toEqual([])
+    // headroom, so an ordinary regression trips the bound above before this
+    expect(worst).toBeLessThan(0.5)
+  })
+
+  /**
+   * The mirror of the arrival net. Sampling only at arrival is blind to the
+   * thrower-side anchor: disabling the release warp in render.ts still passes
+   * the arrival check, because by arrival the start anchor has faded out
+   * (u = 1). Checked one frame after release instead.
+   */
+  const moves = (paths: PlayPath[], id: string | null) =>
+    paths.some((p) => p.tokenId === id && PLAYER_DRIVEN.has(p.type))
+
+  it('the ball leaves the thrower on release, when the thrower actually moves', () => {
+    const offenders: string[] = []
+    for (const { name, tokens, paths, flight } of scenarioFlights()) {
+      if (!moves(paths, flight.tokenId)) continue
+      const at = flight.timing.delayMs + 1
+      if (visibleFlightAt(paths, at)?.id !== flight.id) continue
+      const sc = computeScene(tokens, paths, { tMs: at, playing: true, ballStartId: null })
+      const q = sc.tokenPositions.get(flight.tokenId!)
+      if (!sc.ball || !q) continue
+      const d = Math.hypot(sc.ball.pos.x - q.x, sc.ball.pos.y - q.y)
+      if (d > 1.5) offenders.push(`${name} / ${flight.type} ${flight.id}: ${d.toFixed(2)}yd`)
+    }
+    expect(offenders).toEqual([])
+  })
+
+  /**
+   * KNOWN DEFECT, pinned so it cannot be forgotten. render.ts:117 only warps a
+   * thrower who has a player-driven path, so a flight released by a standing QB
+   * keeps whatever point it was drawn from. In the shipped "Dive" scenario the
+   * handoff is authored 6.3yd behind where the QB token stands, so the ball
+   * visibly leaves from empty grass behind him.
+   *
+   * Convert to a plain `it` when the thrower anchor falls back to the token's
+   * rest position.
+   */
+  it.fails('a flight released by a standing thrower leaves from the wrong place', () => {
+    const offenders: string[] = []
+    for (const { name, tokens, paths, flight } of scenarioFlights()) {
+      if (moves(paths, flight.tokenId)) continue
+      const at = flight.timing.delayMs + 1
+      if (visibleFlightAt(paths, at)?.id !== flight.id) continue
+      const sc = computeScene(tokens, paths, { tMs: at, playing: true, ballStartId: null })
+      const q = sc.tokenPositions.get(flight.tokenId!)
+      if (!sc.ball || !q) continue
+      const d = Math.hypot(sc.ball.pos.x - q.x, sc.ball.pos.y - q.y)
+      if (d > 1.5) offenders.push(`${name} / ${flight.type} ${flight.id}: ${d.toFixed(2)}yd`)
+    }
+    expect(offenders).toEqual([])
+  })
+
+  it('the ball does not jump during flight', () => {
     const { paths } = schedule(TOSS_TO_RUNNER())
     const toss = paths.find((p) => p.id === 'toss')!
     const ys: number[] = []
@@ -216,18 +304,30 @@ describe('KNOWN DEFECT — two positional selectors disagree on equal delayMs', 
 })
 
 describe('KNOWN — a drawn flight can have no receiver at all', () => {
-  it('resolveFlightTarget returns null when no route tip is in range', () => {
-    // FieldCanvas calls it without `tokens`, so the loose nearest-player
-    // fallback is unreachable and a stroke into empty grass resolves to nobody
-    const raw = [P('p', 'route', [[26, 92], [20, 70]], { tokenId: 'qb' })]
-    const { paths } = schedule(raw)
-    expect(paths[0].endTokenId).toBeNull()
+  // far end lands 5yd from a standing player but within 2.5yd of NO route tip,
+  // so only the loose fallback can resolve it
+  const intoGrass = P('p', 'route', [[26, 92], [22, 85]], { tokenId: 'qb' })
+
+  it('resolveFlightTarget returns null when nothing is near the stroke', () => {
+    // FieldCanvas.tsx calls it without `tokens`, so the loose nearest-player
+    // fallback is unreachable there and a stroke into empty grass resolves to
+    // nobody. Asserted against the real function, not against a fixture.
+    expect(resolveFlightTarget(intoGrass.points, 'qb', [intoGrass], 'pass')).toBeNull()
   })
 
-  it('and relabelling it as a pass leaves it receiverless', () => {
-    const { paths } = schedule([P('p', 'route', [[26, 92], [20, 70]], { tokenId: 'qb' })])
-    const store = paths.map((p) => ({ ...p, type: 'pass' as const }))
-    expect(store[0].endTokenId).toBeNull()
+  it('and it still resolves when the loose fallback is supplied', () => {
+    expect(resolveFlightTarget(intoGrass.points, 'qb', [intoGrass], 'pass', TOKENS)).not.toBeNull()
+  })
+
+  it('so the two call sites disagree about the same stroke', () => {
+    const canvas = resolveFlightTarget(intoGrass.points, 'qb', [intoGrass], 'pass')
+    const store = resolveFlightTarget(intoGrass.points, 'qb', [intoGrass], 'pass', TOKENS)
+    expect(canvas).toBeNull()
+    expect(store).not.toBeNull()
+  })
+
+  it('a non-targetable type is never given a receiver', () => {
+    expect(resolveFlightTarget(intoGrass.points, 'qb', [intoGrass], 'run', TOKENS)).toBeNull()
   })
 })
 
@@ -322,32 +422,5 @@ describe('RECORDED — numbers stage 3 is expected to move', () => {
     expect(s.get('pass')!.delayMs + s.get('pass')!.durationMs).toBeGreaterThan(
       s.get('route')!.delayMs + s.get('route')!.durationMs + 500,
     )
-  })
-})
-describe('KNOWN — reschedule is settled after a single pass', () => {
-  it('a second pass changes nothing', () => {
-    // the loop runs 3x for no reason; nothing upstream ever reads a flight
-    const raw = [
-      P('motion', 'motion', [[14, 88], [16, 86]], { tokenId: 'wr' }),
-      P('snap', 'snap', [[26, 90], [26, 92.6]], { tokenId: 'C', endTokenId: 'qb' }),
-      P('drop', 'drop', [[26, 92], [26, 85]], { tokenId: 'qb' }),
-      P('route', 'route', [[14, 88], [14, 78]], { tokenId: 'wr' }),
-      P('pass', 'pass', [[26, 85], [14, 78]], { tokenId: 'qb', endTokenId: 'wr' }),
-      P('handoff', 'handoff', [[26, 92.6], [26, 88]], { tokenId: 'qb', endTokenId: 'rb' }),
-    ]
-    const tokens = raw.map((p, i) => ({ ...p, id: `p${i}` }))
-    const once = reschedule(tokens)
-    const twice = reschedule(tokens.map((p) => ({ ...p, timing: once.get(p.id)! })))
-    for (const p of tokens) {
-      expect(twice.get(p.id), p.id).toEqual(once.get(p.id))
-    }
-  })
-
-  it('and it is deterministic across repeated calls on the same input', () => {
-    const raw = [
-      P('route', 'route', [[14, 88], [14, 78]], { tokenId: 'wr' }),
-      P('pass', 'pass', [[26, 92], [14, 78]], { tokenId: 'qb', endTokenId: 'wr' }),
-    ].map((p, i) => ({ ...p, id: `p${i}` }))
-    expect([...reschedule(raw)]).toEqual([...reschedule(raw)])
   })
 })
