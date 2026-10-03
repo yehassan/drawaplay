@@ -352,13 +352,13 @@ describe('addTransfer with an explicit giver', () => {
   })
 
   it('refuses giving a player the ball from himself', () => {
-    const qb = add('QB', 26)
+    add('QB', 26)
     const rb = add('RB', 30)
     expect(st().addTransfer('handoff', rb.id, rb.id)).toBeNull()
   })
 
   it('still infers the holder when no giver is named', () => {
-    add('QB', 26)
+    const qb = add('QB', 26)
     const rb = add('RB', 30)
     const id = st().addTransfer('handoff', rb.id)!
     expect(st().paths.find((x) => x.id === id)!.tokenId).toBe(qb.id)
