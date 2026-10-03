@@ -1,10 +1,10 @@
-import { useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { useEditorStore } from '../../stores/editorStore'
 import { posLabel } from '../../lib/positions'
 import {
   PATH_STYLES,
   PLAYER_DRIVEN,
-  TYPE_FAMILY,
+  PATH_TYPE_CHOICES,
   type BlockDir,
 } from '../../lib/pathStyles'
 import { ROUTE_CONCEPTS } from '../../lib/routeTemplates'
@@ -78,12 +78,6 @@ function RouteLibraryGrid({ pathId, tokenId }: { pathId?: string; tokenId?: stri
   )
 }
 
-const GIVE_TYPES = [
-  { key: 'handoff' as const, label: 'Hand off' },
-  { key: 'toss' as const, label: 'Toss' },
-  { key: 'pass' as const, label: 'Pass' },
-]
-
 function EmptyState({ count }: { count: number }) {
   return (
     <>
@@ -123,18 +117,10 @@ function PathInspector({ pathId }: { pathId: string }) {
   const deletePaths = useEditorStore((s) => s.deletePaths)
   const mirrorPath = useEditorStore((s) => s.mirrorPath)
   const setMotionSnapAt = useEditorStore((s) => s.setMotionSnapAt)
-  const setPathTarget = useEditorStore((s) => s.setPathTarget)
   const setPassTrajectory = useEditorStore((s) => s.setPassTrajectory)
   const setRouteDepth = useEditorStore((s) => s.setRouteDepth)
-  const addTransfer = useEditorStore((s) => s.addTransfer)
-  const [giving, setGiving] = useState<(typeof GIVE_TYPES)[number]['key'] | null>(null)
   if (!path) return null
   const from = tokens.find((t) => t.id === path.tokenId)
-  const nameOf = (id: string | null | undefined) => {
-    const tk = tokens.find((x) => x.id === id)
-    return tk ? tk.num || tk.letter || posLabel(tk.pos) : '?'
-  }
-  const teammates = tokens.filter((t) => t.side === 'offense' && t.id !== path.tokenId)
 
   return (
     <>
@@ -149,7 +135,7 @@ function PathInspector({ pathId }: { pathId: string }) {
       </p>
 
       <div className="grid grid-cols-2 gap-1.5">
-        {TYPE_FAMILY[path.type].map((type, i) => {
+        {PATH_TYPE_CHOICES.map((type, i) => {
           const st = PATH_STYLES[type]
           const active = path.type === type
           return (
@@ -199,32 +185,6 @@ function PathInspector({ pathId }: { pathId: string }) {
         </div>
       )}
 
-      {['pass', 'handoff', 'toss'].includes(path.type) && (
-        <div className="mt-4 rounded-[16px] border border-chrome-700 bg-chrome-850 p-3">
-          <p className="text-xs font-semibold text-chrome-300">Throw to</p>
-          <p className="mt-1 text-[11px] leading-relaxed text-chrome-500">
-            Pick the receiver — the ball will reach them (arrival pins to their route).
-          </p>
-          <div className="mt-2 grid grid-cols-3 gap-1.5">
-            {tokens
-              .filter((t) => t.side === 'offense' && t.id !== path.tokenId)
-              .map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => setPathTarget(path.id, t.id)}
-                  className={`rounded-[12px] border px-2 py-1.5 text-xs font-medium transition-colors ${
-                    path.endTokenId === t.id
-                      ? 'border-accent-400 bg-accent-400 text-chrome-950'
-                      : 'border-chrome-700 bg-chrome-900 text-chrome-300 hover:border-chrome-600 hover:bg-chrome-800'
-                  }`}
-                >
-                  {t.num || t.letter || posLabel(t.pos)}
-                </button>
-              ))}
-          </div>
-        </div>
-      )}
       {path.type === 'pass' &&
         (() => {
           const thrower = path.tokenId ? tokens.find((t) => t.id === path.tokenId) : null
@@ -303,53 +263,6 @@ function PathInspector({ pathId }: { pathId: string }) {
             </div>
           )
         })()}
-
-      {from?.side === 'offense' && (
-        <div className="mt-4">
-          <p className="pb-1 text-[10px] uppercase tracking-[0.06em] text-chrome-600">
-            Give the ball away
-          </p>
-          <div className="grid grid-cols-3 gap-1.5">
-            {GIVE_TYPES.map((g) => (
-              <button
-                key={g.key}
-                type="button"
-                onClick={() => setGiving(giving === g.key ? null : g.key)}
-                title={`${g.label} from this player`}
-                className={`rounded-[12px] border px-1 py-2 text-[11px] font-medium transition-colors ${
-                  giving === g.key
-                    ? 'border-accent-400/60 bg-accent-surface text-accent-400'
-                    : 'border-[var(--color-inspector-border)] bg-[var(--color-inspector-unselected)] text-[var(--color-inspector-text)] hover:border-[var(--color-inspector-hover-border)] hover:bg-[var(--color-inspector-hover)]'
-                }`}
-              >
-                {g.label}
-              </button>
-            ))}
-          </div>
-          {giving && (
-            <div className="mt-2">
-              <p className="pb-1 text-[10px] uppercase tracking-[0.06em] text-chrome-600">
-                {GIVE_TYPES.find((g) => g.key === giving)!.label} to
-              </p>
-              <div className="grid grid-cols-3 gap-1.5">
-                {teammates.map((tk) => (
-                  <button
-                    key={tk.id}
-                    type="button"
-                    onClick={() => {
-                      addTransfer(giving, tk.id, from.id)
-                      setGiving(null)
-                    }}
-                    className="rounded-[12px] border border-chrome-700 bg-chrome-900 px-2 py-1.5 text-xs font-medium text-chrome-300 transition-colors hover:border-chrome-600 hover:bg-chrome-800"
-                  >
-                    {nameOf(tk.id)}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       <button
         type="button"

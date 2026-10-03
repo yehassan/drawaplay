@@ -50,7 +50,13 @@ describe('a player can route, then take a toss, then block', () => {
   it('shows the toss on both the giver and the receiver', () => {
     const qb = addQb()
     const wr = addWr(20)
-    const toss = st().addTransfer('toss', wr.id)!
+    const toss = st().addPath({
+      tokenId: qb.id,
+      endTokenId: wr.id,
+      type: 'toss',
+      points: [{ x: 26, y: 93 }, { x: 20, y: 88 }],
+      d: '',
+    })
     expect(outgoingOf(qb.id)).toHaveLength(1)
     expect(st().paths.find((p) => p.id === toss)!.endTokenId).toBe(wr.id)
   })
@@ -58,20 +64,30 @@ describe('a player can route, then take a toss, then block', () => {
   it('keeps the toss out of the movement chain on both sides', () => {
     const qb = addQb()
     const wr = addWr(20)
-    const toss = st().addTransfer('toss', wr.id)!
-    st().setPathTarget(toss, wr.id)
+    st().addPath({
+      tokenId: qb.id,
+      endTokenId: wr.id,
+      type: 'toss',
+      points: [{ x: 26, y: 93 }, { x: 20, y: 88 }],
+      d: '',
+    })
     expect(movementOf(qb.id)).toHaveLength(0)
     expect(movementOf(wr.id)).toHaveLength(0)
     expect(outgoingOf(wr.id)).toHaveLength(0)
   })
 
   it('reorders block-before-route within the movement chain only', () => {
-    addQb()
+    const qb = addQb()
     const wr = addWr(20)
     st().setPlayerRoute(wr.id, 'go')
     st().addBlock(wr.id, 'forward')
-    const toss = st().addTransfer('toss', wr.id)!
-    st().setPathTarget(toss, wr.id)
+    st().addPath({
+      tokenId: qb.id,
+      endTokenId: wr.id,
+      type: 'toss',
+      points: [{ x: 26, y: 93 }, { x: 20, y: 88 }],
+      d: '',
+    })
     const block = movementOf(wr.id).find((p) => p.type === 'block')!
     st().reorderPath(block.id, -1)
     expect(movementOf(wr.id).map((p) => p.type)).toEqual(['block', 'route'])

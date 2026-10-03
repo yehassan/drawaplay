@@ -2,9 +2,7 @@ import { create } from 'zustand'
 import { catmullRomPath } from '../lib/geometry'
 import { applySchedule, timelineDuration, type Timing } from '../lib/timing'
 import { resolveFlightTarget } from '../lib/target'
-import { FLIGHT_TYPES, PLAYER_DRIVEN, type BlockDir } from '../lib/pathStyles'
-import { defaultBallStart } from '../lib/ball'
-import { EXCHANGE_MS } from '../lib/timing'
+import { PLAYER_DRIVEN, type BlockDir } from '../lib/pathStyles'
 import { buildRoutePoints, routeConcept } from '../lib/routeTemplates'
 import { forwardY } from '../lib/formations'
 import { coercePos } from '../lib/positions'
@@ -145,16 +143,6 @@ interface EditorState {
    */
   addBlock: (tokenId: string, dir: BlockDir) => string | null
   /**
-   * Hand the ball to a player, from whoever is holding it now. This is the
-   * authoring path for possession — the coach says "RB has it here" instead of
-   * drawing a line and hoping the ball model infers the transfer.
-   */
-  addTransfer: (
-    type: 'handoff' | 'toss' | 'pass',
-    toId: string,
-    fromId?: string,
-  ) => string | null
-  /**
    * The primary way to give a player a route: pick a concept and it either
    * creates his route or reshapes the one he already has. A player only ever
    * has one route, so this never stacks a second on top.
@@ -172,7 +160,6 @@ interface EditorState {
   ) => void
   setPathLocked: (id: string, userLocked: boolean) => void
   setMotionSnapAt: (id: string, snapAt: number) => void
-  setPathTarget: (id: string, targetId: string | null) => void
   setPassTrajectory: (id: string, traj: 'standard' | 'touch') => void
   setRouteDepth: (id: string, depthYd: number) => void
   reorderPath: (id: string, dir: -1 | 1) => void
@@ -434,51 +421,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     return created.id
   },
 
-  addTransfer: (type, toId, explicitFromId) => {
-    const st = get()
-    const to = st.tokens.find((t) => t.id === toId)
-    if (!to || to.side !== 'offense') return null
-
-    let from: Token | undefined
-    if (explicitFromId) {
-      from = st.tokens.find((t) => t.id === explicitFromId)
-      if (!from || from.side !== 'offense' || from.id === toId) return null
-    } else {
-      // otherwise whoever is holding the ball now: the last delivery that has
-      // landed, else whoever the snap went to
-      const flights = st.paths
-        .filter((p) => FLIGHT_TYPES.has(p.type) && p.points.length >= 2)
-        .sort((a, b) => a.timing.delayMs - b.timing.delayMs)
-      let fromId = defaultBallStart(st.paths, st.tokens)
-      for (const f of flights) {
-        if (f.endTokenId && st.tokens.some((t) => t.id === f.endTokenId)) fromId = f.endTokenId
-      }
-      if (!fromId || fromId === toId) return null
-      from = st.tokens.find((t) => t.id === fromId)
-    }
-    if (!from) return null
-
-    // aim at where the receiver actually finishes, so the ball lands on him
-    const driven = st.paths.filter(
-      (p) => p.tokenId === toId && PLAYER_DRIVEN.has(p.type) && p.points.length >= 2,
-    )
-    const dest = driven.find((p) => p.type === 'route') ?? driven[driven.length - 1]
-    const toPos = dest ? dest.points[dest.points.length - 1] : { x: to.x, y: to.y }
-    const points = [{ x: from.x, y: from.y }, toPos]
-    const created: PlayPath = {
-      tokenId: from.id,
-      endTokenId: toId,
-      type,
-      points,
-      d: catmullRomPath(points),
-      id: uid(),
-      timing: { delayMs: 0, durationMs: EXCHANGE_MS },
-    }
-    st.beginHistory()
-    set((s) => ({ paths: applySchedule([...s.paths, created]) }))
-    return created.id
-  },
-
   // hand-tuned timing locks the path against future reschedules
   setPathTimingLive: (id, patch) =>
     set((s) => ({
@@ -550,28 +492,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     })
   },
 
-  setPathTarget: (id, targetId) => {
-    get().beginHistory()
-    set((s) => {
-      const path = s.paths.find((p) => p.id === id)
-      if (!path || !path.tokenId) return {}
-      const from = s.tokens.find((t) => t.id === path.tokenId)
-      const to = s.tokens.find((t) => t.id === targetId)
-      if (!from || !to) return {}
-      let toPos = { x: to.x, y: to.y }
-      const recRoute = s.paths.find(
-        (q) => q.tokenId === targetId && q.type !== 'pass' && q.type !== 'handoff' && q.type !== 'toss' && q.type !== 'snap' && q.type !== 'motion' && q.points.length >= 2,
-      )
-      if (recRoute) toPos = recRoute.points[recRoute.points.length - 1]
-      const points = [{ x: from.x, y: from.y }, toPos]
-      return {
-        paths: applySchedule(
-          s.paths.map((p) => (p.id === id ? { ...p, endTokenId: targetId, points, d: catmullRomPath(points) } : p)),
-        ),
-      }
-    })
-  },
-
   /** swap a player-driven path with its previous/next sibling (draw order = play order) */
   reorderPath: (id, dir) => {
     const paths = get().paths
@@ -601,7 +521,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           if (p.id !== id) return p
           // reclassifying to a flight: resolve a target from nearby path tips
           const endTokenId =
-            p.endTokenId ?? resolveFlightTarget(p.points, p.tokenId, s.paths, type)
+            p.endTokenId ?? resolveFlightTarget(p.points, p.tokenId, s.paths, type, s.tokens)
           // passes & snaps are strictly straight, whatever was drawn
           const points =
             (type === 'pass' || type === 'snap') && p.points.length > 1

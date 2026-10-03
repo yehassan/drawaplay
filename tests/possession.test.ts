@@ -184,79 +184,7 @@ describe('a pass into a receiver still arrives after his route', () => {
     expect(scene.tokenPositions.get('wr')!.y).toBeLessThan(78.5)
   })
 })
-describe('addTransfer — authoring possession without drawing', () => {
-  const setup = () => {
-    useEditorStore.setState({ tokens: [], paths: [], selectedIds: [], past: [], future: [] })
-    st().addToken({ side: 'offense', pos: 'QB', num: '', x: 26, y: 93 })
-    st().addToken({ side: 'offense', pos: 'RB', num: '', x: 26, y: 88 })
-    st().addToken({ side: 'offense', pos: 'WR', num: '', x: 14, y: 88 })
-    return st().tokens
-  }
-  const byPos = (p: string) => st().tokens.find((t) => t.pos === p)!
 
-  it('hands the ball from the snap recipient', () => {
-    setup()
-    st().addPath({
-      tokenId: byPos('QB').id,
-      endTokenId: null,
-      type: 'snap',
-      points: [{ x: 26, y: 90 }, { x: 26, y: 92.6 }],
-      d: '',
-    })
-    const id = st().addTransfer('toss', byPos('RB').id)!
-    const p = st().paths.find((x) => x.id === id)!
-    expect(p.type).toBe('toss')
-    expect(p.endTokenId).toBe(byPos('RB').id)
-  })
-
-  it('chains from the previous recipient, so the track flows in order', () => {
-    setup()
-    const toRb = st().addTransfer('handoff', byPos('RB').id)!
-    const rb = st().paths.find((x) => x.id === toRb)!
-    const fromId = rb.tokenId
-    expect(fromId).toBeTruthy()
-    const toWr = st().addTransfer('pass', byPos('WR').id)!
-    const wr = st().paths.find((x) => x.id === toWr)!
-    expect(wr.tokenId).toBe(rb.endTokenId)
-  })
-
-  it('does not change the selection, so the track stays usable', () => {
-    setup()
-    useEditorStore.setState({ selectedIds: [byPos('WR').id] })
-    st().addTransfer('pass', byPos('WR').id)
-    expect(st().selectedIds).toEqual([byPos('WR').id])
-  })
-
-  it('undo removes the transfer', () => {
-    setup()
-    st().addTransfer('toss', byPos('RB').id)
-    expect(st().paths).toHaveLength(1)
-    st().undo()
-    expect(st().paths).toHaveLength(0)
-  })
-
-  it('refuses a defender as the receiver', () => {
-    setup()
-    st().addToken({ side: 'defense', pos: 'CB', num: '', x: 20, y: 40 })
-    const cb = st().tokens.find((t) => t.side === 'defense')!
-    expect(st().addTransfer('pass', cb.id)).toBeNull()
-  })
-
-  it('refuses handing the ball to whoever already has it', () => {
-    setup()
-    expect(st().addTransfer('handoff', byPos('QB').id)).toBeNull()
-  })
-
-  it('aims at the end of the receiver\'s route', () => {
-    setup()
-    const route = st().setPlayerRoute(byPos('WR').id, 'go')!
-    const rp = st().paths.find((p) => p.id === route)!
-    const tip = rp.points[rp.points.length - 1]
-    const id = st().addTransfer('pass', byPos('WR').id)!
-    const pass = st().paths.find((p) => p.id === id)!
-    expect(pass.points[pass.points.length - 1]).toEqual(tip)
-  })
-})
 
 describe('setPlayerRoute — one step from player to route', () => {
   beforeEach(() => {
@@ -319,7 +247,9 @@ describe('setPlayerRoute — one step from player to route', () => {
   })
 })
 
-describe('addTransfer with an explicit giver', () => {
+
+
+describe('labelling a drawn path as a delivery', () => {
   beforeEach(() => {
     useEditorStore.setState({ tokens: [], paths: [], selectedIds: [], past: [], future: [] })
   })
@@ -328,39 +258,94 @@ describe('addTransfer with an explicit giver', () => {
     return st().tokens[st().tokens.length - 1]!
   }
 
-  it('hands off from the named player, not the inferred holder', () => {
+  /** a path drawn from one player toward another, as the pen would make it */
+  const draw = (fromId: string) =>
+    st().addPath({
+      tokenId: fromId,
+      endTokenId: null,
+      type: 'route',
+      points: [
+        { x: 26, y: 88 },
+        { x: 30, y: 84 },
+      ],
+      d: '',
+    })
+
+  it('becomes a handoff and finds the receiver from the endpoint', () => {
     const qb = add('QB', 26)
     const rb = add('RB', 30)
-    const id = st().addTransfer('handoff', rb.id, qb.id)!
+    const id = draw(qb.id)
+    st().updatePathType(id, 'handoff')
     const p = st().paths.find((x) => x.id === id)!
-    expect(p.tokenId).toBe(qb.id)
+    expect(p.type).toBe('handoff')
     expect(p.endTokenId).toBe(rb.id)
   })
 
-  it('lets the QB throw rather than only hand off', () => {
-    const qb = add('QB', 26)
-    const wr = add('WR', 14)
-    const id = st().addTransfer('pass', wr.id, qb.id)!
-    expect(st().paths.find((x) => x.id === id)!.type).toBe('pass')
-  })
-
-  it('refuses a defender as the giver', () => {
-    const wr = add('WR', 14)
-    st().addToken({ side: 'defense', pos: 'CB', num: '', x: 20, y: 40 })
-    const cb = st().tokens[st().tokens.length - 1]!
-    expect(st().addTransfer('pass', wr.id, cb.id)).toBeNull()
-  })
-
-  it('refuses giving a player the ball from himself', () => {
-    add('QB', 26)
-    const rb = add('RB', 30)
-    expect(st().addTransfer('handoff', rb.id, rb.id)).toBeNull()
-  })
-
-  it('still infers the holder when no giver is named', () => {
+  it('becomes a toss the same way', () => {
     const qb = add('QB', 26)
     const rb = add('RB', 30)
-    const id = st().addTransfer('handoff', rb.id)!
-    expect(st().paths.find((x) => x.id === id)!.tokenId).toBe(qb.id)
+    const id = draw(qb.id)
+    st().updatePathType(id, 'toss')
+    expect(st().paths.find((x) => x.id === id)!.endTokenId).toBe(rb.id)
+  })
+
+  it('becomes a pass and straightens to a two-point line', () => {
+    const qb = add('QB', 26)
+    add('WR', 30)
+    const id = draw(qb.id)
+    st().updatePathType(id, 'pass')
+    const p = st().paths.find((x) => x.id === id)!
+    expect(p.type).toBe('pass')
+    expect(p.points).toHaveLength(2)
+  })
+
+  it('keeps an already-assigned receiver', () => {
+    const qb = add('QB', 26)
+    const rb = add('RB', 30)
+    const id = st().addPath({
+      tokenId: qb.id,
+      endTokenId: rb.id,
+      type: 'route',
+      points: [{ x: 26, y: 88 }, { x: 30, y: 84 }],
+      d: '',
+    })
+    st().updatePathType(id, 'handoff')
+    expect(st().paths.find((x) => x.id === id)!.endTokenId).toBe(rb.id)
+  })
+
+  it('resolves to a player who has not run a route', () => {
+    const qb = add('QB', 26)
+    const rb = add('RB', 30)
+    const id = draw(qb.id)
+    expect(st().paths.find((x) => x.id === id)!.endTokenId).toBeNull()
+    st().updatePathType(id, 'handoff')
+    expect(st().paths.find((x) => x.id === id)!.endTokenId).toBe(rb.id)
+  })
+
+  it('prefers a route tip over a nearer standing player', () => {
+    const qb = add('QB', 26)
+    const rb = add('RB', 30)
+    add('WR', 31)
+    const route = st().setPlayerRoute(rb.id, 'go')!
+    const rp = st().paths.find((p) => p.id === route)!
+    const tip = rp.points[rp.points.length - 1]
+    const id = st().addPath({
+      tokenId: qb.id,
+      endTokenId: null,
+      type: 'route',
+      points: [{ x: 26, y: 88 }, { x: tip.x, y: tip.y }],
+      d: '',
+    })
+    st().updatePathType(id, 'handoff')
+    expect(st().paths.find((x) => x.id === id)!.endTokenId).toBe(rb.id)
+  })
+
+  it('undoes the relabel', () => {
+    const qb = add('QB', 26)
+    add('RB', 30)
+    const id = draw(qb.id)
+    st().updatePathType(id, 'toss')
+    st().undo()
+    expect(st().paths.find((x) => x.id === id)!.type).toBe('route')
   })
 })

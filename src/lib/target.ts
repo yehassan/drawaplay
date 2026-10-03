@@ -1,6 +1,6 @@
 import { dist } from './geometry'
 import type { Pt } from './field'
-import type { PlayPath } from '../stores/editorStore'
+import type { PlayPath, Token } from '../stores/editorStore'
 import type { PathType } from './pathStyles'
 
 /** types whose far end may auto-resolve to a nearby path tip / defender */
@@ -22,6 +22,7 @@ export function resolveFlightTarget(
   startTokenId: string | null,
   paths: PlayPath[],
   type?: PathType,
+  tokens?: Token[],
 ): string | null {
   if (pts.length < 2) return null
   if (type && !TARGETABLE_TYPES.has(type)) return null
@@ -51,5 +52,21 @@ export function resolveFlightTarget(
       bestId = p.tokenId
     }
   }
-  return bestId
+  if (bestId) return bestId
+
+  // No route tip in range: fall back to the nearest player standing near the
+  // far end, so a delivery to somebody who has not run a route still resolves.
+  if (!tokens) return null
+  const loose = TARGET_MATCH_RADIUS_YD * 3
+  let fallbackId: string | null = null
+  let fallbackD = loose
+  for (const tk of tokens) {
+    if (tk.id === startTokenId) continue
+    const d = dist(far, tk)
+    if (d < fallbackD) {
+      fallbackD = d
+      fallbackId = tk.id
+    }
+  }
+  return fallbackId
 }

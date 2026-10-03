@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useEditorStore } from '../stores/editorStore'
-import { TYPE_FAMILY } from '../lib/pathStyles'
+import { PATH_TYPE_CHOICES } from '../lib/pathStyles'
 
 export interface ShortcutEvent {
   key: string
@@ -42,17 +42,16 @@ export function applyShortcut(e: ShortcutEvent): void {
   }
   if (mod) return
 
-  // number keys pick within the selected path's type family, matching the
-  // chips the inspector actually shows (a route is never a snap)
+  // number keys label the selected path, matching the chips the inspector shows
+  // (never a snap — that belongs to the formation)
   if (/^[1-9]$/.test(e.key)) {
     const sel = st.selectedIds
     if (sel.length === 1) {
       const path = st.paths.find((p) => p.id === sel[0])
       const idx = Number(e.key) - 1
-      const family = path ? TYPE_FAMILY[path.type] : null
-      if (path && family && idx < family.length) {
+      if (path && idx < PATH_TYPE_CHOICES.length) {
         e.preventDefault?.()
-        st.updatePathType(path.id, family[idx]!)
+        st.updatePathType(path.id, PATH_TYPE_CHOICES[idx]!)
         return
       }
     }
