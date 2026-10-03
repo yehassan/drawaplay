@@ -1,5 +1,5 @@
 import { catmullRomPath } from './geometry'
-import { renderedPosAt } from './actorPosition'
+import { progressAt, renderedPosAt } from './actorPosition'
 import { timelineDuration } from './timing'
 import { pathEased } from './easing'
 import { ballStateAt, type BallState } from './ball'
@@ -145,7 +145,14 @@ export function computeScene(
 
   const out: ScenePath[] = rendered.map((p, i) => ({
     ...p,
-    progress: animActive ? pathEased(paths[i], opts.tMs) : 1,
+    // Player-driven strokes reveal as the player runs them, so their progress
+    // has to be seam-aware for the token to stay on the tip of its own line.
+    // Flights are not part of a movement chain and keep the plain curve.
+    progress: animActive
+      ? PLAYER_DRIVEN.has(p.type) && p.tokenId
+        ? progressAt(drivenByToken.get(p.tokenId)!, paths[i], opts.tMs)
+        : pathEased(paths[i], opts.tMs)
+      : 1,
   }))
 
   const ball = ballStateAt(

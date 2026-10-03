@@ -31,7 +31,7 @@ src/lib/            pure, dependency-light logic (unit-tested)
   field.ts          field geometry + camera math
   geometry.ts       RDP simplify, Catmull-Rom→bézier, polyline utils
   timing.ts         scheduling engine
-  easing.ts         pathEased — pure progress curve, no scheduler deps
+  easing.ts         pathEased — pure progress curve + seam flags, no scheduler deps
   actorPosition.ts  renderedPosAt — the ONE 'where is this player at t' answer
   infer.ts          path-type intent inference
   target.ts         flight target resolution (directional cone)
@@ -95,6 +95,8 @@ Key actions: `addPath` (returns new id, auto-selects), `moveTokensLive` (no hist
 Speeds (`naturalDuration`): `ROUTE 6`, `DROP 2.4`, `RUN 5.5`, `BALL 14` yd/s.
 
 **Easing** (`pathEased`) is a **trapezoid velocity profile with an absolute 220ms ramp** — NOT per-path normalized cubic. This keeps perceived acceleration identical across short and long routes. Do not regress this to `easeInOutCubic`.
+
+**Seams are speed-continuous.** Two of one player's chained movements meeting used to both sit at zero velocity, so he came to a **dead stop** wherever he changed movement — worst at the moment he received the ball (3.2% of plateau speed for 48ms, under half speed for 240ms). `pathEased` takes `easeIn`/`easeOut` flags; `progressAt` in `actorPosition.ts` lifts the ramp only where a movement actually *touches* a neighbour, never across a real gap. Token position and the stroke reveal must both come from `progressAt`, or the player outruns the tip of his own line by 0.6yd. `tests/chainSpeed.test.ts` polices this, including that the last movement of a chain still decelerates — the one case where `rampIn` is 0 and any divide by it yields Infinity and freezes him.
 
 ## Drawing & rendering pipeline
 

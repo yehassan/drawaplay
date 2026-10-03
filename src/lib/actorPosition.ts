@@ -52,6 +52,30 @@ function bindStartToChain(list: PlayPath[], active: PlayPath): Pt[] {
   return active.points.map((p) => ({ x: p.x + dx, y: p.y + dy }))
 }
 
+/** how close two movements must be for the seam between them to count as joined */
+const TOUCH_MS = 1
+
+/**
+ * Whether a movement starts the instant the one before it ends.
+ *
+ * `reschedule` chains a player's movements back to back, so in practice this is
+ * true for every seam. It is checked rather than assumed, because suppressing
+ * the ramp across a real gap would make the player accelerate, then brake
+ * harder than he would have anyway.
+ */
+function startsWherePreviousEnded(list: PlayPath[], p: PlayPath): boolean {
+  const start = p.timing.delayMs
+  return list.some(
+    (q) => q.id !== p.id && q.timing.delayMs < start && q.timing.delayMs + q.timing.durationMs >= start - TOUCH_MS,
+  )
+}
+
+/** Whether another of this player's movements begins the instant this one ends. */
+function endsWhereNextBegins(list: PlayPath[], p: PlayPath): boolean {
+  const end = p.timing.delayMs + p.timing.durationMs
+  return list.some((q) => q.id !== p.id && q.timing.delayMs >= end - TOUCH_MS && q.timing.delayMs <= end + TOUCH_MS)
+}
+
 /**
  * Where the player owning these movements is at time `t`, or null if none of
  * them has started.
@@ -64,7 +88,22 @@ export function renderedPosAt(list: PlayPath[], t: number): Pt | null {
   const active = activeAt(list, t)
   if (!active) return null
   const pts = bindStartToChain(list, active)
-  return pointAtLength(pts, pathEased(active, t) * polylineLength(pts))
+  return pointAtLength(pts, progressAt(list, active, t) * polylineLength(pts))
+}
+
+/**
+ * Seam-aware 0..1 progress of one movement within its player's chain.
+ *
+ * Carries the plateau speed through a seam instead of stopping dead at it: both
+ * ramps are lifted only where the movement actually touches a neighbour. Shared
+ * with the stroke reveal, because a token that outruns the tip of its own drawn
+ * line is as wrong as a token that stops — the two must use the same number.
+ */
+export function progressAt(list: PlayPath[], p: PlayPath, t: number): number {
+  return pathEased(p, t, {
+    easeIn: !startsWherePreviousEnded(list, p),
+    easeOut: !endsWhereNextBegins(list, p),
+  })
 }
 
 /**
