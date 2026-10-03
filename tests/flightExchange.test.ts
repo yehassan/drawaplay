@@ -167,27 +167,26 @@ describe('SAFETY NET — every visible flight lands on its own receiver', () => 
   })
 
   /**
-   * KNOWN DEFECT, pinned so it cannot be forgotten. render.ts:117 only warps a
-   * thrower who has a player-driven path, so a flight released by a standing QB
-   * keeps whatever point it was drawn from. In the shipped "Dive" scenario the
-   * handoff is authored 6.3yd behind where the QB token stands, so the ball
-   * visibly leaves from empty grass behind him.
-   *
-   * Convert to a plain `it` when the thrower anchor falls back to the token's
-   * rest position.
+   * Regression guard for the standing-thrower fix. render.ts used to warp a
+   * thrower only if he had a player-driven path, so the Dive scenario's handoff
+   * released from 6.3yd behind the QB token — the ball visibly left from empty
+   * grass. The anchor now falls back to the token's rest position.
    */
-  it.fails('a flight released by a standing thrower leaves from the wrong place', () => {
+  it('a flight released by a standing thrower leaves from the thrower', () => {
     const offenders: string[] = []
+    let sawStanding = 0
     for (const { name, tokens, paths, flight } of scenarioFlights()) {
       if (moves(paths, flight.tokenId)) continue
       const at = flight.timing.delayMs + 1
       if (visibleFlightAt(paths, at)?.id !== flight.id) continue
+      sawStanding++
       const sc = computeScene(tokens, paths, { tMs: at, playing: true, ballStartId: null })
       const q = sc.tokenPositions.get(flight.tokenId!)
       if (!sc.ball || !q) continue
       const d = Math.hypot(sc.ball.pos.x - q.x, sc.ball.pos.y - q.y)
       if (d > 1.5) offenders.push(`${name} / ${flight.type} ${flight.id}: ${d.toFixed(2)}yd`)
     }
+    expect(sawStanding).toBeGreaterThan(0)
     expect(offenders).toEqual([])
   })
 
@@ -239,42 +238,86 @@ describe('TRUE today — a flight never disturbs the receiver', () => {
   })
 })
 
-describe('KNOWN DEFECT — a stationary receiver is never warped onto', () => {
-  it('the flight keeps its authored end, so the ball lands short of him', () => {
-    const tokens = [tok('qb', 26, 93, 'QB'), tok('rb', 30, 88, 'RB')]
-    const raw = [P('toss', 'toss', [[26, 92], [34, 84]], { tokenId: 'qb', endTokenId: 'rb' })]
-    const { paths } = schedule(raw)
-    const { gap, far, receiver } = landing(tokens, paths, 'toss', 'rb', 'qb')
-    // render.ts only warps a receiver that has an entry in drivenByToken; a
-    // receiver who never moved has none, so the drawn end survives untouched
-    expect(far).toEqual({ x: 34, y: 84 })
-    expect(receiver.x).toBeCloseTo(30, 5)
-    expect(gap).toBeGreaterThan(5)
+describe('FIXED — both anchors are read at their own instants', () => {
+  /**
+   * The thrower anchor must be the thrower at RELEASE, and the receiver anchor
+   * the receiver at ARRIVAL — never the live tMs, and never each other's instant.
+   * A QB who is still rolling when the ball lands is the case that catches it:
+   * reading the thrower at arrival starts the ball from wherever he got to.
+   *
+   * Timings are set by hand rather than through reschedule, because reschedule
+   * rewrites a userLocked flight's timing (flights are exempt from locks) and
+   * would quietly move the pass out of the QB's rollout.
+   */
+  it('a rolling QB releases the ball from where he was, not where he got to', () => {
+    const tokens = [tok('qb', 26, 92, 'QB'), tok('wr', 20, 70, 'WR')]
+    const paths: PlayPath[] = [
+      P('drop', 'drop', [[26, 92], [26, 88]], { tokenId: 'qb', timing: { delayMs: 0, durationMs: 400 } }),
+      // still rolling at the ball's arrival (1100ms)
+      P('rollout', 'run', [[26, 88], [40, 74]], { tokenId: 'qb', timing: { delayMs: 400, durationMs: 2000 } }),
+      P('pass', 'pass', [[26, 91], [20, 70]], {
+        tokenId: 'qb', endTokenId: 'wr', timing: { delayMs: 500, durationMs: 600 },
+      }),
+    ]
+    const atRelease = 501
+    const sc = computeScene(tokens, paths, { tMs: atRelease, playing: true, ballStartId: 'qb' })
+    const qb = sc.tokenPositions.get('qb')!
+    expect(sc.ball!.flying).toBe(true)
+    expect(Math.hypot(sc.ball!.pos.x - qb.x, sc.ball!.pos.y - qb.y)).toBeLessThan(1.0)
+
+    // and the QB really was still moving, so this is not a trivial pass
+    const atArrival = computeScene(tokens, paths, { tMs: 1100, playing: true, ballStartId: 'qb' })
+      .tokenPositions.get('qb')!
+    expect(Math.hypot(atArrival.x - qb.x, atArrival.y - qb.y)).toBeGreaterThan(5)
   })
 
-  it('so a receiver standing ON the aim point only passes by construction', () => {
+  it('a rolling receiver is met where he ends up, not where he was', () => {
+    const tokens = [tok('qb', 26, 92, 'QB'), tok('wr', 20, 88, 'WR')]
+    const paths: PlayPath[] = [
+      P('route', 'route', [[20, 88], [20, 70]], { tokenId: 'wr', timing: { delayMs: 0, durationMs: 2000 } }),
+      P('pass', 'pass', [[26, 91], [20, 72]], {
+        tokenId: 'qb', endTokenId: 'wr', timing: { delayMs: 100, durationMs: 1200 },
+      }),
+    ]
+    const sc = computeScene(tokens, paths, { tMs: 1299, playing: true, ballStartId: 'qb' })
+    const wr = sc.tokenPositions.get('wr')!
+    expect(Math.hypot(sc.ball!.pos.x - wr.x, sc.ball!.pos.y - wr.y)).toBeLessThan(0.1)
+  })
+})
+
+describe('FIXED — a stationary receiver is warped onto', () => {
+  it('the flight is stretched to reach him even though he never moved', () => {
+    // he has no player-driven path, so the end anchor falls back to his rest
+    // position instead of leaving the stroke wherever it was drawn
+    const tokens = [tok('qb', 26, 93, 'QB'), tok('rb', 30, 88, 'RB')]
+    const { paths } = schedule([P('toss', 'toss', [[26, 92], [34, 84]], { tokenId: 'qb', endTokenId: 'rb' })])
+    const { gap, far, receiver } = landing(tokens, paths, 'toss', 'rb', 'qb')
+    expect(receiver.x).toBeCloseTo(30, 5)
+    expect(far.x).toBeCloseTo(30, 2)
+    expect(gap).toBeLessThan(0.05)
+  })
+
+  it('and one already drawn onto him is left alone', () => {
     const tokens = [tok('qb', 26, 93, 'QB'), tok('rb', 30, 88, 'RB')]
     const { paths } = schedule([P('toss', 'toss', [[26, 92], [30, 88]], { tokenId: 'qb', endTokenId: 'rb' })])
     expect(landing(tokens, paths, 'toss', 'rb', 'qb').gap).toBeLessThan(0.001)
   })
 })
 
-describe('KNOWN DEFECT — the warp uses raw geometry, the receiver renders translated', () => {
-  it('leaves a gap when a route is authored off the chain seam', () => {
-    // route starts 0.2yd off where the motion actually ends; bindStartToChain
-    // translates the rendered route onto the chain but the warp does not
+describe('FIXED — the warp and the player now agree', () => {
+  it('a route authored off the chain seam still lands on him', () => {
+    // the route starts 0.2yd off where the motion ends; the seam is closed by
+    // translation, and the end anchor now reads the translated geometry too
     const raw = [
       P('motion', 'motion', [[26, 88], [26, 84]], { tokenId: 'rb' }),
       P('route', 'route', [[26.02, 84.2], [26, 74]], { tokenId: 'rb' }),
       P('toss', 'toss', [[26, 92], [26, 74]], { tokenId: 'qb', endTokenId: 'rb' }),
     ]
     const { paths } = schedule(raw)
-    const { gap } = landing(TOKENS, paths, 'toss', 'rb', 'qb')
-    expect(gap).toBeGreaterThan(0.15)
-    expect(gap).toBeLessThan(0.3)
+    expect(landing(TOKENS, paths, 'toss', 'rb', 'qb').gap).toBeLessThan(0.001)
   })
 
-  it('is exact when the route is authored onto the seam', () => {
+  it('a route authored onto the seam is unaffected', () => {
     const raw = [
       P('motion', 'motion', [[26, 88], [26, 84]], { tokenId: 'rb' }),
       P('route', 'route', [[26, 84], [26, 74]], { tokenId: 'rb' }),
@@ -283,10 +326,9 @@ describe('KNOWN DEFECT — the warp uses raw geometry, the receiver renders tran
     const { paths } = schedule(raw)
     expect(landing(TOKENS, paths, 'toss', 'rb', 'qb').gap).toBeLessThan(0.001)
   })
-})
 
-describe('KNOWN DEFECT — two positional selectors disagree on equal delayMs', () => {
-  it('the flight anchors on a different movement than the one he renders', () => {
+  it('two movements sharing a delayMs anchor on the one he renders', () => {
+    // both used to answer differently: greatest-start vs last-in-list
     const tokens = [tok('qb', 26, 93, 'QB'), tok('wr', 14, 88, 'WR')]
     const a = P('a', 'route', [[14, 88], [14, 78]], {
       tokenId: 'wr', userLocked: true, timing: { delayMs: 300, durationMs: 1000 },
@@ -296,10 +338,7 @@ describe('KNOWN DEFECT — two positional selectors disagree on equal delayMs', 
     })
     const toss = P('toss', 'toss', [[26, 92], [18, 76]], { tokenId: 'qb', endTokenId: 'wr' })
     const { paths } = schedule([a, b, toss])
-    // chainPosAt takes the last in list order; the token loop takes the greatest
-    // delayMs, so they diverge on a tie
-    const { gap } = landing(tokens, paths, 'toss', 'wr', 'qb')
-    expect(gap).toBeGreaterThan(0.3)
+    expect(landing(tokens, paths, 'toss', 'wr', 'qb').gap).toBeLessThan(0.001)
   })
 })
 

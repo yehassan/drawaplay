@@ -1,5 +1,7 @@
-import { pointAtLength, polylineLength, catmullRomPath } from './geometry'
-import { pathEased, timelineDuration } from './timing'
+import { catmullRomPath } from './geometry'
+import { renderedPosAt } from './actorPosition'
+import { timelineDuration } from './timing'
+import { pathEased } from './easing'
 import { ballStateAt, type BallState } from './ball'
 import { PLAYER_DRIVEN } from './pathStyles'
 import type { Pt } from './field'
@@ -27,34 +29,6 @@ export interface SceneOpts {
   ballStartId: string | null
 }
 
-function chainPosAt(
-  list: PlayPath[],
-  t: number,
-  excludeId?: string,
-): Pt | null {
-  let active: PlayPath | null = null
-  for (const q of list) {
-    if (q.id === excludeId || q.points.length < 2) continue
-    if (q.timing.delayMs <= t) active = q
-  }
-  if (!active) return null
-  return pointAtLength(active.points, pathEased(active, t) * polylineLength(active.points))
-}
-
-/**
- * H1: translate a segment so its start meets where the chain actually has the
- * player, which is what makes a second movement continue from the first with no
- * seam. A first movement has no predecessor, so it stays where it was authored.
- */
-function bindStartToChain(list: PlayPath[], active: PlayPath): Pt[] {
-  const anchorPos = chainPosAt(list, active.timing.delayMs, active.id)
-  if (!anchorPos) return active.points
-  const dx = anchorPos.x - active.points[0].x
-  const dy = anchorPos.y - active.points[0].y
-  if (Math.abs(dx) < 1e-6 && Math.abs(dy) < 1e-6) return active.points
-  return active.points.map((p) => ({ x: p.x + dx, y: p.y + dy }))
-}
-
 /**
  * Pure render state for a play at time t — the single source of truth shared
  * by the SVG editor and the PNG/video exporters.
@@ -75,6 +49,12 @@ export function computeScene(
     else drivenByToken.set(p.tokenId, [p])
   }
 
+  // where a player stands when nothing is animating them
+  const restPos = (id: string): Pt | null => {
+    const t = tokens.find((tk) => tk.id === id)
+    return t ? { x: t.x, y: t.y } : null
+  }
+
   // animated positions for every token this frame
   const tokenPositions = new Map<string, Pt>()
   for (const t of tokens) {
@@ -83,20 +63,8 @@ export function computeScene(
       tokenPositions.set(t.id, { x: t.x, y: t.y })
       continue
     }
-    let active: PlayPath | null = null
-    for (const q of list) {
-      if (q.points.length >= 2 && q.timing.delayMs <= opts.tMs) {
-        // prefer the most recently started path — fixes late-drawn motion
-        // being picked over the route it precedes (bug #2)
-        if (!active || q.timing.delayMs > active.timing.delayMs) active = q
-      }
-    }
-    if (!active) {
-      tokenPositions.set(t.id, { x: t.x, y: t.y })
-      continue
-    }
-    const pts = bindStartToChain(list, active)
-    tokenPositions.set(t.id, pointAtLength(pts, pathEased(active, opts.tMs) * polylineLength(pts)))
+    const pos = renderedPosAt(list, opts.tMs)
+    tokenPositions.set(t.id, pos ?? { x: t.x, y: t.y })
   }
 
   // ball-only flights: two live anchors (thrower release + target arrival),
@@ -113,27 +81,29 @@ export function computeScene(
       let ex = 0
       let ey = 0
 
+      // Both anchors are evaluated at their FIXED instants (release / arrival),
+      // never the live tMs, so the arc never chases a moving player mid-flight.
+      //
+      // A thrower or receiver with no animated movement has no trajectory to
+      // anchor to, so it falls back to the token's rest position. Without this
+      // the flight keeps whatever point it was drawn from — which is how the
+      // Dive scenario's handoff ended up releasing 6.3yd behind the QB.
       if (f.tokenId) {
-        const list = drivenByToken.get(f.tokenId)
-        if (list && list.length > 0) {
-          const evalAt = f.timing.delayMs
-          const pos = chainPosAt(list, evalAt)
-          if (pos) {
-            sx = pos.x - f.points[0].x
-            sy = pos.y - f.points[0].y
-          }
+        const anchor = renderedPosAt(drivenByToken.get(f.tokenId) ?? [], f.timing.delayMs)
+          ?? restPos(f.tokenId)
+        if (anchor) {
+          sx = anchor.x - f.points[0].x
+          sy = anchor.y - f.points[0].y
         }
       }
       if (f.endTokenId) {
-        const list2 = drivenByToken.get(f.endTokenId)
-        if (list2 && list2.length > 0) {
-          const arrival = f.timing.delayMs + f.timing.durationMs
-          const evalAt = arrival
-          const pos = chainPosAt(list2, evalAt)
-          if (pos) {
-            ex = pos.x - f.points[n - 1].x
-            ey = pos.y - f.points[n - 1].y
-          }
+        const anchor = renderedPosAt(
+          drivenByToken.get(f.endTokenId) ?? [],
+          f.timing.delayMs + f.timing.durationMs,
+        ) ?? restPos(f.endTokenId)
+        if (anchor) {
+          ex = anchor.x - f.points[n - 1].x
+          ey = anchor.y - f.points[n - 1].y
         }
       }
 

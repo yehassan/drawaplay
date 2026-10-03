@@ -1,6 +1,6 @@
 import { pointAtLength, polylineLength } from './geometry'
 import type { Pt } from './field'
-import { pathEased } from './timing'
+import { pathEased } from './easing'
 import { FLIGHT_TYPES } from './pathStyles'
 import type { PlayPath, Token } from '../stores/editorStore'
 

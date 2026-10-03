@@ -203,26 +203,6 @@ export function pathProgress(p: PlayPath, tMs: number): number {
   return Math.min(1, Math.max(0, raw))
 }
 
-export function pathEased(p: PlayPath, tMs: number): number {
-  const dur = p.timing.durationMs
-  const t = tMs - p.timing.delayMs
-  if (dur <= 0 || t <= 0) return 0
-  if (t >= dur) return 1
-
-  // Trapezoid velocity profile: everyone accelerates over the SAME absolute
-  // time (~220ms), runs flat-out, then eases out near their own end. Keeps
-  // perceived speed identical across short and long routes off the snap.
-  const ramp = Math.min(220, dur / 2)
-  const total = dur - ramp // area under the velocity curve
-  if (total <= 0) return t / dur
-
-  let area: number
-  if (t < ramp) area = (t * t) / (2 * ramp)
-  else if (t <= dur - ramp) area = ramp / 2 + (t - ramp)
-  else area = total - ((dur - t) * (dur - t)) / (2 * ramp)
-
-  return Math.min(1, Math.max(0, area / total))
-}
 
 export function timelineDuration(paths: PlayPath[]): number {
   return Math.max(1500, ...paths.map((p) => p.timing.delayMs + p.timing.durationMs), 1)

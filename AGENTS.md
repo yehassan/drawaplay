@@ -30,7 +30,9 @@ npm test         # vitest run (29 tests, 4 suites)
 src/lib/            pure, dependency-light logic (unit-tested)
   field.ts          field geometry + camera math
   geometry.ts       RDP simplify, Catmull-Rom→bézier, polyline utils
-  timing.ts         scheduling engine + easing
+  timing.ts         scheduling engine
+  easing.ts         pathEased — pure progress curve, no scheduler deps
+  actorPosition.ts  renderedPosAt — the ONE 'where is this player at t' answer
   infer.ts          path-type intent inference
   target.ts         flight target resolution (directional cone)
   pathStyles.ts     PathType union, per-type styles, PLAYER_DRIVEN set
@@ -103,6 +105,8 @@ Speeds (`naturalDuration`): `ROUTE 6`, `DROP 2.4`, `RUN 5.5`, `BALL 14` yd/s.
 - Rendering is SVG: a single transform group `translate(zoom) scale`; all strokes in field units
 
 **Flight two-anchor warp** (in `FieldCanvas`): pass/handoff/toss arcs have their start pinned to the thrower's release point and end pinned to the target's arrival point, both evaluated at their **fixed instants** (release / arrival time — NOT live-tracking `min(tMs, …)`). Flights are invisible until launched, then self-draw with the ball. Blocks re-trim their end to the defender's rim each frame.
+
+Both anchors and the token loop go through **`renderedPosAt`** (`lib/actorPosition.ts`) — there is exactly one implementation. It was two, and they disagreed: the ball was aimed using a movement the player wasn't drawn on, and it ignored the translation that closes a seam between movements (0.47yd and 0.20yd errors). A thrower or receiver with no animated movement falls back to the token's rest position, so a flight can no longer be left pointing at empty grass (the Dive scenario's handoff used to release 6.3yd behind the QB). Because both sides share the function they agree by construction, so `tests/actorPosition.test.ts` is what polices it — the flight-exchange suite cannot detect the shared function being wrong. Six mutations of these rules are each caught by at least one test.
 
 ## Ball model (`lib/ball.ts`)
 

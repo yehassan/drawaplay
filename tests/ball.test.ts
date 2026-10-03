@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { ballStateAt, defaultBallStart } from '../src/lib/ball'
-import { applySchedule, pathEased } from '../src/lib/timing'
+import { applySchedule } from '../src/lib/timing'
+import { pathEased } from '../src/lib/easing'
 import type { PlayPath, Token } from '../src/stores/editorStore'
 
 const P = (
