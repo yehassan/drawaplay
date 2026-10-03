@@ -358,7 +358,7 @@ describe('addTransfer with an explicit giver', () => {
   })
 
   it('still infers the holder when no giver is named', () => {
-    const qb = add('QB', 26)
+    add('QB', 26)
     const rb = add('RB', 30)
     const id = st().addTransfer('handoff', rb.id)!
     expect(st().paths.find((x) => x.id === id)!.tokenId).toBe(qb.id)
