@@ -370,54 +370,55 @@ describe('KNOWN — a drawn flight can have no receiver at all', () => {
   })
 })
 
-describe('KNOWN — no scenario flight is exempt from rescheduling', () => {
-  it('userLocked is applied only where a seed carried real timing', () => {
-    let flights = 0
-    let lockedFlights = 0
-    for (const s of SCENARIOS) {
-      for (const p of s.build().paths) {
-        if (!['pass', 'toss', 'handoff', 'snap'].includes(p.type)) continue
-        flights++
-        if (p.userLocked) lockedFlights++
-      }
-    }
-    expect(flights).toBeGreaterThan(0)
-    expect(lockedFlights).toBe(0)
-  })
-
-  it('and every scenario flight is actually rescheduled', () => {
-    let changed = 0
-    let total = 0
-    for (const s of SCENARIOS) {
+describe('TRACKING — hand-seeded flights survive rescheduling', () => {
+  /**
+   * The hand-drawn BDB scenarios are userLocked throughout, so the scheduler
+   * had no say over them at all. The extracted tracking plays lock their flight
+   * timing too — otherwise a play's real ball timing would be re-derived from
+   * the app's own rule and the whole point of replaying it would be lost.
+   */
+  it('every extracted tracking play has its flight timing preserved', () => {
+    const tracking = SCENARIOS.filter((s) => s.name.startsWith('BDB '))
+    expect(tracking.length).toBeGreaterThanOrEqual(4)
+    for (const s of tracking) {
       const seeded = s.build().paths.map((p, i) => ({
-        ...p,
-        id: `s${i}`,
-        timing: p.timing ?? { delayMs: 0, durationMs: 600 },
-        userLocked: !!p.timing,
+        ...p, id: `t${i}`, timing: p.timing ?? { delayMs: 0, durationMs: 600 },
       })) as PlayPath[]
       const sched = reschedule(seeded)
       for (const p of seeded) {
-        if (!['pass', 'toss', 'handoff', 'snap'].includes(p.type)) continue
-        total++
-        const t = sched.get(p.id)!
-        if (t.delayMs !== p.timing.delayMs || t.durationMs !== p.timing.durationMs) changed++
+        if (!FLIGHT_TYPES.has(p.type)) continue
+        expect(sched.get(p.id), `${s.name} ${p.id}`).toEqual(p.timing)
       }
     }
-    expect(total).toBeGreaterThan(0)
-    expect(changed).toBe(total)
+  })
+
+  it('and at least one of them is a long throw, so the deep-ball path is covered', () => {
+    const tracking = SCENARIOS.filter((s) => s.name.startsWith('BDB '))
+    const flights = tracking.flatMap((s) =>
+      s.build().paths.filter((p) => FLIGHT_TYPES.has(p.type) && p.timing).map((p) => p.timing!.durationMs),
+    )
+    expect(Math.max(...flights)).toBeGreaterThan(2500)
   })
 })
 
-describe('KNOWN — flight timing locks are ignored', () => {
-  it('a locked flight is still rescheduled, because flights are exempt', () => {
+describe('FIXED — flight timing locks are honoured', () => {
+  it('a locked flight keeps the timing it was given', () => {
+    // flights used to be exempt from locking, which made a hand-set flight
+    // duration in BottomDock revert on the next schedule and made it impossible
+    // to replay a play's real ball timing from tracking data
     const { s } = schedule([
       P('p', 'pass', [[26, 92], [20, 70]], {
         tokenId: 'qb', endTokenId: 'wr', userLocked: true,
         timing: { delayMs: 9999, durationMs: 1234 },
       }),
     ])
+    expect(s.get('p')!.delayMs).toBe(9999)
+    expect(s.get('p')!.durationMs).toBe(1234)
+  })
+
+  it('an unlocked flight is still derived from football logic', () => {
+    const { s } = schedule([P('p', 'pass', [[26, 92], [20, 70]], { tokenId: 'qb', endTokenId: 'wr' })])
     expect(s.get('p')!.delayMs).not.toBe(9999)
-    expect(s.get('p')!.durationMs).not.toBe(1234)
   })
 
   it('a locked movement, by contrast, is honoured', () => {

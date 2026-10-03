@@ -41,6 +41,15 @@ function activeAt(list: PlayPath[], t: number, excludeId?: string): PlayPath | n
  * player, which is what makes a second movement continue from the first with no
  * seam. A first movement has no predecessor, so it stays where it was authored.
  */
+/**
+ * The geometry a movement is DRAWN on: seam-closed, so a stroke meets the one
+ * before it. The token already renders on this; the stroke must not use the raw
+ * authored points or the line visibly fails to join.
+ */
+export function boundPoints(list: PlayPath[], active: PlayPath): Pt[] {
+  return bindStartToChain(list, active)
+}
+
 function bindStartToChain(list: PlayPath[], active: PlayPath): Pt[] {
   const prior = activeAt(list, active.timing.delayMs, active.id)
   if (!prior) return active.points

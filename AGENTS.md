@@ -38,7 +38,9 @@ src/lib/            pure, dependency-light logic (unit-tested)
   pathStyles.ts     PathType union, per-type styles, PLAYER_DRIVEN set
   ball.ts           ball ownership / flight state
   formations.ts     quickstart personnel builder
-  scenarios.ts      seed plays for the canvas scenario picker
+  scenarios.ts      hand-drawn seed plays for the canvas scenario picker
+  scenarioBuilders.ts  shared Scenario/seed types + T/P/build helpers
+  trackingScenarios.ts  GENERATED real plays from the BDB feed (weeks 2-3)
   positions.ts      palette position metadata
 src/stores/editorStore.ts   single zustand store (state + all actions)
 src/components/
@@ -123,6 +125,12 @@ Both anchors and the token loop go through **`renderedPosAt`** (`lib/actorPositi
 - Pan: `H` tool, wheel scroll, middle-drag. Zoom: `⌘+wheel`. Fit: `F`
 - Full shortcut list lives in `InspectorPanel.tsx` (and `useShortcuts.ts`)
 
+## Real tracking plays
+
+`src/lib/trackingScenarios.ts` is **generated** — four plays lifted from `bdbtrackingdata/` (BDB weeks 2-3), one per shape worth checking. Every coordinate is a real 10Hz tracked position and every timing is the real frame time, seeded `userLocked`, so the app replays the play as it happened rather than re-deriving it. The hand-drawn scenarios show what the app thinks a play looks like; these show whether it agrees with reality. Each has a catch followed by a run lane, so they are also the regression corpus for the chain-speed fix.
+
+Regenerate with `tools/extractTrackingScenarios.mjs` (CSV → JSON) then `tools/emitTrackingScenarios.mjs` (JSON → TS). Three things about those CSVs are counter-intuitive and are documented in the tool header: the axes are transposed relative to week 1 (x is length), the ball's `team` column is the literal string `football` so it cannot identify the offense, and the attacking axis must come from the two teams' centroids at the snap rather than the throw vector — on a jet sweep the throw points sideways and using it rotates the field 90°.
+
 ## Conventions & gotchas
 
 - `verbatimModuleSyntax` + `noUnusedLocals` + `erasableSyntaxOnly` are ON — use `import type`, no enums, no unused imports
@@ -130,6 +138,8 @@ Both anchors and the token loop go through **`renderedPosAt`** (`lib/actorPositi
 - oxlint `react/rules-of-hooks` enforced
 - When editing `timing.ts` `reschedule`, preserve the phase order and the `assign()` helper that guards locked paths — scheduling regressions are the most common breakage
 - `addPath`/`loadPlay` generate fresh `uid()`s and `loadPlay` must **remap seed token ids** so path anchors survive
+- **Flight timings are userLocked like everything else.** They used to be exempt, which made a hand-set flight duration in BottomDock revert on the next schedule and made real ball timing unreplayable. Do not re-exempt them.
+- Movement strokes must be drawn on `boundPoints` (seam-closed), the same geometry the token renders on — raw points leave a 0.92yd break where a movement was authored off its predecessor
 - Test conventions: pure lib logic → vitest in `tests/`; component/interaction → manual via the scenario picker (top-left of canvas)
 - Color/design tokens are defined in `src/index.css` under `@theme` (`chrome-*`, `accent-*`, `offense/defense/ball`, `field-*`, `chalk`); fonts are `Archivo` (sans) + `Oswald` (display)
 

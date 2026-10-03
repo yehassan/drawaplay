@@ -51,12 +51,14 @@ const isFlight = (t: PathType): boolean => t === 'pass' || t === 'handoff' || t 
 export function reschedule(paths: PlayPath[]): Map<string, Timing> {
   const result = new Map<string, Timing>()
   // L4: user-locked timings are fixed constraints — preserved verbatim, and
-  // every other rule still reads them as inputs
-  // flight timing is derived from football logic — never locked, even if a
-  // stale flag lingers in an in-memory doc
-  const lockedIds = new Set(
-    paths.filter((p) => p.userLocked && !isFlight(p.type)).map((p) => p.id),
-  )
+  // every other rule still reads them as inputs.
+  //
+  // Flights are locked too. They used to be exempt because their timing is
+  // derived from football logic, which made a hand-set flight duration in
+  // BottomDock silently revert on the next schedule, and made it impossible to
+  // replay a play's real ball timing from tracking data. Derivation only
+  // applies to paths nobody has claimed.
+  const lockedIds = new Set(paths.filter((p) => p.userLocked).map((p) => p.id))
   for (const p of paths) {
     result.set(
       p.id,

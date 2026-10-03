@@ -1,5 +1,5 @@
 import { catmullRomPath } from './geometry'
-import { progressAt, renderedPosAt } from './actorPosition'
+import { boundPoints, progressAt, renderedPosAt } from './actorPosition'
 import { timelineDuration } from './timing'
 import { pathEased } from './easing'
 import { ballStateAt, type BallState } from './ball'
@@ -120,6 +120,18 @@ export function computeScene(
   const rendered = paths.map((f) => {
     const w = flightWarps.get(f.id)
     if (w) return { ...f, points: w.pts, d: w.d }
+
+    // Movement strokes are drawn on the SAME seam-closed geometry the token
+    // uses. Drawn on raw geometry the line visibly fails to meet the previous
+    // one where a movement was authored off its predecessor — 0.92yd on real
+    // tracking data, where the receiver genuinely covers a yard between frames.
+    if (PLAYER_DRIVEN.has(f.type) && f.tokenId) {
+      const list = drivenByToken.get(f.tokenId)
+      if (list) {
+        const pts = boundPoints(list, f)
+        if (pts !== f.points) return { ...f, points: pts, d: catmullRomPath(pts) }
+      }
+    }
 
     // blocks re-trim their end to the defender's current rim
     if (f.type === 'block' && f.endTokenId && animActive && f.points.length >= 2) {

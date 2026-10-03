@@ -1,67 +1,5 @@
-import type { PathType } from './pathStyles'
-import type { PlayPath, Token } from '../stores/editorStore'
-import { simplifyRDP } from './geometry'
-import type { Timing } from './timing'
-
-type Seg = [number, number][]
-
-interface SeedPath {
-  tokenId: string
-  endTokenId?: string | null
-  type: PathType
-  seg: Seg
-  /** real frame-derived timing (10Hz): preserved verbatim via userLocked */
-  timing?: Timing
-}
-
-interface SeedToken extends Token {
-  x: number
-  y: number
-}
-
-interface SeedText {
-  x: number
-  y: number
-  text: string
-}
-
-export interface Scenario {
-  name: string
-  description: string
-  build(): { tokens: Token[]; paths: (Omit<PlayPath, 'id' | 'timing'> & { timing?: Timing })[]; textNotes: { id: string; x: number; y: number; text: string }[]; name: string }
-}
-
-const T = (id: string, side: 'offense' | 'defense', pos: SeedToken['pos'], x: number, y: number): SeedToken => ({ id, side, pos, num: '', x, y })
-const P = (tokenId: string, type: PathType, seg: Seg, endTokenId?: string, timing?: Timing): SeedPath => ({ tokenId, type, seg, endTokenId, timing })
-
-/**
- * Tracking-data seeds carry 10Hz sampling jitter (e.g. the ball hook at the
- * catch). Same RDP pass the pen uses, tuned for yards: eps 1.0 kills the
- * ~0.9yd catch hook but keeps real breaks (hitch/slant cuts deviate yards).
- */
-const BDB = (seg: Seg): Seg => {
-  const pts = seg.map(([x, y]) => ({ x, y }))
-  return simplifyRDP(pts, 1.0).map((p) => [Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10] as [number, number])
-}
-/** tracking-data path: same RDP pass as BDB(), plus real frame timing */
-const PBDB = (tokenId: string, type: PathType, seg: Seg, endTokenId?: string, timing?: Timing): SeedPath =>
-  P(tokenId, type, BDB(seg), endTokenId, timing)
-
-function build(name: string, tokens: SeedToken[], seeds: SeedPath[], texts: SeedText[] = []): Scenario['build'] {
-  return () => ({
-    name,
-    tokens: tokens.map((t) => ({ ...t })),
-    paths: seeds.map((s) => ({
-      tokenId: s.tokenId,
-      endTokenId: s.endTokenId ?? null,
-      type: s.type,
-      points: s.seg.map(([x, y]) => ({ x, y })),
-      d: '',
-      ...(s.timing ? { timing: s.timing, userLocked: true } : {}),
-    })),
-    textNotes: texts.map((t, i) => ({ id: `txt${i}`, ...t })),
-  })
-}
+import { P, PBDB, T, build, type Scenario, type SeedToken } from './scenarioBuilders'
+import { TRACKING_SCENARIOS } from './trackingScenarios'
 
 // shared personnel
 const OFFENSE_LINE: SeedToken[] = [
@@ -343,8 +281,9 @@ export const SCENARIOS: Scenario[] = [
       ],
     ),
   },
+  // real tracking plays, one per shape worth checking
+  ...TRACKING_SCENARIOS,
 ]
-
 /** convenience for the picker */
 export function loadScenario(scenario: Scenario) {
   const built = scenario.build()
