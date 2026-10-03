@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { catchMoment, flightLength, type CatchSample } from '../src/lib/catchPoint'
+import { catchMoment, type CatchSample } from '../src/lib/catchPoint'
 
 /**
  * All expectations below are hand-computed against the line equations noted
@@ -10,13 +10,6 @@ import { catchMoment, flightLength, type CatchSample } from '../src/lib/catchPoi
 const at = (tMs: number, x: number, y: number): CatchSample => ({ tMs, pos: { x, y } })
 const LINE = (ax: number, ay: number, bx: number, by: number) =>
   [{ x: ax, y: ay }, { x: bx, y: by }] as [{ x: number; y: number }, { x: number; y: number }]
-
-describe('flightLength', () => {
-  it('is the distance between the drawn ends', () => {
-    expect(flightLength([{ x: 0, y: 0 }, { x: 3, y: 4 }])).toBe(5)
-    expect(flightLength([{ x: 10, y: 10 }, { x: 10, y: 10 }])).toBe(0)
-  })
-})
 
 describe('catchMoment — ordinary geometry', () => {
   // line (26,92)->(30,88) is x + y = 118, so distance is |x+y-118|/√2

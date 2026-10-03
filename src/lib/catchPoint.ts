@@ -43,12 +43,15 @@ const DEFAULT_TOLERANCE = 2
 /**
  * Find the moment a receiver is nearest a drawn flight line.
  *
- * Two-stage scoring, and the order matters. Candidates are first restricted to
- * those within `toleranceYd` of the line, then among those we take the one
- * closest to the aim point. The reverse order silently breaks on collinear
- * geometry — a toss drawn down the same line the receiver runs puts every
- * sample at zero distance, so the first stage cannot separate them and the
- * aim point is the only thing left that expresses what was meant.
+ * Two-stage scoring, and the order matters — but not for the reason first
+ * assumed. A review showed both orders return the same answer on collinear
+ * geometry, because when every sample is equidistant the tolerance stage cannot
+ * separate them and the aim stage does the work either way.
+ *
+ * The order actually earns its keep when the sample nearest the aim point is
+ * *off* target. Tolerance-first discards it and picks among the on-target
+ * samples; aim-first would pick it and then have nothing left, returning null or
+ * a sample the coach was not aiming at.
  *
  * With no sample on target, this degrades to the globally nearest sample, which
  * is still the closest approach rather than an arbitrary pick.
@@ -93,9 +96,4 @@ export function catchMoment(
     point: { x: chosen.pos.x, y: chosen.pos.y },
     offLine: distToSegment(chosen.pos, a, b),
   }
-}
-
-/** length of a drawn flight, for reading duration off the coach's own aim */
-export function flightLength(line: [Pt, Pt]): number {
-  return dist(line[0], line[1])
 }
