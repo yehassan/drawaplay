@@ -39,7 +39,7 @@ src/lib/            pure, dependency-light logic (unit-tested)
   ball.ts           ball ownership / flight state
   formations.ts     quickstart personnel builder
   scenarios.ts      hand-drawn seed plays for the canvas scenario picker
-  scenarioBuilders.ts  shared Scenario/seed types + T/P/build helpers
+  scenarioBuilders.ts  shared Scenario/seed types + tok()/path()/build() helpers
   trackingScenarios.ts  GENERATED real plays from the BDB feed (weeks 2-3)
   positions.ts      palette position metadata
 src/stores/editorStore.ts   single zustand store (state + all actions)
@@ -128,9 +128,11 @@ Both anchors and the token loop go through **`renderedPosAt`** (`lib/actorPositi
 
 ## Real tracking plays
 
-`src/lib/trackingScenarios.ts` is **generated** — four plays lifted from `bdbtrackingdata/` (BDB weeks 2-3), one per shape worth checking. Every coordinate is a real 10Hz tracked position and every timing is the real frame time, seeded `userLocked`, so the app replays the play as it happened rather than re-deriving it. The hand-drawn scenarios show what the app thinks a play looks like; these show whether it agrees with reality. Each has a catch followed by a run lane, so they are also the regression corpus for the chain-speed fix.
+`src/lib/trackingScenarios.ts` is **generated** — five plays lifted from `bdbtrackingdata/` (BDB weeks 2-3), one per shape worth checking. Every coordinate is a real 10Hz tracked position and every timing is the real frame time, seeded `userLocked`, so the app replays the play as it happened rather than re-deriving it. The hand-drawn scenarios show what the app thinks a play looks like; these show whether it agrees with reality. Each has a catch followed by a run lane, so they are also the regression corpus for the chain-speed fix.
 
-Regenerate with `tools/extractTrackingScenarios.mjs` (CSV → JSON) then `tools/emitTrackingScenarios.mjs` (JSON → TS). Three things about those CSVs are counter-intuitive and are documented in the tool header: the axes are transposed relative to week 1 (x is length), the ball's `team` column is the literal string `football` so it cannot identify the offense, and the attacking axis must come from the two teams' centroids at the snap rather than the throw vector — on a jet sweep the throw points sideways and using it rotates the field 90°.
+Five plays, one per shape worth checking: TE post + 87yd catch-and-run · WR post with 3.1s of air · 1.1yd shovel into an 83yd jet sweep · play-action screen to the RB · **halfback in motion with a WR hitch** (the feed's only word for a tailback is `HB`; the app models it as `RB`).
+
+Regenerate with `tools/extractTrackingScenarios.mjs` (CSV → JSON) then `tools/emitTrackingScenarios.mjs` (JSON → TS), and cross-check with `python3 tools/verifyTrackingPositions.py`. That last one exists because the canvas shows jersey numbers, so a token carrying the wrong position looks correct until you read the inspector — which is exactly how safeties went unlabelled as cornerbacks for a while. Three things about those CSVs are counter-intuitive and are documented in the tool header: the axes are transposed relative to week 1 (x is length), the ball's `team` column is the literal string `football` so it cannot identify the offense, and the attacking axis must come from the two teams' centroids at the snap rather than the throw vector — on a jet sweep the throw points sideways and using it rotates the field 90°.
 
 ## Conventions & gotchas
 
@@ -169,7 +171,8 @@ ball             ownership, default ball start, flight windows
 catchPoint       the unused catchMoment helper (scoring + collinear geometry)
 chainSpeed       seams are speed-continuous; token stays on its own stroke tip
 defenseFormations  fronts, shells, standoff
-flightExchange   the safety net — every visible flight lands on its own receiver
+flightExchange   the safety net — every visible flight lands on its own receiver,
+                 plus the tracking plays' flight locks and position mapping
 loadPlay         id remapping on template load
 persistence      IndexedDB playbook helpers
 playerPaths      setPlayerRoute / addBlock

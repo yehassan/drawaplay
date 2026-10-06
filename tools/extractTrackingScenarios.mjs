@@ -46,10 +46,26 @@ for (const file of ['bdbtrackingdata/week2.csv','bdbtrackingdata/week3.csv']) {
 
 const D=(ax,ay,bx,by)=>Math.hypot(bx-ax,by-ay)
 const near=(pl,f)=>{let b=null,bd=1e9;for(const r of pl.rows){const d=Math.abs(r[0]-f);if(d<bd){bd=d;b=r}}return b}
-const PMAP={QB:'QB',RB:'RB',FB:'FB',WR:'WR',TE:'TE',T:'T',G:'G',C:'C',S:'S',CB:'CB',DB:'CB',LB:'LB',OLB:'LB',ILB:'LB',MLB:'LB',NT:'DL',DL:'DL',DE:'DL'}
+/**
+ * Feed position -> app PosId.
+ *
+ * The feed carries more positions than the app models, so this has to lose
+ * something. It used to collapse EVERYTHING unnamed onto CB/WR by side, which
+ * quietly relabelled safeties as cornerbacks — 9 of the 20 defensive tokens in
+ * the first four plays. Map onto the app's existing ids instead, most specific
+ * first: safeties are safeties here (the app has an `S`), and a halfback is a
+ * running back. Only `LS` (long snapper) has no real home; it does not appear
+ * on a pass play, so it falls through to the side-based default.
+ */
+const PMAP={
+  QB:'QB', HB:'RB', RB:'RB', FB:'FB',
+  WR:'WR', TE:'TE', T:'T', G:'G', C:'C',
+  FS:'CB', SS:'CB', S:'S', CB:'CB', DB:'CB',
+  LB:'LB', OLB:'LB', ILB:'LB', MLB:'LB',
+  NT:'DL', DL:'DL', DE:'DL',
+}
 const LOS_Y=92
-const STOP=1.6          // yd/s below which a player counts as stopped
-const STOP_FRAMES=3     // ...sustained this long
+const STOP=1.6   // yd/s below which a player counts as stopped
 
 /**
  * Last frame on which a player was still moving meaningfully.
@@ -118,7 +134,7 @@ for (const p of raw.values()) {
 
   const people=[...p.players.values()].filter(q=>!q.ball&&q.pos!=='football')
   const endF=Math.max(...people.map(q=>q.rows[q.rows.length-1][0]))
-  const ids=new Map(); let n=0
+  const ids=new Map()
   const clean=(s)=>s.replace(/[^A-Za-z]/g,'').slice(0,4).toUpperCase()||'P'
   for(const q of people){ const base=clean(q.name); let id=base,i=2; while([...ids.values()].includes(id)) id=`${base}${i++}`; ids.set(q.id,id) }
 

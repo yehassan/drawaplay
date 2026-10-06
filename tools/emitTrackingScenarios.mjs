@@ -40,7 +40,7 @@ function rdp(pts, eps) {
   return pts.filter((_, i) => keep[i])
 }
 
-const plays = JSON.parse(fs.readFileSync('/tmp/bdb/plays.json', 'utf8'))
+const plays = JSON.parse(fs.readFileSync(process.argv[2] ?? '/tmp/plays.json', 'utf8'))
 
 const META = {
   '2018091606|1640': {
@@ -62,6 +62,11 @@ const META = {
     title: 'play-action screen to the RB, 55yd run',
     week: 'week-3 feed',
     note: 'play action, then a 7.2yd screen with 500ms of air and a long run behind it',
+  },
+  '2018091300|880': {
+    title: 'halfback in motion, WR hitch, catch and run',
+    week: 'week-2 feed',
+    note: 'the only shape here with a halfback in motion (the feed calls a tailback HB, which the app models as RB) plus a hitch route taken into a run',
   },
 }
 
@@ -86,7 +91,7 @@ let out = `/**
  * Personnel labels come from the feed and do not correspond to real rosters,
  * so these are named by shape rather than by matchup.
  */
-import { P, T, build, type Scenario } from './scenarioBuilders'
+import { path, tok, build, type Scenario } from './scenarioBuilders'
 
 export const TRACKING_SCENARIOS: Scenario[] = [
 `
@@ -118,18 +123,18 @@ for (const { p, m, simplified } of rows) {
   out += `    description: 'Tracking play ${slug} (${m.week}). ${m.note}. Real 10Hz positions, real frame timing.',\n`
   out += `    build: build('BDB ${slug}', [\n`
   for (const t of p.tokens)
-    out += `      T(${lit(t.id)}, ${lit(t.side)}, ${lit(t.pos)}, ${t.x}, ${t.y}, ${lit(t.num)}),\n`
+    out += `      tok(${lit(t.id)}, ${lit(t.side)}, ${lit(t.pos)}, ${t.x}, ${t.y}, ${lit(t.num)}),\n`
   out += '    ], [\n'
   for (const pa of simplified) {
     const end = pa.endTokenId ? lit(pa.endTokenId) : 'null'
-    out += `      P(${lit(pa.tokenId)}, ${lit(pa.type)}, ${seg(pa.seg)}, ${end}, { delayMs: ${pa.timing.delayMs}, durationMs: ${pa.timing.durationMs} }),\n`
+    out += `      path(${lit(pa.tokenId)}, ${lit(pa.type)}, ${seg(pa.seg)}, ${end}, { delayMs: ${pa.timing.delayMs}, durationMs: ${pa.timing.durationMs} }),\n`
   }
   out += '    ]),\n'
   out += '  },\n'
 }
 out += ']\n'
 
-fs.writeFileSync('/tmp/bdb/trackingScenarios.ts', out)
+fs.writeFileSync(process.argv[3] ?? 'src/lib/trackingScenarios.ts', out)
 console.log(
   `points: ${totalRaw} raw -> ${totalPts} after RDP (${Math.round((totalPts / totalRaw) * 100)}%)`,
 )

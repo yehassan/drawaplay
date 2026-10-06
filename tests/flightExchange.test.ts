@@ -5,7 +5,8 @@ import { polylineLength } from '../src/lib/geometry'
 import { FLIGHT_TYPES, PLAYER_DRIVEN } from '../src/lib/pathStyles'
 import { resolveFlightTarget } from '../src/lib/target'
 import { SCENARIOS } from '../src/lib/scenarios'
-import type { PlayPath, Token } from '../src/stores/editorStore'
+import type { PlayPath, PosId, Token } from '../src/stores/editorStore'
+import { POSITIONS } from '../src/lib/positions'
 
 /**
  * Characterization for ball exchange, written BEFORE the timing rework.
@@ -379,7 +380,7 @@ describe('TRACKING — hand-seeded flights survive rescheduling', () => {
    */
   it('every extracted tracking play has its flight timing preserved', () => {
     const tracking = SCENARIOS.filter((s) => s.name.startsWith('BDB '))
-    expect(tracking.length).toBeGreaterThanOrEqual(4)
+    expect(tracking.length).toBeGreaterThanOrEqual(5)
     for (const s of tracking) {
       const seeded = s.build().paths.map((p, i) => ({
         ...p, id: `t${i}`, timing: p.timing ?? { delayMs: 0, durationMs: 600 },
@@ -462,5 +463,52 @@ describe('RECORDED — numbers stage 3 is expected to move', () => {
     expect(s.get('pass')!.delayMs + s.get('pass')!.durationMs).toBeGreaterThan(
       s.get('route')!.delayMs + s.get('route')!.durationMs + 500,
     )
+  })
+})
+
+describe('TRACKING — feed positions survive the mapping', () => {
+  /**
+   * The extractor maps the feed's positions onto the app's smaller vocabulary,
+   * and it used to collapse anything unrecognised onto CB/WR by side. That
+   * silently relabelled safeties as cornerbacks — 9 of the 20 defensive tokens
+   * in the first four plays. The canvas hid it because those tokens carry real
+   * jersey numbers, so it only showed up in the inspector.
+   */
+  const tracking = () => SCENARIOS.filter((s) => s.name.startsWith('BDB '))
+  const positions = () =>
+    tracking().flatMap((s) => s.build().tokens.map((t) => t.pos))
+
+  it('labels safeties as safeties, not cornerbacks', () => {
+    const p = positions()
+    expect(p.filter((x) => x === 'S').length).toBeGreaterThanOrEqual(6)
+  })
+
+  it('and every tracked token carries a position the app actually models', () => {
+    for (const x of positions()) expect(POSITIONS[x as PosId], x).toBeDefined()
+  })
+
+  it('halfbacks are running backs, not receivers', () => {
+    // HB is the feed's word for a tailback. The app has no HB and RB is correct,
+    // but the distinction only matters if some play actually contains one, so
+    // assert a play does rather than trusting the mapping on faith.
+    const p = positions()
+    expect(p.filter((x) => x === 'RB').length).toBeGreaterThanOrEqual(5)
+    expect(p).not.toContain('HB' as PosId)
+  })
+
+  it('and at least one tracked play really does contain a halfback', () => {
+    // Guards the guard: if the set drifts so no play has an HB, the mapping
+    // above stops being tested at all. Play 2018091300-880 has one in motion.
+    const hb = SCENARIOS.find((s) => s.name.includes('halfback in motion'))
+    expect(hb, 'the halfback play was dropped from the set').toBeDefined()
+    expect(hb!.build().tokens.some((t) => t.pos === 'RB' && t.side === 'offense')).toBe(true)
+  })
+
+  it('still draws a full defensive front, so the mapping did not empty a side', () => {
+    for (const s of tracking()) {
+      const t = s.build().tokens
+      expect(t.filter((x) => x.side === 'defense').length).toBeGreaterThanOrEqual(6)
+      expect(t.filter((x) => x.side === 'offense').length).toBeGreaterThanOrEqual(5)
+    }
   })
 })
