@@ -21,7 +21,7 @@ The core loop: a coach picks a formation (quickstart modal), drops player tokens
 npm run dev      # vite dev server
 npm run build    # tsc -b && vite build (typecheck + build)
 npm run lint     # oxlint
-npm test         # vitest run (29 tests, 4 suites)
+npm test         # vitest run (250 tests, 21 suites)
 ```
 
 ## Directory map
@@ -48,7 +48,7 @@ src/components/
   shell/            TopBar, LeftRail, TokenPalette, CanvasStage, InspectorPanel, BottomDock, QuickStartModal
   ui/               icons, IconButton, TypeSample
 src/hooks/useShortcuts.ts   global keyboard shortcuts
-tests/              vitest suites (scheduling, ball, targeting, formations)
+tests/              vitest suites — see "Test suites" below
 ```
 
 ## Coordinate system (critical)
@@ -80,7 +80,7 @@ Key actions: `addPath` (returns new id, auto-selects), `moveTokensLive` (no hist
 
 ## The scheduling engine (`lib/timing.ts`)
 
-`reschedule(paths)` returns a `Map<id, Timing>` and runs 3 iterations of this order:
+`reschedule(paths)` returns a `Map<id, Timing>` and runs 3 iterations of this order (measured: it is already settled after the first, and movement timings are bit-identical either way — the loop is defensive, not load-bearing):
 
 1. **motion** — pre-snap, chained among itself by draw order, ALWAYS before the snap regardless of when drawn
 2. **snap** — fires after motion completes
@@ -120,9 +120,10 @@ Both anchors and the token loop go through **`renderedPosAt`** (`lib/actorPositi
 
 ## UX grammar (sticky pen)
 
-- `D` arms a **sticky pen** (draws many routes, never auto-disarms); finishing a stroke auto-selects it and pops the **one-shot type bar** (R/B/P/H/Toss/Snap/Motion/Drop minis) at the path tip
+- `D` arms a **sticky pen** (draws many routes, never auto-disarms); finishing a stroke auto-selects it and the type is then set in the path inspector. The old floating type bar at the stroke tip is gone
 - Clicks select in every tool; `⌘/Ctrl+drag` moves players while pen is armed; Delete/Backspace deletes the selection
 - Pan: `H` tool, wheel scroll, middle-drag. Zoom: `⌘+wheel`. Fit: `F`
+- A selected path's type is set by digit keys `1`..`8`, indexing `PATH_TYPE_CHOICES` in order (`route, drop, run, motion, block, pass, handoff, toss`). `snap` is deliberately NOT in that list — it is derived, never hand-picked
 - Full shortcut list lives in `InspectorPanel.tsx` (and `useShortcuts.ts`)
 
 ## Real tracking plays
@@ -150,6 +151,44 @@ Regenerate with `tools/extractTrackingScenarios.mjs` (CSV → JSON) then `tools/
 - Play identity: store `playId`; template loads (scenario picker / quickstart / library "New play") call `resetPlayIdentity()` so each becomes its own record
 - Library home = `shell/PlaybookModal.tsx`: cards with live SVG thumbnails (`lib/thumb.ts`), search, open, duplicate, double-click rename, trash w/ restore & purge
 
+## Ball exchange — what this work was, and what it changed
+
+The goal was a ball exchange that lands where a receiver actually is. It is worth recording how it went, because the first three attempts were wrong in ways that only executing them revealed.
+
+**A plan that sounded right and was not.** The proposal was to derive flight duration from `catchMoment` — sample the receiver's rendered position, find the moment he is nearest the drawn flight line, and set `duration = catchTime - release`. Built in a sandbox and measured, it made the game worse: a 5.4yd toss became a 1056ms lob (5.2 yd/s, slower than a running back), and a 57yd touchdown landed 13.4yd short because `FLIGHT_MAX_MS` truncated the flight. Two coupled errors. `duration = catchTime - release` forces release to be `ready`, deleting the deliberate **late launch** (`launchAt = targetEnd - dur`) that lets a ball leave as late as possible before the break. And scoring on *proximity to the aim point* optimises for "when does he happen to pass nearest where I stopped dragging", which on a sweep is his flat break, not his hands. Grid resolution was a red herring (≤56ms spread); the **scoring** was first-order (up to 1348ms). Abandoned — the existing model is already coherent.
+
+**What that work actually found.** `catchMoment` is unused dead code and the "arrival pinned to the receiver" rule is sound; the visible defects were elsewhere. Two implementations of "where is this player at t" disagreed (now one, `renderedPosAt`), a thrower/receiver with no movement was never warped onto the token (now falls back to rest position), movement strokes were drawn on different geometry than the token (now both use `boundPoints`), and every movement seam was a **dead stop** (now speed-continuous). It also turned out **no test would have caught the ball missing the receiver at all** — every ball-vs-receiver assertion sat *after* arrival, where the offset is a constant 0.6495yd by construction. That gap is now closed by a paired arrival/release invariant.
+
+**Method note.** Three reviews were run against this work, and each time the reviewer was instructed to *execute* rather than reason. That is the only reason the failures were found: two of my own plans were materially wrong and reading them a third time would not have shown it. The same discipline applies to the tests — every behavioural claim is mutation-checked, because roughly a third of the tests written in that state passed for the wrong reason (tautological fixtures, `Infinity` from a divide-by-zero, an equivalent mutant mistaken for a missing assertion).
+
+## Test suites
+
+```
+actorPosition    the shared position function: seam closure, tie-break, selection
+ball             ownership, default ball start, flight windows
+catchPoint       the unused catchMoment helper (scoring + collinear geometry)
+chainSpeed       seams are speed-continuous; token stays on its own stroke tip
+defenseFormations  fronts, shells, standoff
+flightExchange   the safety net — every visible flight lands on its own receiver
+loadPlay         id remapping on template load
+persistence      IndexedDB playbook helpers
+playerPaths      setPlayerRoute / addBlock
+positions        posLabel / coercePos recovery
+possession       possession transfer timing
+render           computeScene, view fitting
+routeTemplates   route library
+ruleset          offense/defense rules
+scheduling       reschedule phases and timing rules
+shortcuts        digit → path type
+targeting        resolveFlightTarget
+textNotes        canvas annotations
+theme            field theme tokens
+formations       quickstart personnel
+export           svg/png export
+```
+
 ## Status
 
-Hardening (HA–HE) + M6 persistence/playbook are complete — 39 vitest tests across 5 suites. Next up: defense formations, then M8 exports/sharing.
+Hardening (HA–HE), M6 persistence/playbook and defense formations are complete — 250 vitest tests across 21 suites. The ball exchange was reworked against real tracking data (see above). Next up: M8 exports/sharing.
+
+Known-unfixed, deliberately left: the ball's angle while carried is hardcoded to `-35°` and its offset from the holder is fixed in field space, so on a sharp cut the ball slides around the runner (45° off his heading on the Toss sweep). The fix is to rotate both by the holder's heading, which is not recorded anywhere yet — there is no single answer for "which way is this player facing".
