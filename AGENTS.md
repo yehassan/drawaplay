@@ -21,7 +21,7 @@ The core loop: a coach picks a formation (quickstart modal), drops player tokens
 npm run dev      # vite dev server
 npm run build    # tsc -b && vite build (typecheck + build)
 npm run lint     # oxlint
-npm test         # vitest run (250 tests, 21 suites)
+npm test         # vitest run (261 tests, 21 suites)
 ```
 
 ## Directory map
@@ -41,7 +41,7 @@ src/lib/            pure, dependency-light logic (unit-tested)
   scenarios.ts      hand-drawn seed plays for the canvas scenario picker
   scenarioBuilders.ts  shared Scenario/seed types + tok()/path()/build() helpers
   trackingScenarios.ts  GENERATED real plays from the BDB feed (weeks 2-3)
-  positions.ts      palette position metadata
+  positions.ts      palette position metadata + tokenLabel() (the one label a token draws)
 src/stores/editorStore.ts   single zustand store (state + all actions)
 src/components/
   canvas/           FieldCanvas (interaction hub), Field, TokenView, PathView, BallView, ScenarioPicker
@@ -143,6 +143,7 @@ Regenerate with `tools/extractTrackingScenarios.mjs` (CSV → JSON) then `tools/
 - `addPath`/`loadPlay` generate fresh `uid()`s and `loadPlay` must **remap seed token ids** so path anchors survive
 - **Flight timings are userLocked like everything else.** They used to be exempt, which made a hand-set flight duration in BottomDock revert on the next schedule and made real ball timing unreplayable. Do not re-exempt them.
 - Movement strokes must be drawn on `boundPoints` (seam-closed), the same geometry the token renders on — raw points leave a 0.92yd break where a movement was authored off its predecessor
+- `setRouteDepth` scales a route by its **break**, which is the second-to-last control point's downfield value. For a straight two-point route (`go`, `screen`) that is the endpoint itself; for anything that comes back after the break it is not. A hitch breaks 8yd deep but *finishes* 6yd, so measuring at the end overshot the top and undershot the catch at once. The 2yd floor lives in both the slider and the store and they must agree.
 - Test conventions: pure lib logic → vitest in `tests/`; component/interaction → manual via the scenario picker (top-left of canvas)
 - A token's on-field text comes from `tokenLabel()` (`lib/positions.ts`) — number, then alignment letter, then position. Do not re-derive that chain at a call site, and never assign an alignment letter that spells another position: every tailback used to carry `'T'`, so a running back drew "T" exactly like a tackle, and nothing caught it for a long time because no test looked at a label
 - Color/design tokens are defined in `src/index.css` under `@theme` (`chrome-*`, `accent-*`, `offense/defense/ball`, `field-*`, `chalk`); fonts are `Archivo` (sans) + `Oswald` (display)
@@ -180,7 +181,7 @@ playerPaths      setPlayerRoute / addBlock
 positions        posLabel / coercePos recovery
 possession       possession transfer timing
 render           computeScene, view fitting
-routeTemplates   route library
+routeTemplates   route library + setRouteDepth break-vertex scaling
 ruleset          offense/defense rules
 scheduling       reschedule phases and timing rules
 shortcuts        digit → path type
@@ -193,6 +194,6 @@ export           svg/png export
 
 ## Status
 
-Hardening (HA–HE), M6 persistence/playbook and defense formations are complete — 250 vitest tests across 21 suites. The ball exchange was reworked against real tracking data (see above). Next up: M8 exports/sharing.
+Hardening (HA–HE), M6 persistence/playbook and defense formations are complete — 261 vitest tests across 21 suites. The ball exchange was reworked against real tracking data (see above). Next up: M8 exports/sharing.
 
 Known-unfixed, deliberately left: the ball's angle while carried is hardcoded to `-35°` and its offset from the holder is fixed in field space, so on a sharp cut the ball slides around the runner (45° off his heading on the Toss sweep). The fix is to rotate both by the holder's heading, which is not recorded anywhere yet — there is no single answer for "which way is this player facing".
