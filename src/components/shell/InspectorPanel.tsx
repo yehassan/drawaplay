@@ -233,10 +233,10 @@ function PathInspector({ pathId }: { pathId: string }) {
         (() => {
           const anchor = path.tokenId ? tokens.find((t) => t.id === path.tokenId) : null
           if (!anchor || path.points.length < 2) return null
-          const lastY = path.points[path.points.length - 1].y
+          const breakY = path.points[Math.max(1, path.points.length - 2)].y
           const curDepth = Math.max(
-            4,
-            Math.min(18, (lastY - anchor.y) * forwardY(anchor.side)),
+            2,
+            Math.min(18, (breakY - anchor.y) * forwardY(anchor.side)),
           )
           return (
             <div className="mt-4 rounded-[16px] border border-chrome-700 bg-chrome-850 p-3">
@@ -245,10 +245,10 @@ function PathInspector({ pathId }: { pathId: string }) {
                 How many yards downfield the break lands — drag to adjust.
               </p>
               <div className="mt-3 flex items-center gap-2">
-                <span className="text-[10px] text-chrome-500">4 yd</span>
+                <span className="text-[10px] text-chrome-500">2 yd</span>
                 <input
                   type="range"
-                  min={4}
+                  min={2}
                   max={18}
                   step={0.5}
                   value={curDepth}

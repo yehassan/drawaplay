@@ -309,4 +309,48 @@ describe('setRouteDepth', () => {
     const latAfter = Math.abs(after.points[after.points.length - 1].x - 12)
     expect(latAfter).toBeLessThan(latBefore)
   })
+
+  it('targets the break vertex, not the endpoint', () => {
+    useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
+    const tok = useEditorStore.getState().tokens[0]
+    const id = useEditorStore.getState().setPlayerRoute(tok.id, 'go')!
+    useEditorStore.getState().applyRouteTemplate(id, 'post')
+    useEditorStore.getState().setRouteDepth(id, 8)
+    const p = useEditorStore.getState().paths.find((x) => x.id === id)!
+    // post = [[0,0],[12,0],[17,4]]: the break is the 12yd vertex, the catch is deeper
+    const breakY = 88 - p.points[1].y
+    const endY = 88 - p.points[p.points.length - 1].y
+    expect(breakY).toBeCloseTo(8, 1)
+    expect(endY).toBeGreaterThan(breakY)
+  })
+
+  it('targets the top of a hitch, which sits past its terminal', () => {
+    useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
+    const tok = useEditorStore.getState().tokens[0]
+    const id = useEditorStore.getState().setPlayerRoute(tok.id, 'go')!
+    useEditorStore.getState().applyRouteTemplate(id, 'hitch')
+    useEditorStore.getState().setRouteDepth(id, 10)
+    const p = useEditorStore.getState().paths.find((x) => x.id === id)!
+    // hitch = [[0,0],[6,0],[8,1.5],[6,2.5]]: the break is the 8yd top, the catch comes back to 6
+    const breakY = 88 - p.points[2].y
+    const endY = 88 - p.points[p.points.length - 1].y
+    expect(breakY).toBeCloseTo(10, 1)
+    expect(endY).toBeLessThan(breakY)
+  })
+
+  it('floors at 2yd, matching the slider', () => {
+    // The shortest routes are 2yd; the slider's min and the store's floor have
+    // to agree or dragging to the bottom snaps back up to a depth it cannot reach.
+    useEditorStore.getState().addToken({ side: 'offense', pos: 'WR', num: '', x: 12, y: 88 })
+    const tok = useEditorStore.getState().tokens[0]
+    const id = useEditorStore.getState().setPlayerRoute(tok.id, 'go')!
+    const depth = () => {
+      const p = useEditorStore.getState().paths.find((x) => x.id === id)!
+      return 88 - p.points[p.points.length - 1].y
+    }
+    useEditorStore.getState().setRouteDepth(id, 2)
+    expect(depth()).toBeCloseTo(2, 1)
+    useEditorStore.getState().setRouteDepth(id, 0.5) // below the floor
+    expect(depth()).toBeCloseTo(2, 1)
+  })
 })

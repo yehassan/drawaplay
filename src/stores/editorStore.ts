@@ -464,7 +464,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   setRouteDepth: (id, depthYd) => {
-    const clamped = Math.max(4, Math.min(18, depthYd))
+    const clamped = Math.max(2, Math.min(18, depthYd))
     get().beginHistory()
     set((s) => {
       const path = s.paths.find((p) => p.id === id)
@@ -472,10 +472,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const anchor = s.tokens.find((t) => t.id === path.tokenId)
       if (!anchor) return {}
       const dir = forwardY(anchor.side)
-      const last = path.points[path.points.length - 1].y
+      // the break is the last vertex before the terminal leg; for a straight
+      // two-point route that is the endpoint itself
+      const breakIdx = Math.max(1, path.points.length - 2)
+      const breakY = path.points[breakIdx].y
       // depth is measured along the player's forward axis so it is positive for
       // both sides and the slider cannot flip a route by accident
-      const curDepth = (last - anchor.y) * dir
+      const curDepth = (breakY - anchor.y) * dir
       if (curDepth < 0.5) return {}
       const scale = clamped / curDepth
       const points = path.points.map((pt, i) =>
