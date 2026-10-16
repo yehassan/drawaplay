@@ -109,55 +109,55 @@ export function buildFormation(spec: FormationSpec): BuiltFormation {
   switch (personnel) {
     case '23':
       tok('RB1', 'RB', 0, 3.6, 'F')
-      tok('RB2', 'RB', 0, 5.6, 'T')
+      tok('RB2', 'RB', 0, 5.6)
       tok('TE1', 'TE', -5.4, 0, 'Y')
       tok('TE2', 'TE', 5.4, 0, 'U')
       tok('TE3', 'TE', 6.9, 0.85, 'H')
       break
     case '22':
       tok('RB1', 'RB', 0, 3.6, 'F')
-      tok('RB2', 'RB', 0, 5.6, 'T')
+      tok('RB2', 'RB', 0, 5.6)
       tok('TE1', 'TE', 5.4, 0, 'Y')
       tok('TE2', 'TE', 7.05, 0, 'U')
       tok('WR1', 'WR', -16, 0.3, 'X')
       break
     case '21':
       tok('RB1', 'RB', 0, 3.6, 'F')
-      tok('RB2', 'RB', 0, 5.6, 'T')
+      tok('RB2', 'RB', 0, 5.6)
       tok('TE1', 'TE', -5.4, 0, 'Y')
       tok('WR1', 'WR', -9, 0.3, 'X')
       tok('WR2', 'WR', 9, 0.3, 'Z')
       break
     case '20':
       tok('RB1', 'RB', -1.2, 3.9, 'F')
-      tok('RB2', 'RB', 0, 5.6, 'T')
+      tok('RB2', 'RB', 0, 5.6)
       tok('WR1', 'WR', -17, 0.2, 'X')
       tok('WR2', 'WR', 9, 0.6, 'H')
       tok('WR3', 'WR', 17, 0.2, 'Z')
       break
     case '13':
-      tok('RB1', 'RB', 0, 4.6, 'T')
+      tok('RB1', 'RB', 0, 4.6)
       tok('TE1', 'TE', -5.4, 0, 'Y')
       tok('TE2', 'TE', 5.4, 0, 'U')
       tok('TE3', 'TE', -6.9, 0.85, 'H')
       tok('WR1', 'WR', 16, 0.2, 'X')
       break
     case '12':
-      tok('RB1', 'RB', 0, 4.6, 'T')
+      tok('RB1', 'RB', 0, 4.6)
       tok('TE1', 'TE', -5.4, 0, 'Y')
       tok('TE2', 'TE', -7.05, 0, 'U')
       tok('WR1', 'WR', 10, 0.6, 'H')
       tok('WR2', 'WR', 17, 0.2, 'Z')
       break
     case '11':
-      tok('RB1', 'RB', -1.55, 5.35, 'T')
+      tok('RB1', 'RB', -1.55, 5.35)
       tok('TE1', 'TE', 5.4, 0, 'Y')
       tok('WR1', 'WR', -17, 0.2, 'X')
       tok('WR2', 'WR', -10, 0.6, 'H')
       tok('WR3', 'WR', 17, 0.2, 'Z')
       break
     case '10':
-      tok('RB1', 'RB', -1.55, 5.35, 'T')
+      tok('RB1', 'RB', -1.55, 5.35)
       tok('WR1', 'WR', -17, 0.2, 'X')
       tok('WR2', 'WR', 9, 0.7, 'H')
       tok('WR3', 'WR', 13, 0.45, 'Y')
@@ -185,7 +185,7 @@ export function buildFormation(spec: FormationSpec): BuiltFormation {
       tok('WR5', 'WR', 11.2, 0.4, 'Z')
       break
     default:
-      tok('RB1', 'RB', 0, 4.5, 'T')
+      tok('RB1', 'RB', 0, 4.5)
       tok('WR1', 'WR', -15, 0.2, 'X')
       tok('WR2', 'WR', 15, 0.2, 'Z')
       tok('TE1', 'TE', 5.4, 0, 'Y')

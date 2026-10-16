@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { HASH_X, PERSONNEL, buildFormation, losY } from '../src/lib/formations'
+import { POSITIONS, posLabel, tokenLabel } from '../src/lib/positions'
 import { SCENARIOS } from '../src/lib/scenarios'
 import { reschedule } from '../src/lib/timing'
 
@@ -79,6 +80,54 @@ describe('personnel formations', () => {
         }
       expect(minD, `${def.key} closest ${minD.toFixed(2)}`).toBeGreaterThanOrEqual(2 * R - 0.01)
     }
+  })
+})
+
+describe('token labels', () => {
+  /**
+   * A backfield alignment letter used to be handed out that collided with a
+   * position name: every tailback carried `'T'`, and the label chain prefers
+   * the letter, so a running back rendered as "T" — the exact glyph a tackle
+   * draws. Nothing caught it because no test had ever looked at a label.
+   */
+  const formations = () =>
+    PERSONNEL.flatMap((def) =>
+      [true, false].map((uc) =>
+        buildFormation({
+          personnel: def.key,
+          underCenter: uc,
+          hash: 'center',
+          side: 'ours',
+          yardLine: 25,
+        }),
+      ),
+    )
+
+  it('never labels a token with a position it is not', () => {
+    const ids = new Set(Object.keys(POSITIONS))
+    for (const f of formations())
+      for (const t of f.tokens) {
+        const label = tokenLabel(t)
+        expect(
+          label === posLabel(t.pos) || !ids.has(label),
+          `${f.name}: ${t.id} is a ${t.pos} but draws "${label}"`,
+        ).toBe(true)
+      }
+  })
+
+  it('draws a tailback as RB and still draws a tackle as T', () => {
+    for (const f of formations()) {
+      for (const t of f.tokens) {
+        if (t.pos === 'RB') expect(tokenLabel(t), `${f.name} ${t.id}`).not.toBe('T')
+        if (t.pos === 'T') expect(tokenLabel(t), `${f.name} ${t.id}`).toBe('T')
+      }
+    }
+  })
+
+  it('prefers jersey number, then letter, then position', () => {
+    expect(tokenLabel({ num: '22', letter: 'X', pos: 'WR' })).toBe('22')
+    expect(tokenLabel({ num: '', letter: 'X', pos: 'WR' })).toBe('X')
+    expect(tokenLabel({ num: '', pos: 'WR' })).toBe('WR')
   })
 })
 

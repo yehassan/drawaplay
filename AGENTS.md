@@ -144,6 +144,7 @@ Regenerate with `tools/extractTrackingScenarios.mjs` (CSV → JSON) then `tools/
 - **Flight timings are userLocked like everything else.** They used to be exempt, which made a hand-set flight duration in BottomDock revert on the next schedule and made real ball timing unreplayable. Do not re-exempt them.
 - Movement strokes must be drawn on `boundPoints` (seam-closed), the same geometry the token renders on — raw points leave a 0.92yd break where a movement was authored off its predecessor
 - Test conventions: pure lib logic → vitest in `tests/`; component/interaction → manual via the scenario picker (top-left of canvas)
+- A token's on-field text comes from `tokenLabel()` (`lib/positions.ts`) — number, then alignment letter, then position. Do not re-derive that chain at a call site, and never assign an alignment letter that spells another position: every tailback used to carry `'T'`, so a running back drew "T" exactly like a tackle, and nothing caught it for a long time because no test looked at a label
 - Color/design tokens are defined in `src/index.css` under `@theme` (`chrome-*`, `accent-*`, `offense/defense/ball`, `field-*`, `chalk`); fonts are `Archivo` (sans) + `Oswald` (display)
 
 ## Persistence (M6)

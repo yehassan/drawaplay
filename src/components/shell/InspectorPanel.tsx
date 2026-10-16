@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useEditorStore } from '../../stores/editorStore'
-import { posLabel } from '../../lib/positions'
+import { posLabel, tokenLabel } from '../../lib/positions'
 import {
   PATH_STYLES,
   PLAYER_DRIVEN,
@@ -129,7 +129,7 @@ function PathInspector({ pathId }: { pathId: string }) {
       <p className="mb-2 text-xs text-chrome-500">
         From{' '}
         <span className="font-semibold text-offense-400">
-          {from ? from.num || from.letter || posLabel(from.pos) : 'nothing'}
+          {from ? tokenLabel(from) : 'nothing'}
         </span>{' '}
         · drag the end handle onto a player to re-anchor
       </p>

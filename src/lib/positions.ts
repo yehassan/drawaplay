@@ -25,6 +25,16 @@ export function posLabel(p: string): string {
 }
 
 /**
+ * The one label a token draws. Jersey number wins, then the alignment letter,
+ * then the position. Lives here so the canvas and the inspector share it —
+ * they each grew their own copy, which is how a tailback silently rendered as
+ * a tackle: the letter was wrong, and both copies agreed on the wrong letter.
+ */
+export function tokenLabel(t: { num?: string; letter?: string; pos: string }): string {
+  return t.num || t.letter || posLabel(t.pos)
+}
+
+/**
  * Repair a persisted position that the current build no longer supports. A
  * play saved while a position existed must not become unloadable when it is
  * removed, so unknown values fall back to the generic position for that side.
