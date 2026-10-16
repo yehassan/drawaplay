@@ -12,10 +12,8 @@ import {
   type Camera,
   type Pt,
 } from '../../lib/field'
-import { catmullRomPath, dist, minDistToPath, simplifyRDP } from '../../lib/geometry'
-import { inferPathType } from '../../lib/infer'
-import { resolveFlightTarget } from '../../lib/target'
-import { PLAYER_DRIVEN } from '../../lib/pathStyles'
+import { catmullRomPath, dist, minDistToPath, simplifyRDP, trimToRim } from '../../lib/geometry'
+import { finalizeStroke } from '../../lib/stroke'
 import { timelineDuration } from '../../lib/timing'
 import { POSITIONS } from '../../lib/positions'
 import { useEditorStore, type Token } from '../../stores/editorStore'
@@ -239,6 +237,15 @@ export function FieldCanvas() {
   const onTokenPointerDown = (e: ReactPointerEvent<SVGGElement>, id: string) => {
     const st = useEditorStore.getState()
 
+    // an armed ball action eats the click: the next teammate you hit is the one
+    // the ball goes to, whatever tool is up
+    const armed = st.ballAction
+    if (armed) {
+      e.stopPropagation()
+      if (id !== armed.throwerId) st.addFlight(armed.throwerId, id, armed.type)
+      return
+    }
+
     const moveOverride = st.tool === 'draw' && (e.metaKey || e.ctrlKey)
     if (st.tool !== 'select' && !moveOverride) return
 
@@ -371,7 +378,7 @@ export function FieldCanvas() {
         const p = st.paths.find((pp) => pp.id === s.pathId)
         const prev = p && p.points.length >= 2 ? p.points[p.points.length - 2] : null
         if (prev) {
-          const trimmed = trimToTokenRim(prev, snapCenter)
+          const trimmed = trimToRim(prev, snapCenter)
           bx = trimmed.x
           by = trimmed.y
         }
@@ -476,21 +483,11 @@ export function FieldCanvas() {
     if (s.type === 'draw') {
       // a click in pen mode selects whatever is under the cursor
       if (!s.moved) clickSelect(s.lastSx, s.lastSy)
-      else finalizeStroke(s.raw)
+      else commitStroke(s.raw)
     }
     if (s.type === 'pathEnd') st.applyScheduleNow()
     if (s.type === 'drag' || s.type === 'textDrag') setGuides({ xs: [], ys: [] })
     sessionRef.current = null
-  }
-
-  /** pull an endpoint back to a token's rim so T-bars/arrows/dots stay visible */
-  const trimToTokenRim = (prev: Pt, center: Pt): Pt => {
-    const dx = center.x - prev.x
-    const dy = center.y - prev.y
-    const len = Math.hypot(dx, dy)
-    if (len === 0) return center
-    const gap = Math.min(1.5, len / 2)
-    return { x: center.x - (dx / len) * gap, y: center.y - (dy / len) * gap }
   }
 
   /** pen-mode click: select the nearest player or path under the cursor */
@@ -535,117 +532,31 @@ export function FieldCanvas() {
     st.select(bestPath ? [bestPath] : [])
   }
 
-  /** rough → slick: simplify, snap ends to tokens, store as a clean bézier path */
-  const finalizeStroke = (raw: Pt[]) => {
+  /** rough → slick: hand the raw stroke to the pure finalizer, then commit it */
+  const commitStroke = (raw: Pt[]) => {
     setLiveStroke(null)
     if (raw.length < 3) return // accidental click
     const st = useEditorStore.getState()
-    let pts = simplifyRDP(raw, 2.5 / st.camera.zoom)
-    if (pts.length < 2) pts = [raw[0], raw[raw.length - 1]]
-
-    const radius = Math.min(28 / st.camera.zoom, 2)
-    const snapEnd = (p: Pt): Token | null => {
-      let best: Token | null = null
-      let bestD = radius
-      for (const t of st.tokens) {
-        const d = dist(p, { x: t.x, y: t.y })
-        if (d < bestD) {
-          bestD = d
-          best = t
-        }
-      }
-      return best
-    }
-
-    let startToken: Token | null = snapEnd(pts[0])
-    if (!startToken) {
-      // allow starting at the tip of an existing chain (e.g., route after motion)
-      let best: Token | null = null
-      let bestD = radius
-      for (const t of st.tokens) {
-        const chain = st.paths.filter((q) => q.tokenId === t.id && PLAYER_DRIVEN.has(q.type))
-        if (chain.length === 0) continue
-        const tip = chain[chain.length - 1].points[chain[chain.length - 1].points.length - 1]!
-        const d = dist(pts[0], tip)
-        if (d < bestD) {
-          bestD = d
-          best = t
-        }
-      }
-      if (best) startToken = best
-    }
-    const endToken = snapEnd(pts[pts.length - 1])
-    if (!startToken) {
+    const animating = st.playback.playing || st.playback.tMs > 0
+    const built = finalizeStroke(raw, {
+      zoom: st.camera.zoom,
+      tokens: st.tokens,
+      paths: st.paths,
+      // aim at what is on screen; at rest the two are the same, so the map is
+      // only computed when it can differ
+      renderedPositions: animating
+        ? computeScene(st.tokens, st.paths, {
+            tMs: st.playback.tMs,
+            playing: st.playback.playing,
+            ballStartId: st.ballStartId,
+          }).tokenPositions
+        : undefined,
+    })
+    if (!built) {
       showHint('Start routes on a player')
       return
     }
-    // magnetic chaining: next segment starts where the player's chain ends
-    // (e.g., route after motion starts at motion tip, not original spot)
-    const existingChain = st.paths.filter(
-      (q) => q.tokenId === startToken.id && PLAYER_DRIVEN.has(q.type),
-    )
-    let chainTip: Pt | null = null
-    let chainRoot: Pt | null = null
-    if (existingChain.length > 0) {
-      const lastSibling = existingChain[existingChain.length - 1]!
-      chainTip = lastSibling.points[lastSibling.points.length - 1]
-      chainRoot = existingChain[0].points[0]
-    }
-
-    if (chainTip) pts[0] = chainTip
-    else pts[0] = { x: startToken.x, y: startToken.y }
-    const type = inferPathType(pts, { startToken, endToken })
-    if (!endToken && chainRoot && dist(pts[pts.length - 1], chainRoot) < 2) {
-      pts[pts.length - 1] = chainRoot
-    }
-    if (endToken) {
-      pts[pts.length - 1] = trimToTokenRim(pts[pts.length - 2], {
-        x: endToken.x,
-        y: endToken.y,
-      })
-    }
-
-    // a flight drawn to the tip of someone's route targets that player even
-    // when no token was under the pen
-    const targetId =
-      endToken?.id ?? resolveFlightTarget(pts, startToken.id, st.paths, type)
-
-    // H3: flights get canonical geometry. Passes are STRICTLY straight lines;
-    // handoffs/tosses may keep a gentle capped loft around bodies.
-    if (type === 'pass' || type === 'handoff' || type === 'toss' || type === 'snap') {
-      if (type === 'pass' || type === 'snap') {
-        pts = [pts[0], pts[pts.length - 1]]
-      }
-      const a = pts[0]
-      const b = pts[pts.length - 1]
-      const cx = b.x - a.x
-      const cy = b.y - a.y
-      const chord = Math.hypot(cx, cy)
-      if (chord > 0.5) {
-        let maxDev = 0
-        for (let i = 1; i < pts.length - 1; i++) {
-          const cross = (cx * (pts[i].y - a.y) - cy * (pts[i].x - a.x)) / chord
-          if (Math.abs(cross) > Math.abs(maxDev)) maxDev = cross
-        }
-        if (Math.abs(maxDev) < 0.35) {
-          pts = [a, b]
-        } else {
-          const dev = Math.max(-2, Math.min(2, maxDev))
-          const nx = -cy / chord
-          const ny = cx / chord
-          // Catmull-Rom passes through the middle point → apex ≈ dev
-          pts = [a, { x: (a.x + b.x) / 2 + nx * dev, y: (a.y + b.y) / 2 + ny * dev }, b]
-        }
-      }
-    }
-
-    st.addPath({
-      tokenId: startToken.id,
-      endTokenId: targetId,
-      type,
-      points: pts,
-      d: catmullRomPath(pts),
-    })
+    st.addPath(built)
   }
 
   const onPathPointerDown = (e: ReactPointerEvent<SVGPathElement>, id: string) => {

@@ -1,22 +1,25 @@
 import type { ReactNode } from 'react'
-import { useEditorStore } from '../../stores/editorStore'
+import { useMemo } from 'react'
+import { useEditorStore, type BallActionType } from '../../stores/editorStore'
 import { posLabel, tokenLabel } from '../../lib/positions'
+import { playWarnings } from '../../lib/warnings'
+import { canApplyPathType } from '../../lib/target'
 import {
   PATH_STYLES,
   PLAYER_DRIVEN,
   PATH_TYPE_CHOICES,
   type BlockDir,
 } from '../../lib/pathStyles'
-import { ROUTE_CONCEPTS } from '../../lib/routeTemplates'
+import { ROUTE_CONCEPTS, ROUTE_KEYS } from '../../lib/routeTemplates'
 import { forwardY } from '../../lib/formations'
 import { TypeSample } from '../ui/TypeSample'
 import { Icon } from '../ui/icons'
 import { IconButton } from '../ui/IconButton'
 
-const BLOCK_DIRS: ReadonlyArray<{ key: BlockDir; label: string; title: string }> = [
-  { key: 'left', label: '←', title: 'Block to his left' },
-  { key: 'forward', label: '↑', title: 'Block straight ahead' },
-  { key: 'right', label: '→', title: 'Block to his right' },
+const BLOCK_DIRS: ReadonlyArray<{ key: BlockDir; label: string; title: string; hint: string }> = [
+  { key: 'left', label: '←', title: 'Block to his left', hint: '⇧←' },
+  { key: 'forward', label: '↑', title: 'Block straight ahead', hint: '⇧↑' },
+  { key: 'right', label: '→', title: 'Block to his right', hint: '⇧→' },
 ]
 
 const SHORTCUTS: ReadonlyArray<readonly [string, string]> = [
@@ -27,14 +30,22 @@ const SHORTCUTS: ReadonlyArray<readonly [string, string]> = [
   ['F', 'Fit to play'],
   ['Space', 'Play / pause'],
   ['Arrows', 'Nudge (⇧ = 2yd)'],
+  ['⇧1…⇧=', 'Route concept (player selected)'],
+  ['⇧← ⇧↑ ⇧→', 'Add block (player selected)'],
   ['⌘D', 'Duplicate selection'],
   ['Del', 'Delete selection'],
   ['1-9', 'Set path type (when a path is selected)'],
   ['Alt+click chip', 'Lock / unlock timing'],
   ['⌘Z', 'Undo'],
   ['⇧⌘Z', 'Redo'],
-  ['Esc', 'Deselect / exit pen'],
+  ['Esc', 'Cancel action / deselect'],
   ['Backspace', 'Delete selection'],
+]
+
+const BALL_ACTIONS: ReadonlyArray<{ type: BallActionType; label: string; title: string }> = [
+  { type: 'pass', label: 'Pass', title: 'Throw it to a teammate — click him next' },
+  { type: 'handoff', label: 'Handoff', title: 'Hand it off to a teammate — click him next' },
+  { type: 'toss', label: 'Toss', title: 'Toss it to a teammate — click him next' },
 ]
 
 function SectionLabel({ children }: { children: string }) {
@@ -59,7 +70,7 @@ function RouteLibraryGrid({ pathId, tokenId }: { pathId?: string; tokenId?: stri
         Route library
       </p>
       <div className="grid grid-cols-3 gap-1.5">
-        {ROUTE_CONCEPTS.map((c) => (
+        {ROUTE_CONCEPTS.map((c, i) => (
           <button
             key={c.key}
             type="button"
@@ -67,10 +78,13 @@ function RouteLibraryGrid({ pathId, tokenId }: { pathId?: string; tokenId?: stri
               if (pathId) applyRouteTemplate(pathId, c.key)
               else if (tokenId) setPlayerRoute(tokenId, c.key)
             }}
-            title={c.label}
+            title={`${c.label} — ${ROUTE_KEYS[i]?.hint ?? ''}`}
             className="rounded-[12px] border border-[var(--color-inspector-border)] bg-[var(--color-inspector-unselected)] px-1 py-1.5 text-[11px] font-medium text-[var(--color-inspector-text)] transition-colors hover:border-[var(--color-inspector-hover-border)] hover:bg-[var(--color-inspector-hover)]"
           >
             {c.label}
+            {ROUTE_KEYS[i] && (
+              <span className="ml-1 font-mono text-[9px] text-chrome-600">{ROUTE_KEYS[i]!.hint}</span>
+            )}
           </button>
         ))}
       </div>
@@ -138,16 +152,24 @@ function PathInspector({ pathId }: { pathId: string }) {
         {PATH_TYPE_CHOICES.map((type, i) => {
           const st = PATH_STYLES[type]
           const active = path.type === type
+          const allowed = active || canApplyPathType(path, type, allPaths, tokens)
           return (
             <button
               key={type}
               type="button"
+              disabled={!allowed}
               onClick={() => updatePathType(path.id, type)}
-              title={`Mark as ${st.label}`}
+              title={
+                allowed
+                  ? `Mark as ${st.label}`
+                  : `A ${st.label.toLowerCase()} needs to end on a teammate — this line ends on grass`
+              }
               className={`flex items-center gap-2 rounded-[16px] border px-2.5 py-2 text-xs font-medium transition-colors ${
                 active
                   ? 'border-accent-400/60 bg-accent-surface text-accent-400'
-                  : 'border-[var(--color-inspector-border)] bg-[var(--color-inspector-unselected)] text-[var(--color-inspector-text)] hover:border-[var(--color-inspector-hover-border)] hover:bg-[var(--color-inspector-hover)]'
+                  : allowed
+                    ? 'border-[var(--color-inspector-border)] bg-[var(--color-inspector-unselected)] text-[var(--color-inspector-text)] hover:border-[var(--color-inspector-hover-border)] hover:bg-[var(--color-inspector-hover)]'
+                    : 'cursor-not-allowed border-[var(--color-inspector-border)] bg-[var(--color-inspector-unselected)] text-chrome-600 opacity-50'
               }`}
             >
               <TypeSample type={type} />
@@ -159,6 +181,13 @@ function PathInspector({ pathId }: { pathId: string }) {
           )
         })}
       </div>
+
+      {!canApplyPathType(path, 'pass', allPaths, tokens) && (
+        <p className="mt-2 text-[11px] leading-relaxed text-chrome-500">
+          Pass, handoff and toss need a receiver. Drag this line's end onto a teammate to hand the
+          ball over.
+        </p>
+      )}
 
       {path.type === 'motion' && (
         <div className="mt-4 rounded-[16px] border border-chrome-700 bg-chrome-850 p-3">
@@ -321,6 +350,9 @@ function TokenInspector({ tokenId }: { tokenId: string }) {
   const reorderPath = useEditorStore((s) => s.reorderPath)
   const renameToken = useEditorStore((s) => s.renameToken)
   const addBlock = useEditorStore((s) => s.addBlock)
+  const armed = useEditorStore((s) => s.ballAction)
+  const armBallAction = useEditorStore((s) => s.armBallAction)
+  const cancelBallAction = useEditorStore((s) => s.cancelBallAction)
   if (!token) return null
 
   // his movement sequence, in play order — this is the chain the scheduler
@@ -409,7 +441,7 @@ function TokenInspector({ tokenId }: { tokenId: string }) {
                   key={d.key}
                   type="button"
                   onClick={() => addBlock(token.id, d.key)}
-                  title={d.title}
+                  title={`${d.title} — ${d.hint}`}
                   className="rounded-[12px] border border-[var(--color-inspector-border)] bg-[var(--color-inspector-unselected)] px-2 py-2 text-sm font-semibold text-[var(--color-inspector-text)] transition-colors hover:border-[var(--color-inspector-hover-border)] hover:bg-[var(--color-inspector-hover)]"
                 >
                   {d.label}
@@ -417,6 +449,41 @@ function TokenInspector({ tokenId }: { tokenId: string }) {
               ))}
             </div>
           </div>
+          {token.side === 'offense' && (
+            <div>
+              <p className="pb-1 text-[10px] uppercase tracking-[0.06em] text-chrome-600">
+                + Ball
+              </p>
+              {armed?.throwerId === token.id ? (
+                <div className="rounded-[12px] border border-accent-400/60 bg-accent-400/10 px-2 py-2">
+                  <p className="text-[11px] font-medium text-accent-300">
+                    Click the {armed.type === 'pass' ? 'receiver' : 'ball carrier'}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={cancelBallAction}
+                    className="mt-1.5 w-full rounded-full border border-chrome-600 py-1 text-[10px] font-medium text-chrome-300 hover:bg-chrome-800"
+                  >
+                    Cancel (Esc)
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-1.5">
+                  {BALL_ACTIONS.map((a) => (
+                    <button
+                      key={a.type}
+                      type="button"
+                      onClick={() => armBallAction(token.id, a.type)}
+                      title={a.title}
+                      className="rounded-[12px] border border-[var(--color-inspector-border)] bg-[var(--color-inspector-unselected)] px-2 py-2 text-[11px] font-semibold text-[var(--color-inspector-text)] transition-colors hover:border-[var(--color-inspector-hover-border)] hover:bg-[var(--color-inspector-hover)]"
+                    >
+                      {a.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -456,8 +523,50 @@ export function InspectorPanel() {
         </IconButton>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-4 pt-0">
+        <PlayProblems />
         {body}
       </div>
     </aside>
+  )
+}
+
+/**
+ * The play's own problems, above whatever is selected, so they are visible while
+ * you are working on something else. Only whole-play conditions live here (see
+ * `playWarnings`); anything checkable at the moment of intent is refused by the
+ * control itself instead — which is why the flight buttons grey out rather than
+ * letting you mark a throw that hands the ball to nobody.
+ */
+function PlayProblems() {
+  const tokens = useEditorStore((s) => s.tokens)
+  const paths = useEditorStore((s) => s.paths)
+  const ballStartId = useEditorStore((s) => s.ballStartId)
+  const select = useEditorStore((s) => s.select)
+  const warnings = useMemo(
+    () => playWarnings(tokens, paths, ballStartId),
+    [tokens, paths, ballStartId],
+  )
+
+  if (warnings.length === 0) return null
+
+  return (
+    <div className="mb-3 rounded-xl border border-accent-400/40 bg-accent-400/10 p-2.5">
+      <p className="pb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-accent-400">
+        {warnings.length === 1 ? '1 problem' : `${warnings.length} problems`}
+      </p>
+      <ul className="space-y-0.5">
+        {warnings.map((w) => (
+          <li key={w.id}>
+            <button
+              type="button"
+              onClick={() => select(w.targetIds)}
+              className="w-full rounded-lg px-1.5 py-1 text-left text-[11px] leading-snug text-chrome-200 transition-colors hover:bg-accent-400/15"
+            >
+              {w.message}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }

@@ -1,7 +1,7 @@
 import { create } from 'zustand'
-import { catmullRomPath } from '../lib/geometry'
+import { catmullRomPath, trimToRim } from '../lib/geometry'
 import { applySchedule, timelineDuration, type Timing } from '../lib/timing'
-import { resolveFlightTarget } from '../lib/target'
+import { resolveFlightTarget, canApplyPathType } from '../lib/target'
 import { PLAYER_DRIVEN, type BlockDir } from '../lib/pathStyles'
 import { buildRoutePoints, routeConcept } from '../lib/routeTemplates'
 import { forwardY } from '../lib/formations'
@@ -13,6 +13,8 @@ import type { PathType } from '../lib/pathStyles'
 export type Tool = 'select' | 'draw' | 'erase' | 'pan' | 'text'
 export type Side = 'offense' | 'defense'
 export type PosId = 'QB' | 'RB' | 'FB' | 'WR' | 'TE' | 'C' | 'G' | 'T' | 'DL' | 'LB' | 'CB' | 'S'
+/** ball-handling actions that can be added without drawing */
+export type BallActionType = 'pass' | 'handoff' | 'toss'
 
 export interface Token {
   id: string
@@ -104,6 +106,12 @@ interface EditorState {
   /** token holding the ball at the snap; null = auto (first handoff, else QB) */
   ballStartId: string | null
   selectedIds: string[]
+  /**
+   * Armed "give the ball away" gesture: set on the player who has it, then the
+   * next click on a teammate creates the flight. Cleared on use or Esc, and
+   * deliberately not part of the document — it is a mode, not content.
+   */
+  ballAction: { throwerId: string; type: BallActionType } | null
   camera: Camera
   playback: Playback
   past: Snapshot[]
@@ -148,6 +156,14 @@ interface EditorState {
    * has one route, so this never stacks a second on top.
    */
   setPlayerRoute: (tokenId: string, conceptKey: string) => string | null
+  /**
+   * Arm a ball-handling action on the player who has the ball. The next click on
+   * a teammate creates the flight, so a toss or a screen needs no pen work.
+   */
+  armBallAction: (throwerId: string, type: BallActionType) => void
+  cancelBallAction: () => void
+  /** create the flight an armed ball action produces; null if it does not make sense */
+  addFlight: (throwerId: string, targetId: string, type: BallActionType) => string | null
   updatePathType: (id: string, type: PathType) => void
   /** reshape an existing path to a named route template (BDB medians) */
   applyRouteTemplate: (id: string, conceptKey: string, depthScale?: number) => void
@@ -224,6 +240,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   textNotes: [],
   ballStartId: null,
   selectedIds: [],
+  ballAction: null,
   camera: { zoom: 16, tx: 0, ty: 0 },
   fitNonce: 0,
   losSpec: null,
@@ -342,8 +359,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     get().beginHistory()
     set((s) => ({
       tokens: s.tokens.filter((t) => !ids.includes(t.id)),
-      // deleting a player deletes its anchored paths
-      paths: s.paths.filter((p) => !p.tokenId || !ids.includes(p.tokenId)),
+      // deleting a player deletes its anchored paths, and releases anything that
+      // was aimed at him — a flight holding a dead id would otherwise keep flying
+      // towards a man who is no longer on the field
+      paths: s.paths
+        .filter((p) => !p.tokenId || !ids.includes(p.tokenId))
+        .map((p) =>
+          p.endTokenId && ids.includes(p.endTokenId) ? { ...p, endTokenId: null } : p,
+        ),
       selectedIds: s.selectedIds.filter((id) => !ids.includes(id)),
     }))
   },
@@ -388,6 +411,45 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }
     st.beginHistory()
     set((s) => ({ paths: applySchedule([...s.paths, created]) }))
+    return created.id
+  },
+
+  armBallAction: (throwerId, type) =>
+    set((s) => (s.tokens.some((t) => t.id === throwerId) ? { ballAction: { throwerId, type } } : {})),
+
+  cancelBallAction: () => set({ ballAction: null }),
+
+  addFlight: (throwerId, targetId, type) => {
+    const st = get()
+    const from = st.tokens.find((t) => t.id === throwerId)
+    const to = st.tokens.find((t) => t.id === targetId)
+    // nobody throws to himself, and a delivery needs somebody to land on —
+    // without an endTokenId the ball never changes hands
+    if (!from || !to || from.id === to.id) return null
+    // leave from wherever his own movement already put him, exactly as a drawn
+    // stroke does (magnetic chaining), so a toss after a drop starts at the drop
+    const chain = st.paths.filter((p) => p.tokenId === from.id && PLAYER_DRIVEN.has(p.type))
+    const last = chain[chain.length - 1]
+    const start: Pt = last ? last.points[last.points.length - 1]! : { x: from.x, y: from.y }
+    const rim = trimToRim(start, { x: to.x, y: to.y })
+    // a pass is strictly straight; a handoff/toss keeps the same line, since a
+    // programmatic add has no hand-drawn loft to preserve
+    const points: Pt[] = [start, rim]
+    const created: PlayPath = {
+      tokenId: throwerId,
+      endTokenId: targetId,
+      type,
+      points,
+      d: catmullRomPath(points),
+      id: uid(),
+      timing: { delayMs: 0, durationMs: 600 },
+    }
+    st.beginHistory()
+    set((s) => ({
+      paths: applySchedule([...s.paths, created]),
+      selectedIds: [created.id],
+      ballAction: null,
+    }))
     return created.id
   },
 
@@ -517,6 +579,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   updatePathType: (id, type) => {
+    const before = get()
+    const current = before.paths.find((p) => p.id === id)
+    // a ball action needs a receiver: a line ending on grass is not allowed to
+    // become one, so the picker and the digit keys cannot hand the ball to nobody
+    if (current && !canApplyPathType(current, type, before.paths, before.tokens)) return
     get().beginHistory()
     set((s) => ({
       paths: applySchedule(

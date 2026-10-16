@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useEditorStore } from '../src/stores/editorStore'
 import { PLAYER_DRIVEN } from '../src/lib/pathStyles'
+import { ballStateAt } from '../src/lib/ball'
 
 /**
  * The player panel splits a player's paths into two lists: the movement chain
@@ -158,5 +159,147 @@ describe('addBlock', () => {
 
   it('ignores an unknown player', () => {
     expect(st().addBlock('nope', 'left')).toBeNull()
+  })
+})
+
+describe('addFlight — a pass/toss/handoff with no pen work', () => {
+  const addRb = (x = 26, y = 88) => {
+    st().addToken({ side: 'offense', pos: 'RB', num: '', x, y })
+    return st().tokens[st().tokens.length - 1]!
+  }
+
+  it('creates a flight to the chosen teammate, with the far end anchored', () => {
+    const qb = addQb()
+    const rb = addRb()
+    const id = st().addFlight(qb.id, rb.id, 'toss')!
+    const p = st().paths.find((x) => x.id === id)!
+    expect(p.type).toBe('toss')
+    expect(p.tokenId).toBe(qb.id)
+    // the whole point: without an endTokenId the ball never changes hands
+    expect(p.endTokenId).toBe(rb.id)
+  })
+
+  it('stops at the receiver rim instead of his centre', () => {
+    const qb = addQb()
+    const rb = addRb(26, 88)
+    const id = st().addFlight(qb.id, rb.id, 'handoff')!
+    const p = st().paths.find((x) => x.id === id)!
+    const far = p.points[p.points.length - 1]!
+    // QB is at (26,93), so the delivery runs up the screen and ends short of him
+    expect(far.y).toBeGreaterThan(rb.y)
+    expect(Math.hypot(far.x - rb.x, far.y - rb.y)).toBeGreaterThan(0.5)
+  })
+
+  it('passes and tosses are drawn as a straight line', () => {
+    const qb = addQb()
+    const rb = addRb(20, 95)
+    for (const type of ['pass', 'handoff', 'toss'] as const) {
+      const id = st().addFlight(qb.id, rb.id, type)!
+      expect(st().paths.find((x) => x.id === id)!.points).toHaveLength(2)
+    }
+  })
+
+  it('leaves from where the thrower’s own movement left him', () => {
+    const qb = addQb()
+    const rb = addRb()
+    // a drop that ends 5yd behind the snap
+    st().addPath({
+      tokenId: qb.id,
+      endTokenId: null,
+      type: 'drop',
+      points: [{ x: 26, y: 93 }, { x: 26, y: 98 }],
+      d: '',
+    })
+    const id = st().addFlight(qb.id, rb.id, 'pass')!
+    const p = st().paths.find((x) => x.id === id)!
+    expect(p.points[0]).toEqual({ x: 26, y: 98 })
+  })
+
+  it('every flight type schedules itself instead of piling up at zero', () => {
+    const qb = addQb()
+    const rb = addRb()
+    for (const type of ['pass', 'handoff', 'toss'] as const) {
+      const id = st().addFlight(qb.id, rb.id, type)!
+      const p = st().paths.find((x) => x.id === id)!
+      expect(p.timing.durationMs, type).toBeGreaterThan(0)
+    }
+  })
+
+  it('the ball actually changes hands once the toss is added', () => {
+    const qb = addQb()
+    const rb = addRb(20, 88)
+    st().addFlight(qb.id, rb.id, 'toss')
+    st().applyScheduleNow()
+    const after = st().paths.find((p) => p.type === 'toss')!
+    const t = after.timing.delayMs + after.timing.durationMs + 50
+    const positions = new Map(st().tokens.map((x) => [x.id, { x: x.x, y: x.y }]))
+    const ball = ballStateAt(st().paths, positions, null, t, true, undefined, st().tokens)!
+    const holder = st().tokens.find(
+      (x) => Math.hypot(ball.pos.x - x.x, ball.pos.y - x.y) < 1.5,
+    )
+    expect(holder?.id).toBe(rb.id)
+  })
+
+  it('refuses a throw to himself, and to somebody who is not there', () => {
+    const qb = addQb()
+    expect(st().addFlight(qb.id, qb.id, 'pass')).toBeNull()
+    expect(st().addFlight(qb.id, 'ghost', 'pass')).toBeNull()
+    expect(st().addFlight('ghost', qb.id, 'pass')).toBeNull()
+  })
+
+  it('clears the armed mode and selects the new flight, and undoes cleanly', () => {
+    const qb = addQb()
+    const rb = addRb()
+    st().armBallAction(qb.id, 'handoff')
+    st().addFlight(qb.id, rb.id, 'handoff')
+    expect(st().ballAction).toBeNull()
+    expect(st().selectedIds).toHaveLength(1)
+    st().undo()
+    expect(st().paths).toHaveLength(0)
+  })
+
+  it('can be added while the play is already running', () => {
+    // the reported case: mid-motion, drawing was the only way and it failed
+    const qb = addQb()
+    const rb = addRb(20, 88)
+    st().setPlayerRoute(rb.id, 'go')
+    useEditorStore.setState({ playback: { playing: true, tMs: 2000, speed: 1, loop: false } })
+    const id = st().addFlight(qb.id, rb.id, 'toss')
+    expect(id).not.toBeNull()
+    const p = st().paths.find((x) => x.id === id)!
+    expect(p.endTokenId).toBe(rb.id)
+    expect(st().paths.some((q) => q.type === 'route')).toBe(true)
+  })
+
+  it('a stroke at mid-play keeps its receiver when it is relabelled a toss', () => {
+    // finalizeStroke decides endTokenId at draw time, from the receiver's drawn
+    // spot. A stroke that came out as a route must not lose that when the coach
+    // then presses the toss key — otherwise it is the same silent no-hand-over.
+    // The stroke ends where the back is *mid-route*: 10yd from his rest spot and
+    // 18yd from his route tip, so nothing but the preserved id can resolve it.
+    const qb = addQb()
+    const rb = addRb(20, 88)
+    st().setPlayerRoute(rb.id, 'go')
+    const id = st().addPath({
+      tokenId: qb.id,
+      endTokenId: rb.id,
+      type: 'route',
+      points: [{ x: 26, y: 93 }, { x: 20, y: 78 }],
+      d: '',
+    })
+    st().updatePathType(id, 'toss')
+    const p = st().paths.find((x) => x.id === id)!
+    expect(p.type).toBe('toss')
+    expect(p.endTokenId).toBe(rb.id)
+
+    st().applyScheduleNow()
+    const toss = st().paths.find((x) => x.id === id)!
+    const t = toss.timing.delayMs + toss.timing.durationMs + 50
+    const positions = new Map(st().tokens.map((x) => [x.id, { x: x.x, y: x.y }]))
+    const ball = ballStateAt(st().paths, positions, null, t, true, undefined, st().tokens)!
+    const holder = st().tokens.find(
+      (x) => Math.hypot(ball.pos.x - x.x, ball.pos.y - x.y) < 1.5,
+    )
+    expect(holder?.id).toBe(rb.id)
   })
 })

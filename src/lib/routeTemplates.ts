@@ -35,6 +35,33 @@ export function routeConcept(key: string): RouteConcept {
 }
 
 /**
+ * Keyboard bank for the library. The number row reads `1 2 3 4 5 6 7 8 9 0 - =`
+ * left to right, which is exactly 12 keys for 12 concepts, so the row order is
+ * the library order. Keyed on DOM `code` rather than `key` because Shift turns
+ * `1` into `!` and the binding is only ever used with Shift held.
+ */
+export const ROUTE_KEYS: ReadonlyArray<{ code: string; hint: string }> = [
+  { code: 'Digit1', hint: '⇧1' },
+  { code: 'Digit2', hint: '⇧2' },
+  { code: 'Digit3', hint: '⇧3' },
+  { code: 'Digit4', hint: '⇧4' },
+  { code: 'Digit5', hint: '⇧5' },
+  { code: 'Digit6', hint: '⇧6' },
+  { code: 'Digit7', hint: '⇧7' },
+  { code: 'Digit8', hint: '⇧8' },
+  { code: 'Digit9', hint: '⇧9' },
+  { code: 'Digit0', hint: '⇧0' },
+  { code: 'Minus', hint: '⇧−' },
+  { code: 'Equal', hint: '⇧=' },
+]
+
+/** the concept a shifted number-row key picks, or null if the key isn't bound */
+export function routeForKeyCode(code: string): RouteConcept | null {
+  const i = ROUTE_KEYS.findIndex((k) => k.code === code)
+  return i === -1 ? null : (ROUTE_CONCEPTS[i] ?? null)
+}
+
+/**
  * Receiver-local shape → field yards anchored at (ax, ay).
  * Offense attacks toward decreasing y. Direction comes from alignment:
  * a right-side receiver's inside is −x, a left-side receiver's is +x.
