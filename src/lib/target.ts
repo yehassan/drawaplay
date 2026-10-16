@@ -1,13 +1,74 @@
 import { dist } from './geometry'
 import type { Pt } from './field'
 import type { PlayPath, Token } from '../stores/editorStore'
-import type { PathType } from './pathStyles'
+import { BALL_ACTION_TYPES, type PathType } from './pathStyles'
 
 /** types whose far end may auto-resolve to a nearby path tip / defender */
 const TARGETABLE_TYPES: ReadonlySet<PathType> = new Set(['pass', 'handoff', 'toss', 'snap', 'block'])
 
 /** how far (yd) a flight's far end may sit from a route's endpoint to count as thrown to it */
 export const TARGET_MATCH_RADIUS_YD = 2.5
+
+/**
+ * Who a ball action marked on this stroke would hand the ball to — the one
+ * answer to "does this line end on a teammate?".
+ *
+ * This is the expression `updatePathType` stores, so a mark that passes
+ * `canApplyPathType` cannot then be stored with nobody to throw to.
+ */
+export function ballActionTarget(
+  path: PlayPath,
+  type: PathType,
+  paths: PlayPath[],
+  tokens: Token[],
+): string | null {
+  return (
+    path.endTokenId ?? resolveFlightTarget(path.points, path.tokenId, paths, type, tokens)
+  )
+}
+
+/**
+ * Whether a stroke may be marked as `type`. Only the ball actions are ever
+ * refused, and only when the line ends on nobody: a pass, handoff or toss with
+ * no receiver hands the ball to nobody, so the honest moment to say so is when
+ * the coach picks the type, not after the ball fails to move.
+ */
+export function canApplyPathType(
+  path: PlayPath,
+  type: PathType,
+  paths: PlayPath[],
+  tokens: Token[],
+): boolean {
+  if (!BALL_ACTION_TYPES.has(type)) return true
+  if (!path.tokenId) return false
+  return ballActionTarget(path, type, paths, tokens) !== null
+}
+
+/**
+ * Where a token actually is: its animated position while the play is running,
+ * its rest spot otherwise. The pen is aimed at what is on screen, so every hit
+ * test against a player has to go through here — snapping to the rest spot
+ * while the play is mid-motion misses a receiver by however far he has run,
+ * and a flight that resolves to nobody never hands over the ball.
+ */
+export function tokenAtPoint(
+  p: Pt,
+  tokens: Token[],
+  radiusYd: number,
+  positions?: Map<string, Pt>,
+): Token | null {
+  let best: Token | null = null
+  let bestD = radiusYd
+  for (const t of tokens) {
+    const at = positions?.get(t.id) ?? t
+    const d = dist(p, at)
+    if (d < bestD) {
+      bestD = d
+      best = t
+    }
+  }
+  return best
+}
 
 /**
  * Resolve who a flight is thrown/handed to when endpoint token-snapping found
@@ -23,6 +84,7 @@ export function resolveFlightTarget(
   paths: PlayPath[],
   type?: PathType,
   tokens?: Token[],
+  positions?: Map<string, Pt>,
 ): string | null {
   if (pts.length < 2) return null
   if (type && !TARGETABLE_TYPES.has(type)) return null
@@ -62,7 +124,8 @@ export function resolveFlightTarget(
   let fallbackD = loose
   for (const tk of tokens) {
     if (tk.id === startTokenId) continue
-    const d = dist(far, tk)
+    const at = positions?.get(tk.id) ?? tk
+    const d = dist(far, at)
     if (d < fallbackD) {
       fallbackD = d
       fallbackId = tk.id

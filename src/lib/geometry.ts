@@ -94,3 +94,17 @@ export function pointAtLength(pts: Pt[], target: number): Pt {
   }
   return pts[pts.length - 1]
 }
+
+/**
+ * Pull an endpoint back to a token's rim so T-bars, arrows and handoff dots stay
+ * visible instead of vanishing under the body. Shared by a drawn stroke and an
+ * inspector-added flight so both land on the same spot.
+ */
+export function trimToRim(prev: Pt, center: Pt): Pt {
+  const dx = center.x - prev.x
+  const dy = center.y - prev.y
+  const len = Math.hypot(dx, dy)
+  if (len === 0) return center
+  const gap = Math.min(1.5, len / 2)
+  return { x: center.x - (dx / len) * gap, y: center.y - (dy / len) * gap }
+}

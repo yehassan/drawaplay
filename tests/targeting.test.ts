@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { resolveFlightTarget } from '../src/lib/target'
+import { resolveFlightTarget, tokenAtPoint } from '../src/lib/target'
+import type { PathType } from '../src/lib/pathStyles'
+import type { Token } from '../src/stores/editorStore'
 
 const P = (
   id: string,
   tokenId: string | null,
-  type: 'route' | 'pass',
+  type: PathType,
   seg: [number, number][],
 ) => ({
   id,
@@ -46,5 +48,39 @@ describe('flight target resolution', () => {
     expect(resolveFlightTarget(block.points, 'LT', [defenderTip], 'block')).toBe('DL')
     // routes never resolve
     expect(resolveFlightTarget(block.points, 'LT', [defenderTip], 'route')).toBeNull()
+  })
+})
+
+describe('aiming at a player mid-play', () => {
+  /**
+   * The pen is pointed at the screen, so a hit test has to use the position the
+   * player is *drawn* at. Matching rest spots instead meant that drawing a toss
+   * onto a receiver who had already run 10yd found nobody, because his rest spot
+   * was 10yd behind him and his route tip was 18yd ahead.
+   */
+  const T = (id: string, x: number, y: number): Token => ({
+    id, side: 'offense', pos: id === 'QB' ? 'QB' : 'WR', num: '', x, y,
+  })
+  const TOKENS = [T('QB', 26.6, 95), T('WR', 10, 88)]
+  /** the play is at 2s: the receiver is 10yd into a route that started at y=88 */
+  const drawn = new Map([['QB', pt(26.6, 95)], ['WR', pt(10, 78)]])
+
+  it('hits the player where he is drawn, not where he started', () => {
+    expect(tokenAtPoint(pt(10, 78), TOKENS, 2, drawn)?.id).toBe('WR')
+    // his rest spot is behind him now, and must not match
+    expect(tokenAtPoint(pt(10, 88), TOKENS, 2, drawn)).toBeNull()
+  })
+
+  it('adopts the player the stroke aims at, falling back to drawn positions', () => {
+    const route = P('wr', 'WR', 'route', [[10, 88], [10, 60]])
+    const stroke = [pt(26.6, 95), pt(10, 78)]
+    expect(resolveFlightTarget(stroke, 'QB', [route], 'toss', TOKENS, drawn)).toBe('WR')
+    // without drawn positions nothing resolves: rest spot 10yd off, route tip 18yd
+    expect(resolveFlightTarget(stroke, 'QB', [route], 'toss', TOKENS)).toBeNull()
+  })
+
+  it('still resolves from the rest spot when the play is not running', () => {
+    expect(tokenAtPoint(pt(10, 88), TOKENS, 2)?.id).toBe('WR')
+    expect(tokenAtPoint(pt(10, 78), TOKENS, 2)).toBeNull()
   })
 })
