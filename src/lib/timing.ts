@@ -81,8 +81,11 @@ export function reschedule(paths: PlayPath[]): Map<string, Timing> {
   const motions = () => paths.filter((p) => p.type === 'motion')
   const snaps = () => paths.filter((p) => p.type === 'snap')
 
-  // iterate so chains (motion → snap → drop → pass) settle
-  for (let iter = 0; iter < 3; iter++) {
+  // iterate so chains (motion → snap → drop → pass → pass) settle. Movement
+  // timings settle on the first pass; a possession chain resolves one link per
+  // pass over the list, so a chain drawn back-to-front needs one iteration per
+  // link. Cheap enough to be generous with.
+  for (let iter = 0; iter < 6; iter++) {
     // 1. motion: adjustable snap point — 1.0 = stop before snap, <1 = jet through snap
     let mEnd = 0
     let snapAt = 0
@@ -137,6 +140,16 @@ export function reschedule(paths: PlayPath[]): Map<string, Timing> {
         if (q.tokenId === f.tokenId && q.id !== f.id && !isFlight(q.type)) {
           ready = Math.max(ready, end(q.id) - 100)
         }
+      }
+      // possession: a thrower cannot throw a ball he does not have yet. When
+      // another flight delivers it to him, wait for that flight to land. This is
+      // what makes a chain (a toss, then a pass by the man who caught it)
+      // schedule correctly — without it the release would be earlier than the
+      // catch and the possession gate in ball.ts would render the throw inert.
+      for (const g of paths) {
+        if (g.id === f.id || !isFlight(g.type)) continue
+        if (g.endTokenId !== f.tokenId) continue
+        ready = Math.max(ready, end(g.id))
       }
 
       if (f.type === 'pass' && f.endTokenId) {

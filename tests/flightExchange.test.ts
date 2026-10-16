@@ -3,7 +3,8 @@ import { reschedule } from '../src/lib/timing'
 import { computeScene } from '../src/lib/render'
 import { polylineLength } from '../src/lib/geometry'
 import { FLIGHT_TYPES, PLAYER_DRIVEN } from '../src/lib/pathStyles'
-import { resolveFlightTarget } from '../src/lib/target'
+import { resolveFlightTarget, tokenAtPoint } from '../src/lib/target'
+import { ballEventAt, ballStateAt } from '../src/lib/ball'
 import { SCENARIOS } from '../src/lib/scenarios'
 import type { PlayPath, PosId, Token } from '../src/stores/editorStore'
 import { POSITIONS } from '../src/lib/positions'
@@ -82,23 +83,23 @@ describe('SAFETY NET — every visible flight lands on its own receiver', () => 
    *
    * Sampled one frame BEFORE arrival, while the ball is genuinely in flight.
    *
-   * Note the ownership filter: flights overlap by design (H4 — every flight
-   * flies in its own window so double reads work), so at a given instant the
-   * ball belongs to the MOST RECENTLY LAUNCHED flight still airborne. A flight
-   * superseded before it lands is skipped, because asserting its receiver would
-   * be wrong rather than strict. Verified to fail when the receiver-side warp
-   * in render.ts is disabled (worst 4.37yd).
+   * Note the filter asks the model itself which flight is airborne — the same
+   * `ballEventAt` the renderer uses, possession gate included. Re-deriving it
+   * here (as this helper first did) meant the suite would happily assert a
+   * flight the model had refused to launch at all. Flights released into the
+   * same window are both legal and the later one wins, so a superseded option is
+   * still skipped rather than asserted. Verified to fail when the receiver-side
+   * warp in render.ts is disabled (worst 4.37yd).
    */
-  const visibleFlightAt = (paths: PlayPath[], tMs: number) => {
-    let cand: PlayPath | null = null
-    for (const f of paths
-      .filter((p) => FLIGHT_TYPES.has(p.type) && p.tokenId != null && p.points.length >= 2)
-      .sort((a, b) => a.timing.delayMs - b.timing.delayMs)) {
-      if (tMs < f.timing.delayMs) break
-      if (tMs < f.timing.delayMs + f.timing.durationMs) cand = f
-    }
-    return cand
-  }
+  const visibleFlightAt = (paths: PlayPath[], tokens: Token[], tMs: number) =>
+    ballEventAt(
+      paths,
+      new Map(tokens.map((t) => [t.id, { x: t.x, y: t.y }])),
+      null,
+      tMs,
+      true,
+      tokens,
+    )?.flight ?? null
 
   const scenarioFlights = () =>
     SCENARIOS.flatMap((s) => {
@@ -119,8 +120,9 @@ describe('SAFETY NET — every visible flight lands on its own receiver', () => 
   it('is actually exercised — flights were sampled, not all skipped', () => {
     const all = scenarioFlights()
     const visible = all.filter(
-      ({ paths, flight }) =>
-        visibleFlightAt(paths, flight.timing.delayMs + flight.timing.durationMs - 1)?.id === flight.id,
+      ({ tokens, paths, flight }) =>
+        visibleFlightAt(paths, tokens, flight.timing.delayMs + flight.timing.durationMs - 1)?.id ===
+        flight.id,
     )
     expect(visible.length).toBeGreaterThanOrEqual(8)
   })
@@ -130,7 +132,7 @@ describe('SAFETY NET — every visible flight lands on its own receiver', () => 
     let worst = 0
     for (const { name, tokens, paths, flight } of scenarioFlights()) {
       const at = flight.timing.delayMs + flight.timing.durationMs - 1
-      if (visibleFlightAt(paths, at)?.id !== flight.id) continue
+      if (visibleFlightAt(paths, tokens, at)?.id !== flight.id) continue
       const sc = computeScene(tokens, paths, { tMs: at, playing: true, ballStartId: null })
       const r = sc.tokenPositions.get(flight.endTokenId!)
       if (!sc.ball || !r) continue
@@ -157,7 +159,7 @@ describe('SAFETY NET — every visible flight lands on its own receiver', () => 
     for (const { name, tokens, paths, flight } of scenarioFlights()) {
       if (!moves(paths, flight.tokenId)) continue
       const at = flight.timing.delayMs + 1
-      if (visibleFlightAt(paths, at)?.id !== flight.id) continue
+      if (visibleFlightAt(paths, tokens, at)?.id !== flight.id) continue
       const sc = computeScene(tokens, paths, { tMs: at, playing: true, ballStartId: null })
       const q = sc.tokenPositions.get(flight.tokenId!)
       if (!sc.ball || !q) continue
@@ -179,7 +181,7 @@ describe('SAFETY NET — every visible flight lands on its own receiver', () => 
     for (const { name, tokens, paths, flight } of scenarioFlights()) {
       if (moves(paths, flight.tokenId)) continue
       const at = flight.timing.delayMs + 1
-      if (visibleFlightAt(paths, at)?.id !== flight.id) continue
+      if (visibleFlightAt(paths, tokens, at)?.id !== flight.id) continue
       sawStanding++
       const sc = computeScene(tokens, paths, { tMs: at, playing: true, ballStartId: null })
       const q = sc.tokenPositions.get(flight.tokenId!)
@@ -343,31 +345,90 @@ describe('FIXED — the warp and the player now agree', () => {
   })
 })
 
-describe('KNOWN — a drawn flight can have no receiver at all', () => {
+describe('FIXED — a drawn flight is resolved against the players on screen', () => {
   // far end lands 5yd from a standing player but within 2.5yd of NO route tip,
   // so only the loose fallback can resolve it
   const intoGrass = P('p', 'route', [[26, 92], [22, 85]], { tokenId: 'qb' })
 
-  it('resolveFlightTarget returns null when nothing is near the stroke', () => {
-    // FieldCanvas.tsx calls it without `tokens`, so the loose nearest-player
-    // fallback is unreachable there and a stroke into empty grass resolves to
-    // nobody. Asserted against the real function, not against a fixture.
+  it('needs the nearest-player fallback, which the canvas now supplies', () => {
+    // FieldCanvas used to call this with neither `tokens` nor the drawn
+    // positions, so a stroke into open grass resolved to nobody there and the
+    // flight never handed the ball over. One call site now, one answer.
     expect(resolveFlightTarget(intoGrass.points, 'qb', [intoGrass], 'pass')).toBeNull()
-  })
-
-  it('and it still resolves when the loose fallback is supplied', () => {
     expect(resolveFlightTarget(intoGrass.points, 'qb', [intoGrass], 'pass', TOKENS)).not.toBeNull()
-  })
-
-  it('so the two call sites disagree about the same stroke', () => {
-    const canvas = resolveFlightTarget(intoGrass.points, 'qb', [intoGrass], 'pass')
-    const store = resolveFlightTarget(intoGrass.points, 'qb', [intoGrass], 'pass', TOKENS)
-    expect(canvas).toBeNull()
-    expect(store).not.toBeNull()
   })
 
   it('a non-targetable type is never given a receiver', () => {
     expect(resolveFlightTarget(intoGrass.points, 'qb', [intoGrass], 'run', TOKENS)).toBeNull()
+  })
+})
+
+describe('TRACKING — a flight drawn while the play is mid-motion', () => {
+  /**
+   * The pen is pointed at the screen, so its hit test has to use the position a
+   * player is *drawn* at. It used his rest spot instead: a toss aimed at a
+   * receiver 10yd into his route found nobody, `endTokenId` stayed null, and the
+   * ball simply never left the thrower — the flight was drawn, there was no
+   * hand-over. Nothing caught it because every target test aimed at a player who
+   * was standing still.
+   */
+  const squad = [tok('C', 26.6, 93, 'C'), tok('qb', 26.6, 95, 'QB'), tok('wr', 10, 88, 'WR')]
+  const play = () => [
+    P('snap', 'snap', [[26.6, 93], [26.6, 95]], { tokenId: 'C', endTokenId: 'qb' }),
+    P('wr', 'route', [[10, 88], [10, 60]], { tokenId: 'wr' }),
+  ]
+  const drawnAt = (paths: PlayPath[], tMs: number) =>
+    computeScene(squad, paths, { tMs, playing: true, ballStartId: 'C' }).tokenPositions
+  /** where the pen would land: the receiver's drawn spot at 2s */
+  const tipAt = (paths: PlayPath[]): [number, number] => {
+    const p = drawnAt(paths, 2000).get('wr')!
+    return [p.x, p.y]
+  }
+
+  it('aims at the receiver where he is drawn, so the toss resolves to him', () => {
+    const { paths } = schedule(play())
+    const drawn = drawnAt(paths, 2000)
+    const tip = drawn.get('wr')!
+    // he has genuinely run away from his rest spot
+    expect(Math.hypot(tip.x - 10, tip.y - 88)).toBeGreaterThan(8)
+
+    expect(tokenAtPoint(tip, squad, 2, drawn)?.id).toBe('wr')
+    expect(
+      resolveFlightTarget([{ x: 26.6, y: 95 }, tip], 'qb', paths, 'toss', squad, drawn),
+    ).toBe('wr')
+  })
+
+  it('and the ball ends up in his hands, not the thrower’s', () => {
+    const { paths } = schedule(play())
+    const withToss: PlayPath[] = [
+      ...paths,
+      P('toss', 'toss', [[26.6, 95], tipAt(paths)], { tokenId: 'qb', endTokenId: 'wr' }),
+    ]
+    const sched = schedule(withToss).paths
+    const at = 4000
+    const sc = computeScene(squad, sched, { tMs: at, playing: true, ballStartId: 'C' })
+    const ball = ballStateAt(sched, sc.tokenPositions, 'C', at, true, undefined, squad)!
+    const wr = sc.tokenPositions.get('wr')!
+    expect(ball.flying).toBe(false)
+    expect(ball.pos.x).toBeCloseTo(wr.x + 0.55, 3)
+    expect(ball.pos.y).toBeCloseTo(wr.y - 0.35, 3)
+  })
+
+  it('and with no resolved receiver the same toss leaves it with the thrower', () => {
+    // the defect exactly: identical geometry, endTokenId null, ball never moves
+    const { paths } = schedule(play())
+    const withToss: PlayPath[] = [
+      ...paths,
+      P('toss', 'toss', [[26.6, 95], tipAt(paths)], { tokenId: 'qb' }),
+    ]
+    const sched = schedule(withToss).paths
+    const at = 4000
+    const sc = computeScene(squad, sched, { tMs: at, playing: true, ballStartId: 'C' })
+    const ball = ballStateAt(sched, sc.tokenPositions, 'C', at, true, undefined, squad)!
+    const qb = sc.tokenPositions.get('qb')!
+    const wr = sc.tokenPositions.get('wr')!
+    expect(ball.pos.x).toBeCloseTo(qb.x + 0.55, 3)
+    expect(Math.hypot(ball.pos.x - wr.x, ball.pos.y - wr.y)).toBeGreaterThan(15)
   })
 })
 

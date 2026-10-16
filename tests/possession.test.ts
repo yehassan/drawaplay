@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { reschedule } from '../src/lib/timing'
 import { computeScene } from '../src/lib/render'
+import { ballEventAt } from '../src/lib/ball'
+import { FLIGHT_TYPES } from '../src/lib/pathStyles'
+import { SCENARIOS, loadScenario } from '../src/lib/scenarios'
 import { useEditorStore } from '../src/stores/editorStore'
-import type { PlayPath, Token } from '../src/stores/editorStore'
+import type { PlayPath, PosId, Token } from '../src/stores/editorStore'
 
 const st = () => useEditorStore.getState()
 
@@ -186,6 +189,94 @@ describe('a pass into a receiver still arrives after his route', () => {
 })
 
 
+describe('a throw needs the ball — the scheduler and the gate agree', () => {
+  const chain = () => [
+    path('snap', 'snap', [[26.5, 88], [26.5, 86.5]], { tokenId: 'c', endTokenId: 'qb' }),
+    path('toss', 'toss', [[26.4, 86.4], [24, 86.3]], { tokenId: 'qb', endTokenId: 'rb' }),
+    path('pass', 'pass', [[24, 86.3], [14, 78.5]], { tokenId: 'rb', endTokenId: 'wr' }),
+  ]
+  const squad = [
+    tok('c', 26.5, 88, 'C'),
+    tok('qb', 26.5, 86.5, 'QB'),
+    tok('rb', 24, 86.3, 'RB'),
+    tok('wr', 14, 78.5),
+  ]
+  const positions = () => new Map(squad.map((t) => [t.id, { x: t.x, y: t.y }]))
+
+  it('holds the second thrower back until he has caught it', () => {
+    const { s } = timed(chain())
+    expect(s.get('pass')!.delayMs).toBeGreaterThanOrEqual(
+      s.get('toss')!.delayMs + s.get('toss')!.durationMs,
+    )
+  })
+
+  /**
+   * The case the wait exists for. A thrower who is already running would
+   * otherwise be cleared to release before the ball reaches him — his own lane
+   * ends early, and a stationary target gives the flight no later anchor — so
+   * the possession gate would refuse a throw the coach had drawn and timed.
+   */
+  it('makes an already-running thrower wait for the catch rather than release early', () => {
+    const { s, paths } = timed([
+      path('snap', 'snap', [[26.5, 88], [26.5, 86.5]], { tokenId: 'c', endTokenId: 'qb' }),
+      path('toss', 'toss', [[26.4, 86.4], [24, 86.3]], { tokenId: 'qb', endTokenId: 'rb' }),
+      path('run', 'run', [[24, 86.3], [23.4, 86.2]], { tokenId: 'rb' }),
+      path('pass', 'pass', [[24, 86.3], [14, 78.5]], { tokenId: 'rb', endTokenId: 'wr' }),
+    ])
+    const toss = s.get('toss')!
+    const pass = s.get('pass')!
+    expect(pass.delayMs).toBeGreaterThanOrEqual(toss.delayMs + toss.durationMs)
+    expect(
+      ballEventAt(paths, positions(), null, pass.delayMs + 5, true, squad)?.flight?.id,
+      'the gate refuses a throw the scheduler cleared',
+    ).toBe('pass')
+  })
+
+  it('hands the ball C → QB → RB → WR, one exchange at a time', () => {
+    const { s, paths } = timed(chain())
+    const ownerAt = (t: number) => ballEventAt(paths, positions(), null, t, true, squad)?.owner
+    expect(ownerAt(s.get('snap')!.delayMs + 5)).toBe('c')
+    expect(ownerAt(s.get('toss')!.delayMs + 5)).toBe('qb')
+    expect(ownerAt(s.get('pass')!.delayMs + 5)).toBe('rb')
+    expect(ownerAt(s.get('pass')!.delayMs + s.get('pass')!.durationMs + 5)).toBe('wr')
+  })
+
+  it('a throw by a player who never receives it never leaves the ground', () => {
+    const { paths } = timed([
+      path('snap', 'snap', [[26.5, 88], [26.5, 86.5]], { tokenId: 'c', endTokenId: 'qb' }),
+      path('stray', 'pass', [[14, 78.5], [40, 72]], { tokenId: 'wr', endTokenId: 'rb' }),
+    ])
+    const stray = paths.find((p) => p.id === 'stray')!
+    const mid = stray.timing.delayMs + stray.timing.durationMs / 2
+    const ev = ballEventAt(paths, positions(), null, mid, true, squad)
+    expect(ev?.flight).toBeNull()
+  })
+
+  /**
+   * The invariant that keeps the two rules from drifting: the scheduler must
+   * never emit a flight the possession gate would refuse, or the coach would
+   * watch a throw they drew simply never happen.
+   */
+  it('no scenario hands a scheduled flight to a player who has no ball', () => {
+    const offenders: string[] = []
+    for (const scenario of SCENARIOS) {
+      useEditorStore.setState({ tokens: [], paths: [], selectedIds: [], past: [], future: [] })
+      useEditorStore.getState().loadPlay(loadScenario(scenario))
+      const { tokens, paths } = useEditorStore.getState()
+      const rest = new Map(tokens.map((t) => [t.id, { x: t.x, y: t.y }]))
+      for (const f of paths.filter((p) => FLIGHT_TYPES.has(p.type))) {
+        const ev = ballEventAt(paths, rest, null, f.timing.delayMs + 1, true, tokens)
+        if (ev?.owner !== f.tokenId) {
+          offenders.push(
+            `${scenario.name}: ${f.type} thrown by ${f.tokenId} while ${ev?.owner} holds it`,
+          )
+        }
+      }
+    }
+    expect(offenders).toEqual([])
+  })
+})
+
 describe('setPlayerRoute — one step from player to route', () => {
   beforeEach(() => {
     useEditorStore.setState({ tokens: [], paths: [], selectedIds: [], past: [], future: [] })
@@ -253,7 +344,7 @@ describe('labelling a drawn path as a delivery', () => {
   beforeEach(() => {
     useEditorStore.setState({ tokens: [], paths: [], selectedIds: [], past: [], future: [] })
   })
-  const add = (pos: string, x: number) => {
+  const add = (pos: PosId, x: number) => {
     st().addToken({ side: 'offense', pos, num: '', x, y: 88 })
     return st().tokens[st().tokens.length - 1]!
   }
