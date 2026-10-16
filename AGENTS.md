@@ -21,7 +21,7 @@ The core loop: a coach picks a formation (quickstart modal), drops player tokens
 npm run dev      # vite dev server
 npm run build    # tsc -b && vite build (typecheck + build)
 npm run lint     # oxlint
-npm test         # vitest run (261 tests, 21 suites)
+npm test         # vitest run (342 tests, 23 suites)
 ```
 
 ## Directory map
@@ -34,9 +34,12 @@ src/lib/            pure, dependency-light logic (unit-tested)
   easing.ts         pathEased — pure progress curve + seam flags, no scheduler deps
   actorPosition.ts  renderedPosAt — the ONE 'where is this player at t' answer
   infer.ts          path-type intent inference
-  target.ts         flight target resolution (directional cone)
+  stroke.ts         finalizeStroke — the pen's whole decision as a pure function
+  target.ts         flight target resolution (directional cone) + tokenAtPoint
+                    + canApplyPathType — which strokes may become a ball action
   pathStyles.ts     PathType union, per-type styles, PLAYER_DRIVEN set
   ball.ts           ball ownership / flight state
+  warnings.ts       playWarnings — the play's own problems (whole-play only)
   formations.ts     quickstart personnel builder
   scenarios.ts      hand-drawn seed plays for the canvas scenario picker
   scenarioBuilders.ts  shared Scenario/seed types + tok()/path()/build() helpers
@@ -80,7 +83,7 @@ Key actions: `addPath` (returns new id, auto-selects), `moveTokensLive` (no hist
 
 ## The scheduling engine (`lib/timing.ts`)
 
-`reschedule(paths)` returns a `Map<id, Timing>` and runs 3 iterations of this order (measured: it is already settled after the first, and movement timings are bit-identical either way — the loop is defensive, not load-bearing):
+`reschedule(paths)` returns a `Map<id, Timing>` and runs 6 iterations of this order (movement timings are already settled after the first, and are bit-identical either way; a **possession chain** resolves one link per pass over the list, so a toss→pass chain drawn back-to-front needs one iteration per link — that is the only reason the loop is load-bearing):
 
 1. **motion** — pre-snap, chained among itself by draw order, ALWAYS before the snap regardless of when drawn
 2. **snap** — fires after motion completes
@@ -90,7 +93,8 @@ Key actions: `addPath` (returns new id, auto-selects), `moveTokensLive` (no hist
    - **arrival is pinned to the connected route's end** (motion never counts as a receiving window)
    - **pass duration ≈ 40% of the connected route's duration** (clamped `MIN_DURATION_MS`..`FLIGHT_MAX_MS`)
    - if the thrower isn't ready in time, hold release and compress the flight (arrival still lands on the break)
-6. **possession** — a receiver's later-drawn paths (run/route/drop) wait for their handoff/snap to complete
+   - **a thrower waits for the ball**: if another flight delivers it to him, release is pushed back to that flight's landing. Without this the gate in `ball.ts` would refuse a throw the coach drew and timed — `tests/possession.test.ts` pins the case (a thrower already running would otherwise be cleared to release before the catch)
+6. **possession** — a receiver's later-drawn paths (run/route/drop) wait for their handoff/snap to complete; a *movement* is never gated on an incoming exchange (the runner sells the fake while the ball is in the air)
 
 `userLocked` paths are preserved verbatim and treated as fixed constraints. `timelineDuration` floor is `1500ms`.
 
@@ -106,6 +110,8 @@ Speeds (`naturalDuration`): `ROUTE 6`, `DROP 2.4`, `RUN 5.5`, `BALL 14` yd/s.
 - **Magnetic chaining**: new player-driven segment start snaps to that player's chain tip; end snaps to the chain root (both within 2yd) — enables out-and-back motion
 - **Flight canonicalization**: pass/snap are STRICTLY straight lines (both at draw and on reclassify in `updatePathType`); handoff/toss may keep a capped loft (≤2yd)
 - Endpoint snap radius is `min(28px / zoom, 2.0)` (zoom-independent, H8)
+- **The pen hit-tests against players where they are *drawn*, not where they started.** While the play is mid-motion those differ by however far a man has run. `tokenAtPoint` and `resolveFlightTarget` are the two functions that answer "who is under this point", and both take the rendered position map that `FieldCanvas` supplies from `computeScene(...).tokenPositions`. This is why a toss drawn onto a receiver 10yd into his route used to resolve to nobody: his rest spot was 10yd behind him, his route tip 18yd ahead, `endTokenId` stayed `null`, and the ball never changed hands — the flight was drawn, there was simply no hand-over. Nothing caught it because every target test aimed at a player standing still
+- **The pen's decision is a pure function.** `finalizeStroke(raw, { zoom, tokens, paths, renderedPositions })` in `lib/stroke.ts` does the whole of it — simplify, snap both ends, infer the type, trim to the rim, canonicalize the flight — and `FieldCanvas.commitStroke` only samples the positions and commits the result. It used to live inside the component, where no test could reach it; that is why the mid-play aiming bug survived a suite that already had flight tests. `tests/drawStroke.test.ts` now drives real scenarios through it: 74 mid-play strokes across all 16 scenarios, every one of which resolves wrongly if the drawn map is dropped
 - Rendering is SVG: a single transform group `translate(zoom) scale`; all strokes in field units
 
 **Flight two-anchor warp** (in `FieldCanvas`): pass/handoff/toss arcs have their start pinned to the thrower's release point and end pinned to the target's arrival point, both evaluated at their **fixed instants** (release / arrival time — NOT live-tracking `min(tMs, …)`). Flights are invisible until launched, then self-draw with the ball. Blocks re-trim their end to the defender's rim each frame.
@@ -114,16 +120,37 @@ Both anchors and the token loop go through **`renderedPosAt`** (`lib/actorPositi
 
 ## Ball model (`lib/ball.ts`)
 
-`defaultBallStart(paths, tokens)`: explicit pick > **snap origin** > **handoff origin** > **C** > QB > first offensive player.
+`defaultBallStart(paths, tokens)`: explicit pick > **snap origin** > **handoff origin** > **earliest thrower** > **C** > QB > first offensive player. The earliest-thrower rung is what makes possession workable: a play drawn with a centre and a QB but no snap must still be able to throw, and the man making the first exchange is the only one who can start with the ball.
 
-`ballStateAt(...)`: flights are **unconditional chronological events** (H4) — every flight flies in its own window (double-read plays work). While airborne, the most-recently-launched flight containing `tMs` owns the ball; possession transfers to a flight's `endTokenId` when it completes.
+`ballEventAt(...)` is the one answer to "whose ball is it, and is it in the air"; `ballStateAt` is that plus the ball's position (and takes the `warps`). **Possession rule: a throw needs the ball in hand.** A flight only launches if its thrower is holding the ball at *release* — ownership as of that instant, not as of the sampled time, so a later exchange can't retroactively invalidate an earlier throw. The ball therefore moves **once per exchange**, and a chain (snap → toss → pass) hands it down the line — the `Toss then pass: two throwers` scenario is the live example, and the reason `defaultBallStart` and `reschedule` both know about possession. A stroke thrown by a player who never receives the ball is **inert** rather than teleporting it; that is the deliberate trade for turning a silently-dead throw into a visible one, and it is what the scheduler's possession wait exists to prevent.
+
+`flightLaunches(paths, positions, startId, tokens)` is that walk split out and exported, returning every flight in release order with the man holding the ball at each release and whether it therefore fires. This is the ONE place the rule is decided: `ballEventAt` renders from it and `playWarnings` reports from it, so a throw cannot render and be described differently. It is also why the two cannot drift — a mutation of the walk shows up as a rendering bug *and* a wrong warning.
+
+Two flights released into the same window are **both** legal (possession has not left the thrower's hands until a flight completes), so a drawn double read still reads rather than silently losing an option, and later launches still win the overlap.
+
+Ownership walks the *legal* flights: a landing only transfers if `endTokenId` is still on the field, so deleting a receiver leaves the ball with the thrower instead of making it vanish.
+
+## Problems the play has — warn only for what cannot be prevented
+
+The inert throw is a property of the **whole play** (the thrower's ball must come from somewhere earlier in the timeline, however the play was drawn), so it cannot be caught at the moment of intent, and both drawing orders must stay legal. There is no honest prevention for it — the only ones are the silent teleport (removed) or making the ball one drawn journey (contradicts draw-first-then-label). So it is the one thing the play **warns** about.
+
+`lib/warnings.ts` — a pure `playWarnings(tokens, paths, ballStartId)` returning plain sentences, no severities, no dismissal, no categories. Deliberately short, and it must stay short: the moment it holds anything arguable, coaches stop reading it. `InspectorPanel`'s `PlayProblems` renders it above whatever is selected (so it is visible while you work on something else) and clicking a row selects the offender. Two conditions:
+
+- **the throw that never happens** — a flight the launch walk reports as not firing, naming the thrower and who holds the ball instead
+- **a ball action with nobody to catch it** — `endTokenId` is null. This one is *deletable* into existence, which is why it is a warning and not only a picker guard
+
+Everything checkable at the moment of intent is **prevented instead**, by one rule in `canApplyPathType` (`lib/target.ts`) shared by the store, the digit keys and the inspector: only a line belonging to a player and ending on a teammate may be marked `pass`/`handoff`/`toss`. The inspector greys those buttons with the reason and the digit key is refused by the store, so a throw cannot be created aimed at grass. Its receiver is resolved by the expression `updatePathType` then stores, so a mark that passes the guard cannot be stored with nobody to throw to. Deleting a player **clears any aim at him** (`deleteTokens`) rather than leaving a dead id — which is what makes the warning's "no receiver" a single condition, since `loadPlay` already remaps or nulls dangling ids.
+
+Verified: 12 mutations of these rules, each caught by at least one test, and every scenario the app ships produces no warnings at all.
 
 ## UX grammar (sticky pen)
 
 - `D` arms a **sticky pen** (draws many routes, never auto-disarms); finishing a stroke auto-selects it and the type is then set in the path inspector. The old floating type bar at the stroke tip is gone
 - Clicks select in every tool; `⌘/Ctrl+drag` moves players while pen is armed; Delete/Backspace deletes the selection
 - Pan: `H` tool, wheel scroll, middle-drag. Zoom: `⌘+wheel`. Fit: `F`
-- A selected path's type is set by digit keys `1`..`8`, indexing `PATH_TYPE_CHOICES` in order (`route, drop, run, motion, block, pass, handoff, toss`). `snap` is deliberately NOT in that list — it is derived, never hand-picked
+- A selected path's type is set by digit keys `1`..`8`, indexing `PATH_TYPE_CHOICES` in order (`route, drop, run, motion, block, pass, handoff, toss`). `snap` is deliberately NOT in that list — it is derived, never hand-picked. `pass`/`handoff`/`toss` are refused for a line that does not end on a teammate, by the key and by the button alike
+- **⇧ builds the two things a coach should not have to draw**, and only while exactly one player is selected: `⇧`+number row picks a route concept, `⇧+←↑→` adds a block. The number row reads `1 2 3 4 5 6 7 8 9 0 - =`, which is exactly 12 keys for the 12 concepts, so row order is library order; the binding is on DOM `code`, because with Shift held `key` is `!` not `1`. Routes go to offence only (matching the panel); blocks go to anyone. `⇧+↓` is swallowed rather than falling through to a nudge, so all four shift-arrows mean one thing. Any other selection keeps `⇧`+arrows as the 2yd nudge
+- **A ball action needs no pen**: on the player who has the ball, `+ Ball` (`Pass`/`Handoff`/`Toss`) arms a mode, and the next click on a teammate creates the flight (`addFlight`) — starting at the thrower's chain tip like a drawn stroke, ending at the receiver's rim. Esc cancels. Conditions: both players must exist, they must differ, and the receiver must be a real token — a flight with no `endTokenId` transfers the ball to nobody. The button must stay offered on a player who only *later* receives the ball (the chained pass), so it can never be restricted to the current holder
 - Full shortcut list lives in `InspectorPanel.tsx` (and `useShortcuts.ts`)
 
 ## Real tracking plays
@@ -144,7 +171,7 @@ Regenerate with `tools/extractTrackingScenarios.mjs` (CSV → JSON) then `tools/
 - **Flight timings are userLocked like everything else.** They used to be exempt, which made a hand-set flight duration in BottomDock revert on the next schedule and made real ball timing unreplayable. Do not re-exempt them.
 - Movement strokes must be drawn on `boundPoints` (seam-closed), the same geometry the token renders on — raw points leave a 0.92yd break where a movement was authored off its predecessor
 - `setRouteDepth` scales a route by its **break**, which is the second-to-last control point's downfield value. For a straight two-point route (`go`, `screen`) that is the endpoint itself; for anything that comes back after the break it is not. A hitch breaks 8yd deep but *finishes* 6yd, so measuring at the end overshot the top and undershot the catch at once. The 2yd floor lives in both the slider and the store and they must agree.
-- Test conventions: pure lib logic → vitest in `tests/`; component/interaction → manual via the scenario picker (top-left of canvas)
+- Test conventions: pure lib logic → vitest in `tests/`; what remains genuinely manual is the React event wiring itself (pointer capture, canvas hit-testing, the `+ Ball` click intercept) — check it via the scenario picker (top-left of canvas). Everything a stroke *decides* is `lib/stroke.ts` and is covered by `tests/drawStroke.test.ts`, which loads the same scenarios the picker does
 - A token's on-field text comes from `tokenLabel()` (`lib/positions.ts`) — number, then alignment letter, then position. Do not re-derive that chain at a call site, and never assign an alignment letter that spells another position: every tailback used to carry `'T'`, so a running back drew "T" exactly like a tackle, and nothing caught it for a long time because no test looked at a label
 - Color/design tokens are defined in `src/index.css` under `@theme` (`chrome-*`, `accent-*`, `offense/defense/ball`, `field-*`, `chalk`); fonts are `Archivo` (sans) + `Oswald` (display)
 
@@ -169,31 +196,44 @@ The goal was a ball exchange that lands where a receiver actually is. It is wort
 
 ```
 actorPosition    the shared position function: seam closure, tie-break, selection
-ball             ownership, default ball start, flight windows
+ball             ownership: the possession gate, chains, default ball start,
+                 and that the ball never disappears or hovers while paused
 catchPoint       the unused catchMoment helper (scoring + collinear geometry)
 chainSpeed       seams are speed-continuous; token stays on its own stroke tip
 defenseFormations  fronts, shells, standoff
+drawStroke       the pen's decision driven by the real scenarios — aiming at a
+                 moving player, the ball reaching him, the ⇧ key→concept→shape
+                 chain, and how a toss finds its moment
 flightExchange   the safety net — every visible flight lands on its own receiver,
-                 plus the tracking plays' flight locks and position mapping
+                 plus the tracking plays' flight locks and position mapping, and a
+                 flight drawn mid-motion handing the ball over rather than not.
+                 Asks `ballEventAt` which flight is airborne instead of
+                 re-deriving it, so it can never assert an inert one
 loadPlay         id remapping on template load
 persistence      IndexedDB playbook helpers
-playerPaths      setPlayerRoute / addBlock
+playerPaths      setPlayerRoute / addBlock / addFlight
 positions        posLabel / coercePos recovery
-possession       possession transfer timing
+possession       a throw needs the ball: the chain C → QB → RB → WR, a running
+                 thrower held back to the catch, and the invariant that no
+                 scenario schedules a flight the gate would refuse
 render           computeScene, view fitting
 routeTemplates   route library + setRouteDepth break-vertex scaling
 ruleset          offense/defense rules
 scheduling       reschedule phases and timing rules
-shortcuts        digit → path type
-targeting        resolveFlightTarget
+shortcuts        digit → path type; ⇧ route/block bank; Esc cancels a ball action;
+                 a ball action aimed at nobody is refused, not created
+targeting        resolveFlightTarget + tokenAtPoint (rest vs drawn position)
 textNotes        canvas annotations
 theme            field theme tokens
+warnings         the play's own problems: the throw that never happens, a throw
+                 with nobody to catch it, that a dead aim cannot survive a
+                 delete, and that every scenario the app ships is warning-free
 formations       quickstart personnel
 export           svg/png export
 ```
 
 ## Status
 
-Hardening (HA–HE), M6 persistence/playbook and defense formations are complete — 261 vitest tests across 21 suites. The ball exchange was reworked against real tracking data (see above). Next up: M8 exports/sharing.
+Hardening (HA–HE), M6 persistence/playbook and defense formations are complete — 342 vitest tests across 23 suites. The ball exchange was reworked against real tracking data (see above), the pen's decision extracted to a pure function so the scenario checklist runs as tests, possession made explicit (a throw needs the ball in hand, so a chain — toss, then a pass by the man who caught it — hands it down the line), and the one consequence that cannot be prevented is now told to the coach rather than left silent: the inspector lists the play's own problems. Next up: M8 exports/sharing.
 
 Known-unfixed, deliberately left: the ball's angle while carried is hardcoded to `-35°` and its offset from the holder is fixed in field space, so on a sharp cut the ball slides around the runner (45° off his heading on the Toss sweep). The fix is to rotate both by the holder's heading, which is not recorded anywhere yet — there is no single answer for "which way is this player facing".
