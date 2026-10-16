@@ -8,6 +8,7 @@ import type { ViewRect } from './render'
 import type { TextNote, Token } from '../stores/editorStore'
 
 const CHALK = '#eaf3ea'
+const ACCENT = '#c8714a'
 
 export const FIELD_W_YD = 53.3
 export const FIELD_L_YD = 120
@@ -109,7 +110,7 @@ export function drawFrame(
   if (los) {
     const y = los.side === 'ours' ? 110 - los.n : 10 + los.n
     ctx.save()
-    ctx.strokeStyle = 'var(--color-accent-400, #ffb224)'
+    ctx.strokeStyle = ACCENT
     ctx.setLineDash([1.4, 0.9])
     ctx.lineWidth = 0.22
     ctx.globalAlpha = 0.85
@@ -118,7 +119,7 @@ export function drawFrame(
     ctx.lineTo(FIELD_W_YD, y)
     ctx.stroke()
     ctx.setLineDash([])
-    ctx.fillStyle = '#ffb224'
+    ctx.fillStyle = ACCENT
     ctx.globalAlpha = 0.92
     ctx.fillRect(40.4, y - 1.15, 12.1, 2.3)
     ctx.fillStyle = '#0b0e13'
