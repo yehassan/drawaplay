@@ -118,6 +118,42 @@ function approachMid(p: PlayPath): number {
   return p.timing.delayMs + Math.round(p.timing.durationMs / 2)
 }
 
+describe('a flight is drawn where the ball will fly, not where the receiver started', () => {
+  const tipOf = (paths: ReadonlyArray<{ id: string; points: { x: number; y: number }[] }>, id: string) => {
+    const p = paths.find((q) => q.id === id)!
+    return p.points[p.points.length - 1]!
+  }
+
+  it('a route drawn after the throw drags the line on to the catch', () => {
+    // the coach throws to the WR and draws his route second, so the stored
+    // stroke still ends at the WR's rest spot
+    const tokens = [tok('QB', 'QB', 26.5, 92), tok('WR', 'WR', 12, 88)]
+    const paths = applySchedule([
+      P('pass', 'QB', 'WR', 'pass', [[26.5, 92], [12, 88]]),
+      P('slant', 'WR', null, 'route', [[12, 88], [16, 80]]),
+    ])
+    const idle = computeScene(tokens, paths, { tMs: 0, playing: false, ballStartId: 'QB' })
+    const tip = tipOf(idle.paths, 'pass')
+    // it ends on the route's break, where the ball is really caught
+    expect(Math.hypot(tip.x - 16, tip.y - 80)).toBeLessThan(0.05)
+    // and roughly 9yd from the spot he was standing on when it was drawn
+    expect(Math.hypot(tip.x - 12, tip.y - 88)).toBeGreaterThan(8)
+    // the animation draws the same line — one warp, so the two cannot disagree
+    const playing = computeScene(tokens, paths, { tMs: 0, playing: true, ballStartId: 'QB' })
+    expect(tipOf(playing.paths, 'pass')).toEqual(tip)
+  })
+
+  it('a receiver with no route keeps the line on him', () => {
+    const tokens = [tok('QB', 'QB', 26.5, 92), tok('RB', 'RB', 30, 88)]
+    const paths = applySchedule([P('toss', 'QB', 'RB', 'toss', [[26.5, 92], [30.7, 88]])])
+    const idle = computeScene(tokens, paths, { tMs: 0, playing: false, ballStartId: 'QB' })
+    const tip = tipOf(idle.paths, 'toss')
+    // nothing to follow, so it lands on the man himself
+    expect(tip.x).toBeCloseTo(30, 6)
+    expect(tip.y).toBeCloseTo(88, 6)
+  })
+})
+
 describe('fitView (dynamic export framing)', () => {
   it('frames content with padding, honoring min span', () => {
     const tokens = [tok('WR', 'WR', 20, 80)]

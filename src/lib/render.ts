@@ -67,54 +67,55 @@ export function computeScene(
     tokenPositions.set(t.id, pos ?? { x: t.x, y: t.y })
   }
 
-  // ball-only flights: two live anchors (thrower release + target arrival),
-  // both evaluated at their FIXED instants so arcs never chase players
+  // ball-only flights: two live anchors (thrower release + target arrival).
+  //
+  // Both anchors are read at their OWN FIXED instants (release / arrival), never
+  // the live tMs, so this geometry is identical at every time. That is why it is
+  // built even when nothing is animating: the dashed line a coach sees while
+  // editing has to be the arc the ball will actually fly. A receiver's route is
+  // often drawn AFTER the throw, so the stored stroke still ends where he was
+  // standing — only this warp moves the line on to meet him.
   const flightWarps = new Map<string, { pts: Pt[]; d: string }>()
-  if (animActive) {
-    for (const f of paths) {
-      if (!FLIGHT_TYPES.has(f.type)) continue
-      const n = f.points.length
-      if (n < 2) continue
+  for (const f of paths) {
+    if (!FLIGHT_TYPES.has(f.type)) continue
+    const n = f.points.length
+    if (n < 2) continue
 
-      let sx = 0
-      let sy = 0
-      let ex = 0
-      let ey = 0
+    let sx = 0
+    let sy = 0
+    let ex = 0
+    let ey = 0
 
-      // Both anchors are evaluated at their FIXED instants (release / arrival),
-      // never the live tMs, so the arc never chases a moving player mid-flight.
-      //
-      // A thrower or receiver with no animated movement has no trajectory to
-      // anchor to, so it falls back to the token's rest position. Without this
-      // the flight keeps whatever point it was drawn from — which is how the
-      // Dive scenario's handoff ended up releasing 6.3yd behind the QB.
-      if (f.tokenId) {
-        const anchor = renderedPosAt(drivenByToken.get(f.tokenId) ?? [], f.timing.delayMs)
-          ?? restPos(f.tokenId)
-        if (anchor) {
-          sx = anchor.x - f.points[0].x
-          sy = anchor.y - f.points[0].y
-        }
+    // A thrower or receiver with no animated movement has no trajectory to
+    // anchor to, so it falls back to the token's rest position. Without this
+    // the flight keeps whatever point it was drawn from — which is how the
+    // Dive scenario's handoff ended up releasing 6.3yd behind the QB.
+    if (f.tokenId) {
+      const anchor = renderedPosAt(drivenByToken.get(f.tokenId) ?? [], f.timing.delayMs)
+        ?? restPos(f.tokenId)
+      if (anchor) {
+        sx = anchor.x - f.points[0].x
+        sy = anchor.y - f.points[0].y
       }
-      if (f.endTokenId) {
-        const anchor = renderedPosAt(
-          drivenByToken.get(f.endTokenId) ?? [],
-          f.timing.delayMs + f.timing.durationMs,
-        ) ?? restPos(f.endTokenId)
-        if (anchor) {
-          ex = anchor.x - f.points[n - 1].x
-          ey = anchor.y - f.points[n - 1].y
-        }
-      }
-
-      if (sx === 0 && sy === 0 && ex === 0 && ey === 0) continue
-
-      const pts = f.points.map((p, i) => {
-        const u = i / (n - 1)
-        return { x: p.x + sx * (1 - u) + ex * u, y: p.y + sy * (1 - u) + ey * u }
-      })
-      flightWarps.set(f.id, { pts, d: catmullRomPath(pts) })
     }
+    if (f.endTokenId) {
+      const anchor = renderedPosAt(
+        drivenByToken.get(f.endTokenId) ?? [],
+        f.timing.delayMs + f.timing.durationMs,
+      ) ?? restPos(f.endTokenId)
+      if (anchor) {
+        ex = anchor.x - f.points[n - 1].x
+        ey = anchor.y - f.points[n - 1].y
+      }
+    }
+
+    if (sx === 0 && sy === 0 && ex === 0 && ey === 0) continue
+
+    const pts = f.points.map((p, i) => {
+      const u = i / (n - 1)
+      return { x: p.x + sx * (1 - u) + ex * u, y: p.y + sy * (1 - u) + ey * u }
+    })
+    flightWarps.set(f.id, { pts, d: catmullRomPath(pts) })
   }
 
   const rendered = paths.map((f) => {
