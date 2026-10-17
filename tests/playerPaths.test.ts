@@ -168,7 +168,7 @@ describe('addFlight — a pass/toss/handoff with no pen work', () => {
     return st().tokens[st().tokens.length - 1]!
   }
 
-  it('creates a flight to the chosen teammate, with the far end anchored', () => {
+  it('creates a flight to the chosen player, with the far end anchored', () => {
     const qb = addQb()
     const rb = addRb()
     const id = st().addFlight(qb.id, rb.id, 'toss')!

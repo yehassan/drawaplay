@@ -101,10 +101,11 @@ export function applyShortcut(e: ShortcutEvent): void {
     }
   }
 
-  // arrow keys nudge the selection
+  // arrow keys nudge the selection. ⇧ is not a nudge modifier: on a single player
+  // it builds a block or a route, so a ⇧-modified step would mean two things.
   if (e.key.startsWith('Arrow') && st.selectedIds.length > 0) {
     e.preventDefault?.()
-    const step = e.shiftKey ? 2 : 0.5
+    const step = 0.5
     const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0
     const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0
     if (dx || dy) st.nudgeSelected(dx, dy)

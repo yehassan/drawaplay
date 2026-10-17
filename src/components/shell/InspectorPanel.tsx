@@ -29,7 +29,7 @@ const SHORTCUTS: ReadonlyArray<readonly [string, string]> = [
   ['⌘+wheel', 'Zoom'],
   ['F', 'Fit to play'],
   ['Space', 'Play / pause'],
-  ['Arrows', 'Nudge (⇧ = 2yd)'],
+  ['Arrows', 'Nudge selection'],
   ['⇧1…⇧=', 'Route concept (player selected)'],
   ['⇧← ⇧↑ ⇧→', 'Add block (player selected)'],
   ['⌘D', 'Duplicate selection'],
@@ -43,9 +43,9 @@ const SHORTCUTS: ReadonlyArray<readonly [string, string]> = [
 ]
 
 const BALL_ACTIONS: ReadonlyArray<{ type: BallActionType; label: string; title: string }> = [
-  { type: 'pass', label: 'Pass', title: 'Throw it to a teammate — click him next' },
-  { type: 'handoff', label: 'Handoff', title: 'Hand it off to a teammate — click him next' },
-  { type: 'toss', label: 'Toss', title: 'Toss it to a teammate — click him next' },
+  { type: 'pass', label: 'Pass', title: 'Throw it to another player — click him next' },
+  { type: 'handoff', label: 'Handoff', title: 'Hand it off to another player — click him next' },
+  { type: 'toss', label: 'Toss', title: 'Toss it to another player — click him next' },
 ]
 
 function SectionLabel({ children }: { children: string }) {
@@ -162,7 +162,7 @@ function PathInspector({ pathId }: { pathId: string }) {
               title={
                 allowed
                   ? `Mark as ${st.label}`
-                  : `A ${st.label.toLowerCase()} needs to end on a teammate — this line ends on grass`
+                  : `A ${st.label.toLowerCase()} needs to end on another player — this line ends on grass`
               }
               className={`flex items-center gap-2 rounded-[16px] border px-2.5 py-2 text-xs font-medium transition-colors ${
                 active
@@ -184,8 +184,8 @@ function PathInspector({ pathId }: { pathId: string }) {
 
       {!canApplyPathType(path, 'pass', allPaths, tokens) && (
         <p className="mt-2 text-[11px] leading-relaxed text-chrome-500">
-          Pass, handoff and toss need a receiver. Drag this line's end onto a teammate to hand the
-          ball over.
+          Pass, handoff and toss need a receiver. Drag this line's end onto another player to hand
+          the ball over.
         </p>
       )}
 

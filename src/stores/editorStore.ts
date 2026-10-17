@@ -108,7 +108,7 @@ interface EditorState {
   selectedIds: string[]
   /**
    * Armed "give the ball away" gesture: set on the player who has it, then the
-   * next click on a teammate creates the flight. Cleared on use or Esc, and
+   * next click on another player creates the flight. Cleared on use or Esc, and
    * deliberately not part of the document — it is a mode, not content.
    */
   ballAction: { throwerId: string; type: BallActionType } | null
@@ -158,7 +158,7 @@ interface EditorState {
   setPlayerRoute: (tokenId: string, conceptKey: string) => string | null
   /**
    * Arm a ball-handling action on the player who has the ball. The next click on
-   * a teammate creates the flight, so a toss or a screen needs no pen work.
+   * another player creates the flight, so a toss or a screen needs no pen work.
    */
   armBallAction: (throwerId: string, type: BallActionType) => void
   cancelBallAction: () => void

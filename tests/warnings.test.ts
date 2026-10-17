@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { playWarnings } from '../src/lib/warnings'
+import { ballEventAt } from '../src/lib/ball'
 import { canApplyPathType } from '../src/lib/target'
 import { reschedule } from '../src/lib/timing'
 import { SCENARIOS, loadScenario } from '../src/lib/scenarios'
@@ -37,6 +38,8 @@ const timed = (paths: PlayPath[]): PlayPath[] => {
   const s = reschedule(paths)
   return paths.map((p) => ({ ...p, timing: s.get(p.id)! }))
 }
+
+const rest = (tokens: Token[]) => new Map(tokens.map((t) => [t.id, { x: t.x, y: t.y }]))
 
 const crew = [
   tok('C', 'C', 26.5, 89),
@@ -134,12 +137,27 @@ describe('a ball action with nobody to catch it', () => {
 })
 
 describe('a ball action needs a receiver, decided where the coach picks it', () => {
-  it('allows a line ending on a teammate and refuses one ending on grass', () => {
+  it('allows a line ending on another player and refuses one ending on grass', () => {
     const onGrass = path('p', 'route', [[10, 80], [24, 74]], { tokenId: 'WR' })
-    const onTeammate = path('p', 'route', [[10, 80], [40, 82]], { tokenId: 'WR' })
+    const onPlayer = path('p', 'route', [[10, 80], [40, 82]], { tokenId: 'WR' })
     expect(canApplyPathType(onGrass, 'pass', [onGrass], crew)).toBe(false)
-    expect(canApplyPathType(onTeammate, 'pass', [onTeammate], crew)).toBe(true)
+    expect(canApplyPathType(onPlayer, 'pass', [onPlayer], crew)).toBe(true)
     expect(canApplyPathType(onGrass, 'route', [onGrass], crew)).toBe(true)
+  })
+
+  it('lets a throw end on a defender, since that is a drawn look', () => {
+    const cb = tok('CB', 'CB', 40, 82)
+    const tokens = [...crew, cb]
+    const aimed = path('p', 'route', [[10, 80], [40, 82]], { tokenId: 'WR' })
+    expect(canApplyPathType(aimed, 'pass', [aimed], tokens)).toBe(true)
+
+    // and it plays out as a hand-over: the ball ends up with the defender
+    const paths = timed([
+      path('p', 'pass', [[10, 80], [40, 82]], { tokenId: 'WR', endTokenId: 'CB' }),
+    ])
+    const end = paths[0]!.timing.delayMs + paths[0]!.timing.durationMs
+    expect(playWarnings(tokens, paths, 'WR')).toEqual([])
+    expect(ballEventAt(paths, rest(tokens), 'WR', end + 1, true, tokens)?.owner).toBe('CB')
   })
 
   it('refuses a thrower-less line, which is not a ball action either', () => {

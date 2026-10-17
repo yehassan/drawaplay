@@ -11,7 +11,10 @@ export const TARGET_MATCH_RADIUS_YD = 2.5
 
 /**
  * Who a ball action marked on this stroke would hand the ball to — the one
- * answer to "does this line end on a teammate?".
+ * answer to "does this line end on another player?".
+ *
+ * A defender counts. A ball thrown into the defence is a drawn look rather than
+ * a mistake, so the only thing this refuses is a line that ends on grass.
  *
  * This is the expression `updatePathType` stores, so a mark that passes
  * `canApplyPathType` cannot then be stored with nobody to throw to.
@@ -32,6 +35,10 @@ export function ballActionTarget(
  * refused, and only when the line ends on nobody: a pass, handoff or toss with
  * no receiver hands the ball to nobody, so the honest moment to say so is when
  * the coach picks the type, not after the ball fails to move.
+ *
+ * Which side the receiver is on is not this function's business. A throw that
+ * ends on a defender is a look a coach may want to draw, and it plays out as a
+ * hand-over like any other.
  */
 export function canApplyPathType(
   path: PlayPath,

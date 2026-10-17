@@ -217,8 +217,8 @@ describe('⇧ builds a route or a block without the pen', () => {
     expect(useEditorStore.getState().paths).toHaveLength(1)
   })
 
-  it('⇧ still nudges 2yd when the selection is not a single player', () => {
-    // a single player gets blocks from ⇧+arrows; anything else keeps the nudge
+  it('⇧ is not a nudge modifier, so it cannot mean two things at once', () => {
+    // a single player gets blocks from ⇧+arrows; nothing else changes the step
     useEditorStore.setState({
       tokens: [tok('a', 20, 20), tok('b', 30, 20)],
       selectedIds: ['a', 'b'],
@@ -226,7 +226,7 @@ describe('⇧ builds a route or a block without the pen', () => {
     shift('ArrowUp', 'ArrowUp')
     const s = useEditorStore.getState()
     expect(s.paths).toHaveLength(0)
-    expect(s.tokens.map((t) => t.y)).toEqual([18, 18])
+    expect(s.tokens.map((t) => t.y)).toEqual([19.5, 19.5])
   })
 })
 

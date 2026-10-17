@@ -237,7 +237,7 @@ export function FieldCanvas() {
   const onTokenPointerDown = (e: ReactPointerEvent<SVGGElement>, id: string) => {
     const st = useEditorStore.getState()
 
-    // an armed ball action eats the click: the next teammate you hit is the one
+    // an armed ball action eats the click: the next player you hit is the one
     // the ball goes to, whatever tool is up
     const armed = st.ballAction
     if (armed) {
