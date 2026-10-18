@@ -214,6 +214,8 @@ Architecture rule: **editor state is serializable data, always.** Rendering is a
 
 Each milestone ends demoable. Acceptance criteria are the definition of done.
 
+> The coach-product milestones on top of this list — the playbook home, the sheet and the file, situation and order — are in `ROADMAP.md`. M7's save-as-formation and playbook import/export, and M8's share link, are owed there rather than forgotten.
+
 ### M0 — Scaffold & Foundations (½ wk)
 Vite+React+TS+Tailwind+Zustand wired; design tokens; app shell (top bar, left rail, right inspector, bottom dock placeholders); CI-less lint/typecheck scripts.
 ✅ Empty editor shell renders, hot reload works, tokens defined.
@@ -260,7 +262,7 @@ Full keyboard map, a11y pass (focus order, contrast), perf budget check (60fps @
 
 ## 10. Non-Goals (v1)
 
-Real-time multiplayer collaboration · native mobile apps · opponent-scouting/AI features · printable playbook PDFs (trivial later from PNG export) · defensive-overlay mode (parked) · cloud accounts (local-first until proven).
+Real-time multiplayer collaboration · native mobile apps · opponent-scouting/AI features · defensive-overlay mode (parked) · cloud accounts (local-first until proven). Printable playbook sheets were a non-goal here and are now the point: `ROADMAP.md` M9.
 
 ## 11. Open Questions (decide by M4)
 
