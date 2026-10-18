@@ -1,4 +1,4 @@
-import { hashX, numberX, type Ruleset } from './field'
+import { FIELD_L, FIELD_W, hashX, numberX, type Ruleset } from './field'
 import { PATH_STYLES } from './pathStyles'
 import { POSITIONS } from './positions'
 import { paletteFor, styleColor, type FieldTheme } from './theme'
@@ -10,8 +10,8 @@ import type { TextNote, Token } from '../stores/editorStore'
 const CHALK = '#eaf3ea'
 const ACCENT = '#c8714a'
 
-export const FIELD_W_YD = 53.3
-export const FIELD_L_YD = 120
+export const FIELD_W_YD = FIELD_W
+export const FIELD_L_YD = FIELD_L
 
 /** Paint the full animated frame for a scene onto a 2D context (scale = px/yd). */
 export function drawFrame(

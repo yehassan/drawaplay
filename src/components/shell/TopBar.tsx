@@ -207,7 +207,7 @@ export function TopBar() {
             {[
               {
                 label: 'PNG — full diagram',
-                hint: 'static, hi-res',
+                hint: 'static, 2160×3840',
                 run: async () => {
                   const st = useEditorStore.getState()
                   await exportPNG({ name: st.playName, tokens: st.tokens, paths: st.paths, textNotes: st.textNotes, ballStartId: st.ballStartId, losSpec: st.losSpec, fieldTheme, ruleset: st.ruleset })
@@ -215,7 +215,7 @@ export function TopBar() {
               },
               {
                 label: 'Video',
-                hint: 'MP4 or WebM — one playback pass',
+                hint: 'MP4 or WebM, 1080×1920',
                 run: async () => {
                   const st = useEditorStore.getState()
                   await exportWebM(

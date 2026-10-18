@@ -1,4 +1,4 @@
-import { computeScene, fitView, type ViewRect } from './render'
+import { computeScene, fitView, frameView, type Frame } from './render'
 import { drawFrame } from './exportCanvas'
 import { timelineDuration } from './timing'
 import type { LosSpecLike } from './los'
@@ -48,13 +48,21 @@ export function pickVideoMime(
   return null
 }
 
-/** Static hi-res PNG of the diagram, framed tightly on the play. */
+/**
+ * The one shape every export has, so a play's export size never depends on the
+ * shape of the play. 9:16 portrait, because the field is vertical and a play is
+ * normally taller than it is wide. The still is twice the video's density.
+ */
+export const VIDEO_FRAME: Frame = { w: 1080, h: 1920 }
+export const PNG_FRAME: Frame = { w: 2160, h: 3840 }
+
+/** Static hi-res PNG of the diagram, in the standard frame. */
 export async function exportPNG(doc: ExportDoc): Promise<void> {
-  const scale = 24
-  const view = fitView(doc.tokens, doc.paths, { tMs: 0, playing: false, ballStartId: doc.ballStartId }, 5, 20, doc.textNotes ?? [])
+  const content = fitView(doc.tokens, doc.paths, { tMs: 0, playing: false, ballStartId: doc.ballStartId }, 5, 20, doc.textNotes ?? [])
+  const { view, scale, width, height } = frameView(content, PNG_FRAME)
   const canvas = document.createElement('canvas')
-  canvas.width = Math.round(view.w * scale)
-  canvas.height = Math.round(view.h * scale)
+  canvas.width = width
+  canvas.height = height
   const ctx = canvas.getContext('2d')!
   const scene = computeScene(doc.tokens, doc.paths, { tMs: 0, playing: false, ballStartId: doc.ballStartId })
   drawFrame(ctx, { ...scene, tokens: doc.tokens, textNotes: doc.textNotes }, { scale, losSpec: doc.losSpec ?? null, view, theme: doc.fieldTheme, ruleset: doc.ruleset })
@@ -65,8 +73,6 @@ export async function exportPNG(doc: ExportDoc): Promise<void> {
 
 const VIDEO_FPS = 60
 const VIDEO_BITRATE = 12_000_000
-const VIDEO_SCALE = 16
-const VIDEO_MAX_DIM = 1920
 const TAIL_HOLD_MS = 400
 
 export async function exportWebM(
@@ -77,22 +83,11 @@ export async function exportWebM(
     throw new Error('Video recording is not supported in this browser')
   }
 
-  const baseView = fitView(doc.tokens, doc.paths, { tMs: 0, playing: true, ballStartId: doc.ballStartId }, 5, 20, doc.textNotes ?? [])
-  let scale = VIDEO_SCALE
-  const longest = Math.max(baseView.w, baseView.h)
-  if (longest * scale > VIDEO_MAX_DIM) {
-    scale = Math.max(2, Math.floor(VIDEO_MAX_DIM / longest))
-  }
-
-  const view: ViewRect = {
-    x: baseView.x,
-    y: baseView.y,
-    w: Math.ceil((baseView.w * scale) / 2) * 2 / scale,
-    h: Math.ceil((baseView.h * scale) / 2) * 2 / scale,
-  }
+  const content = fitView(doc.tokens, doc.paths, { tMs: 0, playing: true, ballStartId: doc.ballStartId }, 5, 20, doc.textNotes ?? [])
+  const { view, scale, width, height } = frameView(content, VIDEO_FRAME)
   const canvas = document.createElement('canvas')
-  canvas.width = Math.round(view.w * scale)
-  canvas.height = Math.round(view.h * scale)
+  canvas.width = width
+  canvas.height = height
   const ctx = canvas.getContext('2d')!
   ctx.imageSmoothingEnabled = true
   ctx.imageSmoothingQuality = 'high'

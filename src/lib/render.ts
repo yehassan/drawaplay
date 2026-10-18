@@ -4,7 +4,7 @@ import { timelineDuration } from './timing'
 import { pathEased } from './easing'
 import { ballStateAt, type BallState } from './ball'
 import { PLAYER_DRIVEN } from './pathStyles'
-import type { Pt } from './field'
+import { FIELD_L, FIELD_W, type Pt } from './field'
 
 import type { PlayPath, TextNote, Token } from '../stores/editorStore'
 
@@ -258,4 +258,51 @@ export function fitView(
   }
 
   return { x: minX, y: minY, w, h }
+}
+
+// ---------------------------------------------------------------------------
+// A fixed frame for export
+// ---------------------------------------------------------------------------
+
+export interface Frame {
+  w: number
+  h: number
+}
+
+export interface FramedView {
+  /** window onto the field, in field yards */
+  view: ViewRect
+  /** px per yard, derived so the window fills the frame exactly */
+  scale: number
+  width: number
+  height: number
+}
+
+/**
+ * Put the play in a frame of a fixed size.
+ *
+ * `fitView` frames the content tightly, which is right for a diagram but makes
+ * every play export at its own size and aspect ratio. Export needs one size, so
+ * the content box is grown to the frame's aspect around its centre and the
+ * scale follows from that: resolution then depends on the play instead of the
+ * picture depending on the play. Growing the box only ever *adds* field around
+ * the play, so nothing is cropped.
+ *
+ * The window is also pulled back inside the field while it fits, so a play near
+ * a sideline or a goal line fills the frame with turf rather than leaving a
+ * band of nothing; a window larger than the field cannot be helped and is
+ * centred on it instead.
+ */
+export function frameView(content: ViewRect, frame: Frame): FramedView {
+  const aspect = frame.w / frame.h
+  const w = Math.max(content.w, content.h * aspect)
+  const h = w / aspect
+  const x = clampAxis(content.x + content.w / 2 - w / 2, w, FIELD_W)
+  const y = clampAxis(content.y + content.h / 2 - h / 2, h, FIELD_L)
+  return { view: { x, y, w, h }, scale: frame.w / w, width: frame.w, height: frame.h }
+}
+
+function clampAxis(pos: number, size: number, span: number): number {
+  if (size >= span) return (span - size) / 2
+  return Math.max(0, Math.min(span - size, pos))
 }
