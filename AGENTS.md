@@ -21,7 +21,7 @@ The core loop: a coach picks a formation (quickstart modal), drops player tokens
 npm run dev      # vite dev server
 npm run build    # tsc -b && vite build (typecheck + build)
 npm run lint     # oxlint
-npm test         # vitest run (345 tests, 23 suites)
+npm test         # vitest run (350 tests, 23 suites)
 ```
 
 ## Directory map
@@ -130,6 +130,12 @@ Two flights released into the same window are **both** legal (possession has not
 
 Ownership walks the *legal* flights: a landing only transfers if `endTokenId` is still on the field, so deleting a receiver leaves the ball with the thrower instead of making it vanish.
 
+## Export framing — one size, density derived from the play
+
+Export is a fixed **1080×1920** video (60fps MP4/WebM) and **2160×3840** PNG — 9:16 portrait, because the field is vertical and a play is normally taller than it is wide. It used to be neither: the frame *was* the play's tight `fitView` box times a flat 16px/yd, so every play exported at its own size, shape and density (`Dive: snap → handoff → run chain` came out 320×550, `BDB: Rodgers 57yd TD` 894×1104).
+
+`frameView(content, frame)` (`lib/render.ts`) grows the content box to the frame's aspect around its centre and derives the scale from that, so the size is constant and the **density follows the play** — 19–54px/yd across the shipped scenarios, never below the flat 16 it replaced. Growing the box only ever adds field around the play, so nothing is cropped; the window is also pulled back inside the field while it fits, so a play on a goal line fills the frame with turf instead of leaving a band of nothing (that can trim the 5yd pad, never the play itself). A window larger than the field is centred on it, and only then is there a margin. `tests/export.test.ts` pins the size, the 9:16 aspect, that the play is still in shot, and the density floor.
+
 ## Problems the play has — warn only for what cannot be prevented
 
 The inert throw is a property of the **whole play** (the thrower's ball must come from somewhere earlier in the timeline, however the play was drawn), so it cannot be caught at the moment of intent, and both drawing orders must stay legal. There is no honest prevention for it — the only ones are the silent teleport (removed) or making the ball one drawn journey (contradicts draw-first-then-label). So it is the one thing the play **warns** about.
@@ -232,12 +238,13 @@ warnings         the play's own problems: the throw that never happens, a throw
                  delete, that a throw may end on a defender, and that every
                  scenario the app ships is warning-free
 formations       quickstart personnel
-export           svg/png export
+export           the fixed export frame: standard size and aspect, density
+                 derived from the play, nothing cropped
 ```
 
 ## Status
 
-Hardening (HA–HE), M6 persistence/playbook and defense formations are complete — 345 vitest tests across 23 suites. The ball exchange was reworked against real tracking data (see above), the pen's decision extracted to a pure function so the scenario checklist runs as tests, possession made explicit (a throw needs the ball in hand, so a chain — toss, then a pass by the man who caught it — hands it down the line), and the one consequence that cannot be prevented is now told to the coach rather than left silent: the inspector lists the play's own problems. Next up: M8 exports/sharing.
+Hardening (HA–HE), M6 persistence/playbook and defense formations are complete — 350 vitest tests across 23 suites. The ball exchange was reworked against real tracking data (see above), the pen's decision extracted to a pure function so the scenario checklist runs as tests, possession made explicit (a throw needs the ball in hand, so a chain — toss, then a pass by the man who caught it — hands it down the line), and the one consequence that cannot be prevented is now told to the coach rather than left silent: the inspector lists the play's own problems. Next up: M8 exports/sharing.
 
 Known-unfixed, deliberately left: the ball's angle while carried is hardcoded to `-35°` and its offset from the holder is fixed in field space, so on a sharp cut the ball slides around the runner (45° off his heading on the Toss sweep). The fix is to rotate both by the holder's heading, which is not recorded anywhere yet — there is no single answer for "which way is this player facing".
 
