@@ -138,12 +138,14 @@ export async function exportWebM(
     const interval = 1000 / VIDEO_FPS
     const totalFrames = Math.ceil(D / interval)
     const holdFrames = Math.ceil(TAIL_HOLD_MS / interval)
+    const startedAt = performance.now()
     for (let i = 0; i <= totalFrames + holdFrames; i++) {
       const t = Math.min(D, i * interval)
       drawAt(t)
       ;(track as unknown as { requestFrame: () => void }).requestFrame()
       onProgress?.(Math.min(1, t / D))
-      await new Promise((r) => setTimeout(r, interval))
+      const due = startedAt + (i + 1) * interval
+      await new Promise((r) => setTimeout(r, Math.max(0, due - performance.now())))
     }
   } else {
     await new Promise<void>((resolve) => {
