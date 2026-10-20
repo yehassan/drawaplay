@@ -253,7 +253,7 @@ PNG export (static, hi-res); WebM/GIF recording of playback (MediaRecorder / fra
 ✅ Coach can drop an animated play into a group chat.
 
 ### M9 — Hardening & Delight (1 wk)
-Full keyboard map, a11y pass (focus order, contrast), perf budget check (60fps @ 22 tokens/15 paths), error boundaries, onboarding hint overlay on first run, seed content (3 example plays).
+Full keyboard map, a11y pass (focus order, contrast), perf budget check (60fps @ 22 tokens/15 paths), error boundaries. First-run onboarding is not a polish item and is not an overlay: the first-play walkthrough is specified in `ROADMAP.md` M8, and the app ships no seed plays.
 ✅ Feels like a product, not a prototype. Core-loop e2e test green.
 
 **Total: ~8 weeks** solo, sequenced so the riskiest unknowns (smoothing quality, animation feel) land in M2/M4, early enough to pivot.
