@@ -1,6 +1,6 @@
 # DrawAPLAY — Coach Product Roadmap
 
-`SPEC.md` specs the editor, and the editor is largely built. This document is the *product* plan on top of it: what has to exist before a coach's season can run on the app, in the order I would build it.
+`SPEC.md` specs the editor, and the editor is largely built. This document is the *product* plan on top of it: what has to exist before a coach's season can run on the app and before anyone can pay for it, in the order I would build it.
 
 The customer is a **coach, youth through small college**. That whole range shares one workflow end to end — the coach is the entire staff, there is no money for tools or procurement, paper still carries the plan, and the week is always build → print → teach → call → review. Serve the workflow and the range is one product.
 
@@ -14,7 +14,7 @@ The customer is a **coach, youth through small college**. That whole range share
 | Medium | phone first, finger drawing | laptop, projector, print |
 | Who pays | a parent-coach | a program, or a GA's own money |
 
-**Constraint on M8–M10: the launch product is 11-man only, and the small-sided variants are M11 — but the number of players and the field length must not be baked into the sheet layout or the file format.** They reach the geometry, the formation builder, the drawing surface, the export frame and the print layout. Deferring them is cheap; undoing them is not.
+**Constraint on M9 and M12: the launch product is 11-man only, and the small-sided variants are M12 — but the number of players and the field length must not be baked into the sheet layout or the file format.** They reach the geometry, the formation builder, the drawing surface, the export frame and the print layout. Deferring them is cheap; undoing them is not.
 
 ## The problem this plan solves
 
@@ -32,10 +32,11 @@ Three artifacts are missing, and they are what a coach actually carries:
 |---|---|---|
 | **M8** | Playbook home, and the first play | The app opens as their playbook, and the first play is drawn with them |
 | **M9** | The sheet and the file | Plays on paper, the season in a file |
-| **M10** | Situation and order | Find a play by down and distance; a script in order |
-| **M11** | The depth the range demands | Bulk work, roster names, notes, flip, small-sided fields, league-legal defensive presets |
+| **M10** | The front door | A stranger finds it, draws free, signs up, pays, and finds the same play on another device |
+| **M11** | Situation and order | Find a play by down and distance; a script in order |
+| **M12** | The depth the range demands | Bulk work, roster names, notes, flip, small-sided fields, league-legal defensive presets |
 
-Numbering continues `SPEC.md`'s list. `SPEC.md`'s M8 (Export & Share) is built — PNG and video shipped as one fixed frame; only the read-only share link remains, deferred behind a backend and not part of this plan. Still owed from `SPEC.md` and absorbed here: §5.1 (the library as the *home*, not a modal), §5.3 (save-as-formation), §5.4 (import/export the whole playbook). M8 and M9 pay those off rather than invent them.
+Numbering continues `SPEC.md`'s list. `SPEC.md`'s M8 (Export & Share) is built — PNG and video shipped as one fixed frame; the read-only share link lands in M10, now that there is a backend to put it behind. Still owed from `SPEC.md` and absorbed here: §5.1 (the library as the *home*, not a modal), §5.3 (save-as-formation), §5.4 (import/export the whole playbook). M8 and M9 pay those off rather than invent them.
 
 ---
 
@@ -85,11 +86,11 @@ Then it stops. No tool inventory, no path types, no pass or handoff, no defence 
 
 - **`ProfileRecord`** (a small store in the existing IndexedDB, not a change to `PlayRecord`): `lastOpenedPlayId`, so **Continue** means the play the coach actually had open rather than the most recently saved one, and `onboardingDoneAt`, which is the only part of the walkthrough that is stored.
 - **No launch decision.** With one format there is nothing to ask and nothing to infer: the app opens on the playbook, empty or full. The store holds `screen` with `openPlaybook()` / `openEditor()`. No router — the app is one screen with modals today and this keeps the dependency list as it is.
-- **When small-sided formats arrive (M11)** the field becomes a setting and the question of a coach's format has a real answer; that is where a level belongs, not here.
+- **When small-sided formats arrive (M12)** the field becomes a setting and the question of a coach's format has a real answer; that is where a level belongs, not here.
 
 ## Youth rules, and what they buy us
 
-Pop Warner at 8U/9U: **no blitzing**, a maximum of **six defenders on the line of scrimmage**, linebackers 3yd off the ball, corners 5, safeties 7, and coaches permitted on the field. No kickoffs or punts at those ages. A mercy rule at 30 points bars passes and outside runs. A minimum-play rule must be met by the end of the third quarter. Two consequences: special teams stay out of scope (nothing to build), and **league-legal defensive presets** become possible — alignments that are legal by construction for the coach's game (M11).
+Pop Warner at 8U/9U: **no blitzing**, a maximum of **six defenders on the line of scrimmage**, linebackers 3yd off the ball, corners 5, safeties 7, and coaches permitted on the field. No kickoffs or punts at those ages. A mercy rule at 30 points bars passes and outside runs. A minimum-play rule must be met by the end of the third quarter. Two consequences: special teams stay out of scope (nothing to build), and **league-legal defensive presets** become possible — alignments that are legal by construction for the coach's game (M12).
 
 ### Sources
 
@@ -114,7 +115,7 @@ M8 is mostly a screen, so most of it is checked by hand. The logic it adds is on
 
 ## Out of scope for M8
 
-Printing, the playbook file, situation, bulk actions, small-sided geometry, roster names. Those are M9–M11. Pre-drawn plays are not planned: the formation presets are the starting point, and every play in a playbook is the coach's.
+Printing and the playbook file are M9, situation is M11, and bulk actions, small-sided geometry and roster names are M12. Pre-drawn plays are not planned: the formation presets are the starting point, and every play in a playbook is the coach's.
 
 ## Acceptance
 
@@ -129,16 +130,16 @@ About two days. The library already exists as a modal, so the promotion, the emp
 - **The walkthrough must show, not explain.** The demo is fifteen seconds and three prompts is the ceiling. A step that needs a paragraph is the wrong step, and an onboarding that teaches the toolbar instead of the first play wastes the only first run there is.
 - **Touch is unverified.** The pen is a visible rail button, so it is discoverable, but drag-drawing with a finger has never been tested. If youth coaches are phone-first and the drag does not work there, the walkthrough has to be designed for touch first, not adapted afterwards.
 - **The preset list is personnel-coded** (`23 … 00`), which a youth coach may not recognise at a glance. Watch first-run behaviour before deciding whether named formations are worth adding; do not add them on a hunch.
-- **11-man only leaves small-school coaches out until M11.** Say so in the product's own words, not just here.
+- **11-man only leaves small-school coaches out until M12.** Say so in the product's own words, not just here.
 
 ## Decisions
 
-- The launch product is **11-man only**; 9-, 8- and 6-man arrive in M11, and flag is not in the plan (see M11).
+- The launch product is **11-man only**; 9-, 8- and 6-man arrive in M12, and flag is not in the plan (see M12).
 - M9 does the **sheet** before the **file** — the sheet is visible, the file is the safety net.
 - **Formations, not plays.** The quickstart's presets are the fast path onto the field, so the app ships no plays of its own; a playbook starts empty and holds only the coach's work.
 - **The walkthrough is the first play**, not a tour: three action-gated prompts on the real field, ending with a saved play. Its ghost stroke is a hint on the coach's own formation, never content.
-- **No level question.** At 11-man there is nothing for the answer to change; it returns with small-sided formats in M11, when it decides the bodies on the field.
-- League-legal **defensive** presets (six on the line, linebackers 3yd off, corners 5, safeties 7) sit in M11, not M8.
+- **No level question.** At 11-man there is nothing for the answer to change; it returns with small-sided formats in M12, when it decides the bodies on the field.
+- League-legal **defensive** presets (six on the line, linebackers 3yd off, corners 5, safeties 7) sit in M12, not M8.
 
 ---
 
@@ -168,6 +169,7 @@ A play leaves the screen: the coach prints it for Friday, and can hand the seaso
 
 - `lib/sheet.ts`: page layout per play, built on `frameView` with a paper aspect; pure, so the layout is tested without a printer.
 - `lib/playbookFile.ts`: `exportPlaybook(records) → Blob` and `importPlaybook(json) → { plays, folders, scripts }`, versioned and pure.
+- The file's play shape is the shape sync stores, so there is one serialization of a play, not two.
 - `ProfileRecord` unchanged.
 
 ## What gets tested
@@ -199,10 +201,166 @@ About three days: the sheet is one, the file and its tests two.
 
 - The sheet prints through the browser; no PDF library.
 - The file is JSON and additive; import never replaces.
+- Printing is free until M10; from then on it is the Pro gate.
+- Export requires an account from M10; the video and the file never require payment, the still is Pro.
 
 ---
 
-# M10 — Situation and order
+# M10 — The front door
+
+## Goal
+
+A stranger finds the product, draws a play without an account, signs up to keep it safe and take it with them, pays for the rest, and opens the same playbook on a laptop.
+
+This is the first milestone that is not about football. It is the one that turns the app into a business, and it sits here because everything before it is what the coach is actually paying for.
+
+## The landing page
+
+**One URL.** The product's root is the marketing page to a stranger and the playbook to a signed-in coach. There is no separate marketing site and no `/app` prefix: one deploy, one place to be wrong.
+
+- **The hero is the app.** The loop at the top is a real play rendered by the same `computeScene` the editor uses, autoplaying and repeating — not a recorded video, so it cannot drift from the product and weighs nothing. It is a hand-drawn scenario, never one of the tracking plays: that footage is not ours to advertise with.
+- **One sentence, then proof.** What it is, the loop, and a button that goes straight into the editor. No sign-up gate on the button.
+- **Three steps, no feature list**: draw it, watch it, print it.
+- **Pricing on the page**, one plan, monthly and yearly, with the free tier stated in the same breath.
+- **The questions a coach actually asks**: does it work on a phone, does it work offline, is it 11-man, can I print it, what happens to my plays if I stop paying.
+- **No cookie banner.** Analytics are cookieless and the funnel is counted in our own database, so nothing needs consent.
+- **Legal before money**: privacy, terms, refund policy, and account deletion that is not buried in an email thread.
+
+## Sharing
+
+A shared play is a public, read-only page at `/p/<id>`: the same renderer, no editor, no account to view, revocable by its owner, and `noindex` so a coach's playbook never surfaces in a search result. It is a day of work now that a backend exists, and it is the only growth loop this product has — a coach who sends a play to the staff group chat is showing the product to five other coaches.
+
+The earlier plan deferred share links behind a backend. That reason is gone.
+
+## Accounts
+
+- Email and password, Google, and magic link. Email verification is required before sync, not before drawing.
+- **Better Auth in the same Worker**, sessions in D1, httpOnly cookies. Version 1.5 supports D1 directly: no separate auth service and no second bill.
+- **Sign-up is offered, never required to draw.** The first play is made signed out; the account appears the first time the coach wants to take something out of the app or keep it safe — export a video, back up the playbook, sync it or pay. A wall before the first stroke throws away the only demo this product gets.
+- **A free account stores a backup, not a synced playbook.** One compressed snapshot per save in R2 — cheaper than the verification email it took to create the account — and nothing to reconcile. That is the cheapest acquisition channel available and it is the product's best argument.
+- Deleting an account deletes the plays, the snapshots and their R2 objects — a real cascade, with a short restore window and nothing after it.
+
+## Sync
+
+- **The play is the unit.** A write states the revision it started from; if the server has moved on, the incoming version is kept as a conflict copy named after its device rather than silently overwriting.
+- **Ordering comes from a server sequence, never a device clock.** Two phones ten minutes apart must not decide which edit won.
+- **Deletes are tombstones**, so a play deleted on the phone does not come back from the laptop.
+- **Local-first stays.** IndexedDB is the working copy and the network is a background convenience: drawing, playback and printing never wait for a request. Offline is a normal state, not an error.
+- **Nothing syncs until sign-in.** A signed-out playbook behaves exactly as it does today, and the first sign-in claims the local playbook in one pass rather than uploading it twice.
+- Exports are not synced; video and PNG are regenerated on the device that wants them.
+- **A service worker**: installed, the app opens and draws with no network at all.
+
+## Backup — free, and not sync
+
+The account's first job is to make the work safe, and that part is free.
+
+- **The whole playbook, every time.** Every save writes one compressed snapshot of the entire playbook to R2, with a pointer row in D1 — every play, folder, tag, timing and note. There is no coverage cap: "ten of your plays are safe" is a half-truth and a support ticket, and the eleventh is usually the new game plan. The 25-play limit is on creating new plays, and it never decides what a snapshot contains: a coach over the line, for any reason, has every play backed up.
+- **Restore-only.** A snapshot never pushes itself to a device and never merges. Restoring is an explicit action that replaces the local playbook, behind a confirm that names what is being replaced.
+- **One source device.** Saves carry a device label. A device that is not the source cannot silently become one: it asks, and the question says plainly that the other device's changes will not be merged.
+- **A lapse freezes sync, never deletes.** A coach who stops paying keeps every snapshot, keeps backing up as a free account, and can still restore; synced rows stop changing rather than disappearing. Pro is what keeps two devices the same, not what keeps the work alive.
+- **Retention is time, not coverage**: the last 20 snapshots and at least 90 days, pruned by one job, and the newest is never pruned.
+- **Writes are rate-limited; coverage is not.** One snapshot per minute of change, because a snapshot per keystroke is a bill, not a feature.
+
+This is deliberately not sync. Sync is a different job — two devices kept identical while both are being edited — and it is what Pro sells.
+
+## Billing
+
+- **RevenueCat Web, on its own billing engine over Stripe.** RevenueCat Billing gives a hosted checkout, the subscription lifecycle, a customer portal and receipts without building any of them, and one `pro` entitlement the server checks. Stripe is the gateway; RevenueCat is not the merchant of record, so sales tax runs through Stripe Tax at 50¢ per transaction in registered locations.
+- **The free tier is the trial.** No timed trial, because a coach's season has gaps. Free, once there is an account, is the whole editor with the playbook backed up: the walkthrough, the animation as video, the file, share links, a restore-only backup with no coverage cap, and **up to 25 plays**. Pro buys **a season** — unlimited plays, live sync, the sheet and the PNG still — at **$9/month or $59/year**, priced to be the coach's own money rather than a program's purchase order.
+- **Three reasons to pay, in the order a coach meets them.** Capacity — the 25th play, because a season needs more room than a game plan. Paper — the sheet and the still, the artifacts he hands out on Friday. Continuity — two devices kept identical, which only a staff needs. They arrive as one plan, because a menu of three would be a worse product and a worse business.
+- **The cap is capacity, not safety.** Twenty-five plays is a game plan's worth: enough to build, watch and print through a real Friday, and then the season asks for more. It blocks a new play; it never takes one away, never edits one, never stops an export, and never touches the backup. A coach already over the line keeps every play he made, and only new ones wait.
+- **Paper is the second gate.** The sheet and the PNG still are the same purchase: the still is 2160×3840, a coach can print it, so giving it away would make the print gate a formality. Video stays free because motion is the demo and the only share loop this product has — a coach who sends a clip to the staff group chat is the advertisement.
+- **Sync is the third gate, and the smallest.** Only a staff with two devices needs two devices kept identical. A youth coach with one phone is buying capacity and paper.
+- **The server decides; the client only hides buttons.** Entitlement is a row written by the RevenueCat webhook, checked on sync and on print.
+- **Webhooks are verified and idempotent**: signature checked, event id stored, duplicate delivery ignored, unknown types logged and ignored. A daily reconcile pulls from RevenueCat, so a dropped webhook cannot leave a paying coach locked out.
+- **The file is never held hostage.** Exporting the whole playbook stays free for every account, including one that has stopped paying, because a coach's season is not collateral for a subscription. The file is also the reason a lapsed coach can come back without having lost a year.
+- **Honest limit: printing, export and the play limit happen in the browser and cannot be enforced by a server.** All three are UI gates; sync is the one the server can actually check. That is the right trade — a coach who opens the browser's developer tools to print one page was never going to pay.
+- **Refunds and comps** happen in RevenueCat's dashboard and a support inbox. No admin UI in this milestone.
+- RevenueCat is free below $2,500 monthly tracked revenue, then 1%. If sales-tax registration becomes the bottleneck, RevenueCat also supports Paddle as merchant of record, at roughly 5% + 50¢ and no filings.
+
+## What runs where
+
+Checked against Cloudflare's published pricing and limits, October 2026:
+
+- **One Worker** serves the app and the API. Static assets are free and unlimited; the paid Workers plan is $5/month and includes 10M requests and 30M CPU-ms.
+- **D1** holds users, sessions, plays, entitlements and webhook events: 5GB included, $0.75/GB-month beyond, 10GB maximum per database, 25B rows read and 50M written included per month. A play is a few kilobytes, so a thousand coaches with a hundred plays each stay inside the included tier. Each database is single-threaded — fine at this size, and the first thing to watch if writes ever queue.
+- **R2** for playbook snapshots and shared pages: 10GB free, no egress fee.
+- **Turnstile** on sign-up and password reset, free.
+- **Resend** for verification and reset mail: 3,000 emails a month free, 100 a day.
+- **No other platform.** No Postgres, no second host, no separate auth vendor, no CMS.
+
+The alternative was Supabase or Firebase, which bundle auth with a database. Cloudflare wins because the app is already a static bundle and the API is small: the same deploy serves both, static traffic costs nothing, and the only stranger in the stack is email. The cost is that auth, sync and billing are ours to write and ours to keep running — which is the work below, not a hidden extra.
+
+## Data
+
+```
+users         id, email, created_at, deleted_at
+sessions      Better Auth
+plays         id (client uuid), user_id, name, folder_id, tags, data JSON, rev, seq, updated_at, deleted_at
+folders       id (client uuid), user_id, name, rev, seq, updated_at, deleted_at
+entitlements  user_id, pro_until, source, updated_at
+webhook_log   event_id, type, received_at
+snapshots     id, user_id, seq, device, r2_key, bytes, created_at
+```
+
+- The play id is generated on the device and kept, so an offline play is never renumbered when it uploads.
+- `rev` is per row; `seq` is per user and assigned by the server.
+- Folders sync like plays, so the playbook a coach sees on the laptop is the one they filed on the phone.
+- A snapshot's body is a gzipped playbook in R2; D1 stores only the pointer, so a 300-play season never approaches the 2MB row limit.
+- `data` is the same serialized play the file format defines — one shape with three uses: IndexedDB, the file, the server.
+
+## What gets tested
+
+- **Entitlement**: a signed-out request cannot sync; a free account cannot sync; a cancelled subscription loses pro at period end, not mid-session; a webhook replayed twice changes nothing.
+- **Sync**: two devices converge; a delete does not resurrect; an offline edit merges; a conflicting edit produces a named conflict copy instead of a loss.
+- **Auth**: verification, reset, session expiry, and account deletion removing every play.
+- **Export**: a signed-out client is asked for an account before a video, a PNG or the file; a free account can take the video and the file but not the still.
+- **The landing page**: it renders with the app's own renderer, the loop stays under 2MB, and nothing moves under `prefers-reduced-motion`.
+- **The share page**: no editor, no account, and a revoked link 404s.
+- **Backup**: a restore replaces the local playbook and never merges; a second device cannot overwrite the source without confirming; a lapsed account can still restore; pruning never removes the newest snapshot.
+- **Capacity**: a free playbook refuses the 26th play with the reason shown, while every existing play stays editable, exportable and backed up; a playbook already over the line is never trimmed.
+
+## Manual checks
+
+- Buy with a test card, cancel, and confirm access ends when the period does.
+- Sign up on a phone, draw, open a laptop, find the play.
+- Turn the network off, draw, reconnect, nothing lost and nothing duplicated.
+- Open the installed app with the server unreachable: it still draws.
+- Clear the browser on a signed-in phone, restore from the account, and get the playbook back exactly.
+
+## Acceptance
+
+A stranger lands, draws a play without an account, signs up to make it safe and export it, pays when the season outgrows the playbook, and finds it on a laptop. A coach who never pays can still draw, watch and export a video of each of his 25 plays, keep them backed up, and take them home in one file.
+
+## Effort
+
+About three and a half weeks of one person's time: landing page and legal two days, accounts three, schema and sync four, backup two, billing three, sharing one, hardening two.
+
+## Risks
+
+- **Sync is the hard part**, and the version worth building is deliberately small: per-play revisions, conflict copies, tombstones. A real CRDT is a month and solves a problem one coach with two devices does not have.
+- **The backend is a promise.** Uptime, backups, deletion and privacy are now the product's problem. D1 Time Travel gives 30 days of point-in-time recovery; a weekly export to R2 is the belt to that braces.
+- **Charging for print is a bet.** It is the fairest gate — pay for the routine — and it is still a bet, to be watched with real coaches before the free tier hardens.
+- **D1 is single-threaded per database.** Fine for thousands of coaches; if that changes, shard by user, which the schema already allows because every row is owned.
+- **Email deliverability** is a real setup job: SPF, DKIM, DMARC and a warm domain. A reset email in spam is a customer lost.
+- **A landing page is not a business.** This milestone makes the product buyable; it does not make anyone want it. That is the demo, and the demo is already built.
+- **Restore is a rule, not a merge.** The first coach who restores onto a device that was also being edited will lose the weaker copy if the confirm is read carelessly; the confirm must name the playbook and the time it replaces.
+- **A backup is a promise.** The night before a game is exactly when it must work. Test a restore every month, and treat an outage on that night as the most expensive hour of the year.
+- **The 25th play is the bet.** Capacity — not sync, not paper — is what most coaches will pay for, and 25 is a guess. Test it with the first fifty coaches, only ever move it up, and grandfather early buyers.
+
+## Decisions
+
+- **Cloudflare** for hosting and backend: one Worker, D1 for data, R2 for snapshots and share pages.
+- **RevenueCat for billing**, its own billing engine, Stripe underneath, one `pro` entitlement, one plan.
+- **Anonymous-first**: no account is required to draw, only to export, back up, sync or pay.
+- **Free is the trial**: the editor, the animation, video export, the file, share links, a whole-playbook restore-only backup, and 25 plays on one device, forever, for any account; Pro buys a season — unlimited plays, sync, the sheet and the still.
+- **The landing page is the app's own renderer**, on the app's own domain, with no CMS and no recorded video.
+- **Share links are in**, public and revocable, because the backend that was blocking them now exists.
+- **Backup covers the whole playbook and is free; sync is paid.** Safety is not an upgrade, and a cap on coverage is a nag. The cloud copy is never merged, only owned.
+
+---
+
+# M11 — Situation and order
 
 ## Goal
 
@@ -214,6 +372,12 @@ A coach finds the play for the moment, and puts plays in the order they will be 
 - Set on the play, in the inspector or on the playbook card. Optional: a play without a situation is still a play.
 - **Finding** is a filter row in the playbook — pick down and distance, see what fits. No query syntax and no search operators.
 
+## Present
+
+- A play fills the screen with playback and nothing else: no rails, no inspector, no pen. The playbook is used in a staff meeting, not only while drawing.
+- A script steps forward and back call by call, so the meeting follows the order rather than a search box.
+- Presenting is part of Pro. It is the clearest thing a coach can point at when asked what he pays for.
+
 ## The order
 
 - A **script** is an ordered list of plays with one line of text per call. It references plays; it never copies them, so editing a play edits the call.
@@ -224,7 +388,7 @@ A coach finds the play for the moment, and puts plays in the order they will be 
 ## Data
 
 - `PlayRecord.situation?: { down?, distance?, zone?, hash? }`; tags already exist on the record.
-- `ScriptRecord { id, name, entries: { playId, note? }[], createdAt, updatedAt }` in the same IndexedDB.
+- `ScriptRecord { id, name, entries: { playId, note? }[], createdAt, updatedAt }` in the same IndexedDB, and synced the same way plays are.
 - Filtering is pure: `matchesSituation(play, query)`.
 
 ## What gets tested
@@ -232,6 +396,7 @@ A coach finds the play for the moment, and puts plays in the order they will be 
 - Filtering across every field and combination, with unset fields meaning "any".
 - A script survives a play being edited, and names the gap when a play is deleted.
 - A script prints in call order, one line per call.
+- Presenting shows the play and nothing else; a script steps forward and back in order.
 
 ## Acceptance
 
@@ -250,10 +415,12 @@ About three days.
 
 - Situation lives on the play, not on the call.
 - Scripts reference plays; they never copy them.
+- Presenting is a viewing mode, not a slide deck: no transitions, themes or embedded video.
+- Presenting and the printed call sheet are Pro; finding a play is free.
 
 ---
 
-# M11 — The depth the range demands
+# M12 — The depth the range demands
 
 ## Goal
 
@@ -299,5 +466,5 @@ About two weeks, most of it the field and the preset tables.
 
 ## Decisions
 
-- The field is a value, never a constant, before M11 starts.
+- The field is a value, never a constant, before M12 starts.
 - Flag is out until the play grammar can express it.
